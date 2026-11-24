@@ -25,10 +25,14 @@ cd ~/Projects/Charly
 pnpm install
 pnpm exec playwright install chromium
 cp .env.example .env.local
+docker compose up -d           # Postgres + MinIO (R2 stand-in); needs Docker or Podman
+pnpm db:migrate                # create/upgrade tables
 pnpm dev                       # http://localhost:3000
 ```
 
 Fresh machine instead? `git clone https://github.com/violentwave/charlys-corner-store.git` and run the same steps.
+
+No Docker? Forms need a database from Phase 3 on. Install Docker/Podman (Bazzite ships Podman: `podman compose up -d`), or point `DATABASE_URL` at any Postgres. Emails print to the terminal (`EMAIL_DRIVER=console`); uploaded files land in MinIO (console at http://localhost:9001, login `charly` / `charly-dev-secret`).
 
 Start opencode from the repo root (`opencode`). It reads `AGENTS.md` and the docs listed in `opencode.json`.
 

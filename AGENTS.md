@@ -29,7 +29,12 @@ src/components/layout/  header, footer          src/lib/nav.ts       nav items
 src/styles/tokens.css  design tokens (docs/03)  src/lib/coupons.ts   coupon rules + checks (unit-tested)
 src/content/        catalog, services, about, portfolio (facts only; TODO(content) for unknowns)
 src/lib/schemas.ts  shared Zod form schemas     src/components/ui/   primitives    src/components/neon/  Hero, CouponTicket, ComingSoon
-src/lib/storage.ts  S3-compatible file storage  db/                  Drizzle schema + SQL migrations
+db/schema.ts        Drizzle schema → `pnpm db:generate` writes db/migrations/*.sql; `pnpm db:migrate` applies them
+src/lib/db.ts       getDb() (server-only)       src/lib/leads.ts     upsertLead()
+src/lib/storage.ts  getStorage(), buildObjectKey()  (R2 / MinIO / memory)
+src/lib/email.ts    sendEmail(), ownerInbox()   src/lib/turnstile.ts verifyTurnstile()
+src/lib/rate-limit.ts rateLimit(), clientIp(), LIMITS   src/lib/artwork.ts checkArtwork() (byte sniffing)
+src/lib/action-result.ts ActionResult, zodFieldErrors()  src/test/db.ts real-Postgres test helper
 tests/e2e/          Playwright specs             public/brand/        logo for the web
 render.yaml         Render blueprint (the only host-specific file)
 ```
@@ -49,6 +54,9 @@ pnpm test       # vitest
 pnpm e2e        # playwright (first time: pnpm exec playwright install chromium)
 pnpm build
 pnpm format     # prettier (+ tailwind class sorting)
+pnpm db:generate  # after editing db/schema.ts (commit the generated SQL)
+pnpm db:migrate   # apply migrations to DATABASE_URL
+docker compose up -d  # local Postgres + MinIO
 ```
 
 CI (`.github/workflows/ci.yml`) runs lint, typecheck, test, and build, then e2e, on every PR and on pushes to `main`.
@@ -58,6 +66,7 @@ A task isn't done until `lint`, `typecheck`, and `test` pass (and `e2e` for buil
 
 - **Scope:** do only the task asked. No drive-by refactors, no new dependencies without saying why.
 - **Server is the source of truth:** validate every form server-side with the same Zod schema; verify Turnstile; rate-limit public endpoints; coupons are issued and validated only on the server.
+- **Backend pattern (every public form):** server action → `schema.safeParse` (shared Zod schema) → `verifyTurnstile` → `rateLimit(LIMITS.x)` keyed by `clientIp` → `upsertLead` + insert row → `sendEmail` to `ownerInbox()` (+ confirmation to the customer) → return `ActionResult`. Never trust client MIME types for files; use `checkArtwork`. Never store raw IPs. Email failures must not lose the submission (row first, email second).
 - **Secrets:** env vars only (`.env.local`, documented in `.env.example`). Never commit secrets or customer uploads.
 - **Portability (hosting can change):** the database is reached only through Drizzle/`pg` with one `DATABASE_URL`; never import a vendor SDK (`supabase-js`, etc.). All file reads and writes go through `src/lib/storage.ts` (S3 API, config from env). No host-specific features (no Vercel Blob/KV/Edge Config, no edge-only runtime code, no host-only cron). Migrations are plain SQL in `db/migrations`. `render.yaml` is the only host-specific file. The app must run with `pnpm build && pnpm start` on any Node 22 host.
 - **Design tokens:** never hard-code neon hex values in components; use tokens or Tailwind theme classes.
