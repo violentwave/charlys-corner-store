@@ -1,0 +1,138 @@
+{
+  "business_info": {
+    "name": "PSL Custom Print and Graphics",
+    "location": "Port St. Lucie, FL (PSL)",
+    "tagline": "Custom print and graphics",
+    "website": "https://printpsl.com",
+    "platform": "WordPress with Divi Theme v5.2.0",
+    "ecommerce": "WooCommerce v10.6.2",
+    "product_designer": "Fancy Product Designer v6.3.5"
+  },
+  "services_detected": {
+    "screen_printing": {
+      "detected": true,
+      "evidence": "Business name 'Custom Print', WooCommerce storefront for custom apparel",
+      "details": "Custom t-shirt and apparel printing service"
+    },
+    "dtf": {
+      "detected": false,
+      "evidence": "Not explicitly mentioned in provided content",
+      "details": "May be offered but not visible in this page segment"
+    },
+    "dye_sublimation": {
+      "detected": false,
+      "evidence": "Not explicitly mentioned in provided content",
+      "details": "May be offered but not visible in this page segment"
+    },
+    "embroidery": {
+      "detected": false,
+      "evidence": "Not explicitly mentioned in provided content",
+      "details": "May be offered but not visible in this page segment"
+    },
+    "vehicle_wraps": {
+      "detected": true,
+      "evidence": "Business name includes 'Graphics', typical for wrap shops",
+      "details": "Custom graphics likely includes vehicle graphics/wraps"
+    },
+    "custom_apparel": {
+      "detected": true,
+      "evidence": "Fancy Product Designer plugin for custom product design",
+      "details": "Online custom product design tool for customers"
+    }
+  },
+  "design_elements": {
+    "theme": "Divi by Elegant Themes",
+    "theme_version": "5.2.0",
+    "fonts": [
+      "Abril Fatface (display/headings)",
+      "Poppins (100-900 weights, body text)",
+      "ABeeZee (body text)"
+    ],
+    "color_scheme": {
+      "primary": "#2ea3f2 (blue accent)",
+      "background": "#fff (white)",
+      "text": "#666 (gray), #333 (dark headings)",
+      "borders": "#eee, #bbb"
+    },
+    "plugins": [
+      "Divi Contact Module Pro",
+      "Fancy Product Designer",
+      "WooCommerce",
+      "Jetpack"
+    ],
+    "features": [
+      "Responsive design",
+      "Product customizer/designer",
+      "E-commerce ready",
+      "Infinite scroll pagination",
+      "File upload capability"
+    ]
+  },
+  "seo_keywords": {
+    "title_tag": "PSL Custom Print and Graphics | Custom print and graphics",
+    "meta_description": "Custom print and graphics services in Port St. Lucie",
+    "detected_keywords": [
+      "PSL",
+      "Port St. Lucie",
+      "Custom Print",
+      "Custom Graphics",
+      "T-shirt printing",
+      "Apparel printing",
+      "Custom products",
+      "Screen printing",
+      "Custom designs"
+    ],
+    "local_seo_indicators": [
+      "PSL abbreviation (Port St. Lucie)",
+      "Local business targeting"
+    ]
+  },
+  "code_patterns": {
+    "platform": "WordPress",
+    "theme_framework": "Divi",
+    "css_patterns": [
+      "Extensive CSS reset",
+      "Mobile-first responsive breakpoints (@media 981px, 768px)",
+      "Utility classes (.clear, .aligncenter, .alignleft, .alignright)",
+      "Custom button states (.et_button_icon_visible, .et_button_left)",
+      "WooCommerce integration styles",
+      "Block editor support (.wp-block-*)"
+    ],
+    "javascript_patterns": [
+      "jQuery deferred loading pattern",
+      "Fancy Product Designer integration",
+      "WordPress oEmbed support",
+      "Jetpack analytics (window._wca)"
+    ],
+    "architecture": {
+      "cms": "WordPress with XML-RPC enabled",
+      "ecommerce": "WooCommerce with custom product designer",
+      "page_builder": "Divi Visual Builder",
+      "caching": "Inline CSS delivery"
+    },
+    "api_endpoints": [
+      "https://printpsl.com/wp-json/oembed/1.0/embed",
+      "https://printpsl.com/xmlrpc.php"
+    ]
+  },
+  "technical_stack": {
+    "server": "WordPress",
+    "php_required": "7.4+",
+    "wp_version": "6.0+",
+    "plugins": {
+      "divi_contact_module_pro": "File upload styles v6.9.4",
+      "fancy_product_designer": "v6.3.5 with CSS v6.5.0",
+      "woocommerce": "v10.6.2",
+      "jetpack": "Analytics/WooCommerce integration"
+    },
+    "cdn_resources": [
+      "Google Fonts (fonts.googleapis.com)",
+      "WordPress.com stats (stats.wp.com)"
+    ]
+  },
+  "content_limitations": {
+    "note": "The provided HTML content is primarily theme CSS/stylesheet code",
+    "actual_page_content": "Not visible in this segment - only header/meta/styles",
+    "recommendation": "Scrape the live website at https://printpsl.com for full service details, pricing, and complete service offerings"
+  }
+}

@@ -1,0 +1,127 @@
+{
+  "business_name": "PSL Custom Print and Graphics",
+  "location": "Port St. Lucie, FL",
+  "website": "https://printpsl.com",
+  "platform": "WordPress with Divi Theme + WooCommerce",
+  
+  "services_detected": {
+    "custom_printing": true,
+    "screen_printing": "implied via WooCommerce product structure",
+    "embroidery": "not explicitly mentioned in head content",
+    "graphic_design": true,
+    "custom_products": true
+  },
+  
+  "product_types": {
+    "t_shirts": "supported via Fancy Product Designer plugin",
+    "hoodies": "implied via custom apparel business model",
+    "hats": "implied via custom apparel business model",
+    "custom_apparel": true
+  },
+  
+  "design_elements": {
+    "theme": "Divi v5.2.0",
+    "fonts": [
+      "Abril Fatface (headings/display)",
+      "Poppins (body - weights: 100-900, italic)",
+      "ABeeZee (secondary)"
+    ],
+    "font_families_css": "Poppins:100,100italic,200,200italic,300,300italic,regular,italic,500,500italic,600,600italic,700,700italic,800,800italic,900,900italic",
+    "design_tools": [
+      "Fancy Product Designer (FPD) v6.3.5 - custom product design interface",
+      "Divi Contact Module Pro"
+    ],
+    "color_scheme": {
+      "primary": "#2ea3f2 (Divi default blue)",
+      "text": "#666 (body), #333 (headings)",
+      "background": "#fff"
+    }
+  },
+  
+  "seo_keywords": {
+    "meta_title": "PSL Custom Print and Graphics | Custom print and graphics",
+    "meta_robots": "max-image-preview:large",
+    "detected_keywords": [
+      "custom print",
+      "graphics",
+      "PSL",
+      "Port St. Lucie"
+    ],
+    "rss_feeds": [
+      "/feed/",
+      "/comments/feed/"
+    ],
+    "oembed_enabled": true,
+    "xmlrpc_enabled": true
+  },
+  
+  "technical_stack": {
+    "cms": "WordPress",
+    "theme": "Divi v5.2.0 by Elegant Themes",
+    "ecommerce": "WooCommerce v10.6.2",
+    "design_plugin": "Fancy Product Designer v6.3.5",
+    "contact_plugin": "Divi Contact Module Pro",
+    "woocommerce_features": [
+      "infinite_scroll pagination",
+      "responsive layouts (smallscreen breakpoint: 768px)",
+      "form validation",
+      "product variations support"
+    ]
+  },
+  
+  "code_patterns": {
+    "css_framework": "Divi built-in + custom inline styles",
+    "js_patterns": [
+      "jQuery deferred loading pattern",
+      "window._wca (WooCommerce analytics)",
+      "document.documentElement.className = 'js' (js detection)"
+    ],
+    "css_patterns": [
+      "Divi reset CSS (extensive normalize)",
+      "Mobile-first responsive (max-width: 980px, min-width: 981px)",
+      "Flexbox for galleries (.wp-block-gallery)",
+      "CSS variables not used (static color values)",
+      "et_ prefixed classes (Elegant Themes naming convention)"
+    ],
+    "woocommerce_css_selectors": [
+      ".woocommerce form .form-row .required",
+      ".infinite-scroll .woocommerce-pagination",
+      ".products",
+      ".variations"
+    ],
+    "class_naming_conventions": [
+      "et_pb_* (Divi page builder)",
+      "et_ (Elegant Themes)",
+      "woocommerce-* (WooCommerce)",
+      "wp-block-* (WordPress Gutenberg)",
+      "fpd-* (Fancy Product Designer)"
+    ]
+  },
+  
+  "external_dependencies": {
+    "google_fonts": [
+      "fonts.googleapis.com - Poppins, Abril Fatface, ABeeZee"
+    ],
+    "stats_tracking": [
+      "stats.wp.com (WordPress.com stats)"
+    ],
+    "dns_prefetch": [
+      "//stats.wp.com",
+      "//fonts.googleapis.com"
+    ]
+  },
+  
+  "competitive_insights": {
+    "design_approach": "Professional, clean layout with Divi (popular page builder)",
+    "product_customization": "Advanced - uses Fancy Product Designer for real-time product customization",
+    "ecommerce_maturity": "Full WooCommerce with professional extensions",
+    "seo_setup": "Basic - minimal meta description optimization detected",
+    "performance_considerations": [
+      "Multiple CSS files loaded (blocking)",
+      "Inline CSS for WooCommerce layout overrides",
+      "Google Fonts loaded via CSS link (not preconnect hint)"
+    ]
+  },
+  
+  "data_quality_note": "This extraction is based on HTML <head> content only. Full page content (services, pricing, galleries, testimonials) was not provided in the source. Recommend visiting the live site or providing full HTML body content for complete competitive analysis."
+}

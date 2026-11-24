@@ -1,0 +1,116 @@
+{
+  "source": "Rapid Silk Screen Printing - HTML content provided",
+  "extraction_date": "2026-05-17",
+  "extraction_quality": "LIMITED - Content provided is primarily asset URLs with minimal semantic content",
+  "extracted_data": {
+    "brand_identity": {
+      "logo": {
+        "url": "https://cdn.sanity.io/images/2ahps9jc/production/3ae1c16d3ec64699ef9fe2b86e6fbda1b358cade-300x120.png",
+        "dimensions": "300x120",
+        "cdn": "Sanity.io"
+      },
+      "fonts": [
+        "Bungee Inline (display/header font)",
+        "Nunito (body font)"
+      ],
+      "style_inferences": [
+        "Retro/vintage aesthetic suggested by Bungee Inline font choice",
+        "Clean modern body typography with Nunito",
+        "Class naming suggests 'antialiased' rendering for crisp text"
+      ]
+    },
+    "product_images_detected": [
+      {
+        "url_pattern": "52dacf1430890a205e44f9c6ce1ab9344699e370-1250x900.png",
+        "dimensions": "1250x900",
+        "likely_content": "Hero/banner image (landscape orientation)"
+      },
+      {
+        "url_pattern": "6c0d0cc25dae033d4f18fbc3ca1544e4d647256e-976x1088.png",
+        "dimensions": "976x1088",
+        "likely_content": "Product mockup (portrait orientation, t-shirt/product display)"
+      },
+      {
+        "url_pattern": "33b091e178f8b87c1a756b78ddd0c0a5e83002cc-976x1088.png",
+        "dimensions": "976x1088",
+        "likely_content": "Product mockup (portrait orientation)"
+      },
+      {
+        "url_pattern": "30f59ba6fe4c998e1b2e7d537ccfe8c008d501dd-800x900.jpg",
+        "dimensions": "800x900",
+        "likely_content": "Product/gallery image (portrait)"
+      },
+      {
+        "url_pattern": "5679b636726b3ab2a4c807d314fb727abd9bd0bb-800x900.jpg",
+        "dimensions": "800x900",
+        "likely_content": "Product/gallery image (portrait)"
+      },
+      {
+        "url_pattern": "e4866b42fd358cef3f2fcea025b94a4f6a13f70c-976x1088.png",
+        "dimensions": "976x1088",
+        "likely_content": "Product mockup (portrait orientation)"
+      },
+      {
+        "url_pattern": "7475df0c848041f4b52ef744d5bdda8df3a22cd9-958x1078.jpg",
+        "dimensions": "958x1078",
+        "likely_content": "Product image (portrait orientation)"
+      },
+      {
+        "url_pattern": "49c542fd177906b397ea63556e16245b03be2a95-976x1088.png",
+        "dimensions": "976x1088",
+        "likely_content": "Product mockup (portrait orientation)"
+      }
+    ],
+    "technical_infrastructure": {
+      "framework": "Next.js (evident from _next paths and font module naming)",
+      "cms": "Sanity.io (image CDN)",
+      "image_optimization": {
+        "srcset_sizes": [256, 384, 640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+        "responsive_strategy": "Multi-size srcset with fit=min and auto=format",
+        "lazy_loading": "Inferred from preload strategy"
+      },
+      "font_loading": "Next.js font optimization with variable fonts"
+    },
+    "ui_patterns_inferred": {
+      "responsive_breakpoints": [
+        "640px (mobile)",
+        "768px (tablet portrait)",
+        "1024px (tablet landscape/desktop)"
+      ],
+      "image_layout": "Grid-based product display with 50vw/33vw/100vw sizing",
+      "image_sizes_attribute": "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+    }
+  },
+  "requested_but_not_found": {
+    "custom_t_shirt_printing_services": {
+      "status": "NOT FOUND",
+      "note": "No service descriptions, process steps, or printing methods in provided content"
+    },
+    "design_process": {
+      "status": "NOT FOUND",
+      "note": "No workflow, design tool descriptions, or process documentation in provided content"
+    },
+    "pricing_models": {
+      "status": "NOT FOUND",
+      "note": "No pricing tables, tier structures, or cost information in provided content"
+    },
+    "online_designer_tool": {
+      "status": "NOT FOUND",
+      "note": "No references to design tools, configurators, or customizers in provided content"
+    },
+    "seo_keywords": {
+      "status": "NOT FOUND",
+      "note": "No meta tags, title, description, or semantic content in provided content"
+    }
+  },
+  "recommendations": {
+    "for_better_extraction": [
+      "Scrape full page content including <body> text content",
+      "Capture meta tags in <head> section",
+      "Extract visible text from service/pricing pages",
+      "Check for JavaScript-rendered content that may not appear in initial HTML",
+      "Use browser-based scraping to capture dynamically loaded content"
+    ],
+    "what_was_probably_a_full_page": "This appears to be the <head> section only with asset preloads. The actual content (services, pricing, about) would be in the <body> section which was not provided."
+  }
+}

@@ -1,0 +1,69 @@
+@import "tailwindcss";
+@import "../styles/tokens.css";
+
+/* Map design tokens into Tailwind utilities (bg-bg-0, text-neon-pink, shadow-glow-pink, font-display …) */
+@theme inline {
+  --color-bg-0: var(--bg-0);
+  --color-bg-1: var(--bg-1);
+  --color-bg-2: var(--bg-2);
+  --color-bg-3: var(--bg-3);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text-1: var(--text-1);
+  --color-text-2: var(--text-2);
+  --color-text-3: var(--text-3);
+  --color-neon-pink: var(--neon-pink);
+  --color-neon-cyan: var(--neon-cyan);
+  --color-neon-purple: var(--neon-purple);
+  --color-neon-orange: var(--neon-orange);
+  --color-neon-yellow: var(--neon-yellow);
+  --color-neon-green: var(--neon-green);
+  --color-danger: var(--danger);
+
+  --shadow-glow-pink: var(--glow-pink);
+  --shadow-glow-cyan: var(--glow-cyan);
+
+  --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Orbitron Variable", "Poppins", ui-sans-serif, sans-serif;
+  /* DECIDE (docs/03): display font Monoton vs Bungee Inline — heading font stands in until then */
+  --font-display: var(--font-heading);
+  --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+  body {
+    background: var(--bg-0);
+    color: var(--text-1);
+    font-family: var(--font-sans);
+    line-height: 1.6;
+  }
+  :focus-visible {
+    outline: 2px solid var(--neon-cyan);
+    outline-offset: 3px;
+  }
+}
+
+@utility text-gradient-vice {
+  background: var(--grad-vice);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility bg-horizon {
+  background: var(--grad-horizon);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

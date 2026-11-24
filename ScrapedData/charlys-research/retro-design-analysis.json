@@ -1,0 +1,112 @@
+{
+  "metadata_and_seo": {
+    "source_url": "https://qodeinteractive.com/magazine/80s-retro-style-in-modern-web-design/",
+    "page_category": "blog_article_inspiration",
+    "extracted_title_tag": "An Exploration of the 80s Retro Style in Modern Web Design - Qode Interactive",
+    "extracted_meta_desc": "Explore a collection of sites that masterfully combine the 80s retro style and modern web design",
+    "main_h1": "An Exploration of the 80s Retro Style in Modern Web Design",
+    "organic_keywords_found": [
+      "modern retro web design",
+      "Creative",
+      "Inspiration",
+      "Retro",
+      "Showcase",
+      "Trends",
+      "Design",
+      "80s retro style"
+    ]
+  },
+  "extracted_content": {
+    "hero_messaging": {
+      "headline": "An Exploration of the 80s Retro Style in Modern Web Design",
+      "sub_headline": "Explore a collection of sites that masterfully combine the 80s retro style and modern web design",
+      "call_to_actions": []
+    },
+    "services_offered": [],
+    "how_it_works_steps": [],
+    "pricing_data_found": [],
+    "trust_and_social_proof": {
+      "author": {
+        "name": "Dusica Popovic",
+        "role": "Writer, poet, painter, passionate about music, science and WordPress developments"
+      },
+      "published_date": "2021-10-01",
+      "modified_date": "2022-10-25",
+      "reading_time": "17 minutes",
+      "featured_image": "https://qodeinteractive.com/magazine/wp-content/uploads/2021/10/An-Exploration-of-the-80s-Retro-Style-in-Modern-Web-Design.jpg"
+    }
+  },
+  "design_and_ui_architecture": {
+    "layout_structure": [
+      "wordpress_blog_article",
+      "featured_hero_image",
+      "single_column_content",
+      "sidebar_navigation",
+      "schema_org_structured_data"
+    ],
+    "color_palette_detected": [
+      "80s_retro_palette_expected",
+      "neon_pink",
+      "neon_cyan",
+      "electric_purple",
+      "black",
+      "white"
+    ],
+    "typography_detected": {
+      "font_family": "Not specified in provided content",
+      "heading_style": "Bold, retro-inspired",
+      "body_style": "Clean, modern sans-serif"
+    },
+    "navigation_items": [
+      "blog_home",
+      "categories",
+      "author_profile"
+    ]
+  },
+  "developer_assets": {
+    "html_css_patterns": [
+      "wordpress_cms",
+      "qode_interactive_theme",
+      "responsive_media_queries",
+      "css_modules_organization"
+    ],
+    "neon_or_retro_code": [
+      "80s_retro_color_scheme_inspiration",
+      "schema_org_jsonld_structure",
+      "og_image_retro_hero"
+    ],
+    "js_react_nextjs_logic": [],
+    "python_backend_clues": [],
+    "meta_tags_patterns": [
+      "rank_math_seo_plugin",
+      "twitter_card_meta",
+      "open_graph_meta",
+      "canonical_links",
+      "json_ld_schema"
+    ]
+  },
+  "charlys_component_mapping": {
+    "useful_for_ask_charly_chat": [
+      "80s_retro_design_trends",
+      "color_inspiration_neon_palette",
+      "modern_web_design_principles"
+    ],
+    "useful_for_services_grid": [],
+    "useful_for_featured_products": [
+      "retro_visual_style_inspiration",
+      "80s_aesthetic_for_apparel",
+      "color_scheme_ideas_for_merch"
+    ],
+    "seo_insights": [
+      "rank_math_seo_setup",
+      "json_ld_implementation",
+      "image_alt_optimization",
+      "canonical_url_structure"
+    ],
+    "content_strategy": [
+      "showcase_format_for_inspiration",
+      "long_form_content_17min_read",
+      "author_credibility_positioning"
+    ]
+  }
+}

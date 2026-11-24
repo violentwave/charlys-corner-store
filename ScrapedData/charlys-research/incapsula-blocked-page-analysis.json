@@ -1,0 +1,45 @@
+{
+  "metadata_and_seo": {
+    "source_url": null,
+    "page_category": "security_verification_challenge",
+    "extracted_title_tag": null,
+    "extracted_meta_desc": null,
+    "main_h1": null,
+    "organic_keywords_found": []
+  },
+  "extracted_content": {
+    "hero_messaging": {
+      "headline": null,
+      "sub_headline": null,
+      "call_to_actions": []
+    },
+    "services_offered": [],
+    "how_it_works_steps": [],
+    "pricing_data_found": [],
+    "trust_and_social_proof": []
+  },
+  "design_and_ui_architecture": {
+    "layout_structure": "blocked_content_iframe_container",
+    "color_palette_detected": [],
+    "typography_detected": [],
+    "navigation_items": []
+  },
+  "developer_assets": {
+    "html_css_patterns": ["iframe_delivery_with_full_viewport", "inline_body_styles_margin_zero"],
+    "neon_or_retro_code": [],
+    "js_react_nextjs_logic": [],
+    "python_backend_clues": []
+  },
+  "charlys_component_mapping": {
+    "useful_for_ask_charly_chat": "none - blocked by security",
+    "useful_for_services_grid": "none - blocked by security",
+    "useful_for_featured_products": "none - blocked by security"
+  },
+  "blocking_details": {
+    "security_service": "Incapsula",
+    "incident_id": "515000590070973725-203537920370609861",
+    "request_block_reason": "bot_protection_or_rate_limiting",
+    "meta_robots_directive": "NOINDEX, NOFOLLOW",
+    "response_message": "Request unsuccessful. Incapsula incident ID: 515000590070973725-203537920370609861"
+  }
+}

@@ -1,0 +1,165 @@
+{
+  "metadata_and_seo": {
+    "source_url": "https://www.deconetwork.com/",
+    "page_category": "SaaS Landing Page - Print Shop Management Software",
+    "extracted_title_tag": "Print Shop Management Software For Business Growth",
+    "extracted_meta_desc": "All-in-one print shop management software for quotes, orders, production, and ecommerce to grow your business — Request FREE demo",
+    "main_h1": null,
+    "organic_keywords_found": [
+      "print shop management software",
+      "business growth",
+      "quotes",
+      "orders",
+      "production",
+      "ecommerce",
+      "free demo",
+      "online designer",
+      "mockups"
+    ]
+  },
+  "extracted_content": {
+    "hero_messaging": {
+      "headline": "Print Shop Management Software For Business Growth",
+      "sub_headline": "All-in-one print shop management software for quotes, orders, production, and ecommerce to grow your business",
+      "call_to_actions": [
+        "Request FREE demo"
+      ]
+    },
+    "services_offered": [
+      {
+        "service": "Print Shop Management",
+        "description": "All-in-one platform"
+      },
+      {
+        "service": "Quotes Management",
+        "description": "Quote generation and management"
+      },
+      {
+        "service": "Orders Management",
+        "description": "Order processing and tracking"
+      },
+      {
+        "service": "Production Management",
+        "description": "Production workflow management"
+      },
+      {
+        "service": "Ecommerce",
+        "description": "Online store and sales platform"
+      },
+      {
+        "service": "Online Designer",
+        "description": "Customer-facing design tool with mockups"
+      }
+    ],
+    "how_it_works_steps": [],
+    "pricing_data_found": [],
+    "trust_and_social_proof": [
+      {
+        "type": "social_media",
+        "platform": "Facebook",
+        "url": "https://www.facebook.com/DecoNetwork"
+      },
+      {
+        "type": "social_media",
+        "platform": "Twitter",
+        "handle": "@DecoNetwork"
+      },
+      {
+        "type": "author_credit",
+        "name": "Victor Marquez"
+      },
+      {
+        "type": "platform_indicator",
+        "data": "WordPress with Elementor"
+      }
+    ]
+  },
+  "design_and_ui_architecture": {
+    "layout_structure": {
+      "platform": "WordPress",
+      "page_builder": "Elementor",
+      "theme": "OceanWP (child theme: DecoNetwork)",
+      "responsive": true
+    },
+    "color_palette_detected": {
+      "primary": "#000000",
+      "success": "#28A800",
+      "info": "#2c99ff",
+      "warning": "#f28100",
+      "danger": "#f80718",
+      "open_badge": "#32cc6f",
+      "closed_badge": "#e23636",
+      "featured_badge": "#fa8b0c",
+      "popular_badge": "#f51957",
+      "new_badge": "#122069",
+      "background_gray": "#f4f4f4",
+      "border": "#e9e9e9"
+    },
+    "typography_detected": {
+      "primary_font": "Roboto Flex",
+      "font_weights": ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
+      "font_styles": ["normal", "italic"]
+    },
+    "navigation_items": []
+  },
+  "developer_assets": {
+    "html_css_patterns": [
+      "WordPress with Elementor page builder",
+      "OceanWP theme framework",
+      "Autoptimize CSS optimization",
+      "Lazy loading with .lazyload class",
+      "CSS custom properties (variables) for Directorist theming",
+      "Google Fonts loading (Roboto Flex)"
+    ],
+    "neon_or_retro_code": [],
+    "js_react_nextjs_logic": [
+      "WordPress jQuery-based architecture",
+      "Google Tag Manager integration",
+      "Facebook Pixel tracking",
+      "Microsoft Bing tracking (bat.js)",
+      "Zoho SalesIQ widget",
+      "WordPress Popular Posts plugin (WPP)"
+    ],
+    "python_backend_clues": [
+      "OEmbed API endpoint: /wp-json/oembed/1.0/embed",
+      "REST API base: /wp-json/",
+      "PHP backend (WordPress)"
+    ],
+    "third_party_integrations": [
+      "Google Analytics",
+      "Google Tag Manager (GTM-PM6Q233, GTM-53M55RZ)",
+      "Facebook Pixel",
+      "Microsoft Bing Ads",
+      "Zoho SalesIQ chat widget",
+      "All in One SEO (AIOSEO) plugin"
+    ]
+  },
+  "charlys_component_mapping": {
+    "useful_for_ask_charly_chat": {
+      "inspiration": [
+        "Live chat integration pattern (Zoho SalesIQ)",
+        "Widget script loading with defer",
+        "Chat-triggered lead capture"
+      ],
+      "implementation_notes": "Zoho SalesIQ embed pattern for real-time customer support"
+    },
+    "useful_for_services_grid": {
+      "inspiration": [
+        "Service bundling into 'all-in-one' messaging",
+        "Six-pillar service structure (Quotes, Orders, Production, Ecommerce, Online Designer, Management)",
+        "Directorist plugin for directory-style listings",
+        "Badge system for categorization (Open, Closed, Featured, Popular, New)"
+      ],
+      "implementation_notes": "Grid with visual badges and status indicators"
+    },
+    "useful_for_featured_products": {
+      "inspiration": [
+        "Online designer with mockups functionality",
+        "Product catalog with Featured/Popular/New badges",
+        "Image optimization with lazy loading",
+        "OG/Twitter card markup for social sharing"
+      ],
+      "implementation_notes": "Focus on visual customization tools and social sharing"
+    }
+  }
+}

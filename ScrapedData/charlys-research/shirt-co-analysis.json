@@ -1,0 +1,134 @@
+{
+  "competitor_source": "shirt.co",
+  "extracted_date": "2026-05-17",
+  "seo_keywords": {
+    "primary": [
+      "custom t shirt",
+      "custom t shirts",
+      "t shirt custom",
+      "custom screen printing"
+    ],
+    "location_based": [
+      "custom t shirt port st lucie fl",
+      "custom t shirts in port st lucie fl",
+      "t shirt custom port st lucie",
+      "screen printing port st lucie"
+    ],
+    "long_tail": [
+      "custom t shirt designer and printer",
+      "expedited shipping custom shirts",
+      "custom order t shirts"
+    ],
+    "meta_description_patterns": [
+      "[service] [location]. [company] near [location], is your leading designer and printer of [product] in the [location] area. Contact us today for your custom order near [location]. We also provide expedited shipping for customers outside of the [location] area."
+    ]
+  },
+  "services_detected": {
+    "screen_printing": {
+      "detected": true,
+      "evidence": "leading designer and printer of custom T shirts",
+      "offerings": [
+        "custom t-shirt design",
+        "custom t-shirt printing",
+        "expedited shipping"
+      ]
+    },
+    "embroidery": {
+      "detected": false,
+      "evidence": null
+    },
+    "banners": {
+      "detected": false,
+      "evidence": null
+    },
+    "promotional_products": {
+      "detected": false,
+      "evidence": null
+    }
+  },
+  "design_elements": {
+    "brand_name": "Shirt.Co",
+    "logo_url": "https://shirt.co/wp-content/uploads/2025/06/SHIRT.CO-LOGO-SMALL-EMAIL-ICON-SIZE.png",
+    "logo_dimensions": {
+      "width": 667,
+      "height": 272
+    },
+    "primary_color": "#008658",
+    "fonts": [
+      "Barlow Condensed",
+      "PT Sans"
+    ],
+    "og_image": "https://shirt.co/wp-content/uploads/2020/06/custom-t-shirts-st-louis.jpg",
+    "og_image_dimensions": {
+      "width": 1280,
+      "height": 314
+    },
+    "image_caption_pattern": "custom-t-shirt-[city]-[state]|stl-shirt-co-[city]-[state]|[city]-[state]-custom-t-shirts"
+  },
+  "technical_seo": {
+    "platform": "WordPress",
+    "seo_plugin": "Yoast SEO v27.6",
+    "schema_types": [
+      "WebPage",
+      "ImageObject",
+      "BreadcrumbList",
+      "WebSite",
+      "Organization"
+    ],
+    "analytics": [
+      "Google Tag Manager",
+      "Google Ads (AW-10835576472)",
+      "Facebook Pixel",
+      "LinkedIn Insight"
+    ],
+    "breadcrumb_structure": [
+      "Home",
+      "Custom T Shirt",
+      "[City, State]"
+    ]
+  },
+  "social_presence": {
+    "facebook": "https://www.facebook.com/STLShirtCo/",
+    "twitter": "https://x.com/STLShirtCo",
+    "instagram": "https://www.instagram.com/stlshirtco/"
+  },
+  "location_page_strategy": {
+    "url_pattern": "https://shirt.co/custom-t-shirt/[city]-[state]/",
+    "title_template": "Custom T Shirt [City], [State] | T Shirt Custom [Brand] | Custom T shirts in [City], [State]",
+    "content_template": "[Service] [Location]. [Brand] near [Location], is your leading designer and printer of [product] in the [Location] area. Contact us today for your custom order near [Location]. We also provide expedited shipping for customers outside of the [Location] area."
+  },
+  "recommendations_for_charlys_corner_store": {
+    "seo_keywords_to_target": [
+      "custom screen printing [city] [state]",
+      "custom t shirts [city]",
+      "t shirt printing near me",
+      "custom apparel printing",
+      "local screen printer",
+      "custom shirt designer",
+      "fast t shirt printing",
+      "bulk t shirt orders",
+      "embroidery services [city]",
+      "custom banners [city]",
+      "promotional products [city]",
+      "custom hats embroidery",
+      "company branded apparel",
+      "team uniform printing",
+      "event t shirt printing"
+    ],
+    "location_pages": "Create dedicated landing pages for each target city following the pattern: /services/[service-type]/[city]-[state]/",
+    "content_strategy": "Include geo-modifiers in meta titles and descriptions, emphasize 'local' and 'near me' keywords, mention expedited/shipping options",
+    "technical_implementation": [
+      "Implement Yoast SEO or similar for schema markup",
+      "Add BreadcrumbList schema for navigation",
+      "Set up Organization schema with logo",
+      "Configure Open Graph images (1280x314 aspect ratio)",
+      "Use consistent image caption patterns for SEO"
+    ],
+    "design_recommendations": [
+      "Define primary brand color (shirt.co uses #008658 - green)",
+      "Use condensed fonts for headlines (Barlow Condensed style)",
+      "Create OG images at 1280x314 dimensions",
+      "Maintain consistent logo placement in schema"
+    ]
+  }
+}

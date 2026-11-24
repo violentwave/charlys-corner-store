@@ -1,0 +1,64 @@
+{
+  "metadata_and_seo": {
+    "source_url": "https://printpsl.com",
+    "page_category": "custom_printing_homepage",
+    "extracted_title_tag": "PSL Custom Print and Graphics | Custom print and graphics",
+    "extracted_meta_desc": null,
+    "main_h1": null,
+    "organic_keywords_found": ["PSL", "custom print", "graphics", "custom print and graphics", "Port St. Lucie"]
+  },
+  "extracted_content": {
+    "hero_messaging": {
+      "headline": null,
+      "sub_headline": null,
+      "call_to_actions": []
+    },
+    "services_offered": [],
+    "how_it_works_steps": [],
+    "pricing_data_found": [],
+    "trust_and_social_proof": []
+  },
+  "design_and_ui_architecture": {
+    "layout_structure": "WordPress Divi theme with full-width sections, WooCommerce integration, product designer overlay",
+    "color_palette_detected": null,
+    "typography_detected": {
+      "heading_font": "Abril Fatface",
+      "body_font": "Poppins (100-900 weights)",
+      "alt_font": "ABeeZee"
+    },
+    "navigation_items": []
+  },
+  "technical_architecture": {
+    "cms_platform": "WordPress",
+    "theme": "Divi v5.2.0",
+    "ecommerce": "WooCommerce v10.6.2",
+    "custom_designer_plugin": "Fancy Product Designer v6.3.5",
+    "contact_form": "Divi Contact Module Pro",
+    "fonts_loaded": ["Abril Fatface", "Poppins", "ABeeZee"]
+  },
+  "developer_assets": {
+    "html_css_patterns": [
+      "Divi CSS reset and base styles",
+      "WooCommerce layout/smallscreen/responsive stylesheets",
+      "Fancy Product Designer CSS framework",
+      "Google Fonts cached loading with display=swap"
+    ],
+    "neon_or_retro_code": [],
+    "js_react_nextjs_logic": [],
+    "python_backend_clues": [],
+    "wordpress_hooks": [
+      "wp-content/plugins/woocommerce",
+      "wp-content/plugins/fancy-product-designer",
+      "wp-content/plugins/divi-contact-module-pro"
+    ]
+  },
+  "charlys_component_mapping": {
+    "useful_for_ask_charly_chat": false,
+    "useful_for_services_grid": false,
+    "useful_for_featured_products": {
+      "fearured_product_designer": "Fancy Product Designer plugin provides live product customization UI",
+      "woocommerce_products": "Standard WooCommerce product grid with custom design integration"
+    }
+  },
+  "data_availability_note": "PROVIDED_CONTENT_TRUNCATED - Only HTML head section received. Body content, hero sections, pricing, and service details were not included in the provided snippet. Recommend re-scraping full page for complete content extraction."
+}

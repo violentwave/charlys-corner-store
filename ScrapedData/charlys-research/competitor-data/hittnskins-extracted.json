@@ -1,0 +1,141 @@
+{
+  "metadata_and_seo": {
+    "source_url": "https://hittnskins.com/",
+    "page_category": "Homepage - Custom Apparel, Merchandise, and Vehicle Wraps",
+    "extracted_title_tag": "Custom Printed T Shirts and Branded Merchandise Orlando | Hittn' Skins",
+    "extracted_meta_desc": "Premium custom apparel, merchandise, and vehicle wraps crafted in Orlando. Screen printing, embroidery, and branding built for businesses and creatives.",
+    "main_h1": null,
+    "organic_keywords_found": [
+      "custom t shirts",
+      "custom screen printing",
+      "custom embroidery",
+      "custom vehicle wraps",
+      "vinyl graphics",
+      "promotional products",
+      "custom apparel",
+      "custom signs and banners",
+      "custom apparel printing",
+      "dtg apparel",
+      "branding identity",
+      "graphic design"
+    ]
+  },
+  "extracted_content": {
+    "hero_messaging": {
+      "headline": null,
+      "sub_headline": null,
+      "call_to_actions": []
+    },
+    "services_offered": [
+      "Screen printing",
+      "Embroidery",
+      "Vehicle wraps",
+      "DTG (Direct to Garment)",
+      "Custom signage and banners",
+      "Promotional products",
+      "Branding identity",
+      "Graphic design",
+      "Custom stickers"
+    ],
+    "how_it_works_steps": [],
+    "pricing_data_found": [
+      {
+        "type": "sticker_editor",
+        "note": "Base price per square inch model with quantity tiers",
+        "fields_hidden_in_cart": [
+          "preset-width",
+          "preset-height",
+          "preset-label",
+          "base-price-per-sqin",
+          "quantity-tiers"
+        ]
+      }
+    ],
+    "trust_and_social_proof": [
+      {
+        "type": "LocalBusiness Schema.org markup",
+        "name": "Hittn' Skins",
+        "description": "Custom Apparel, Vinyl Graphics, Branding Merchandise.",
+        "phone": "(407) 835-2425"
+      },
+      {
+        "type": "Open Graph Image",
+        "url": "https://hittnskins.com/sites/default/files/images/hs_stacked_logo_rev3.png"
+      },
+      {
+        "type": "apple-touch-icons",
+        "sizes": ["60x60", "76x76", "120x120", "152x152", "180x180"]
+      }
+    ]
+  },
+  "design_and_ui_architecture": {
+    "layout_structure": {
+      "framework": "Drupal 10 + Commerce 2",
+      "grid_system": "Custom theme with module-based CSS components",
+      "responsive_approach": "Mobile-optimized with viewport meta tag",
+      "notable_features": [
+        "Superfish menu system",
+        "Responsive tables",
+        "Custom mobile blocks",
+        "Animate.css integration"
+      ]
+    },
+    "color_palette_detected": {
+      "primary": "#666 (text gray)",
+      "secondary": "#eee (border light gray)",
+      "system_colors": "BEM naming pattern with color.module.css",
+      "note": "Logo suggests purple/orange gradient based on stacked_logo_rev3.png"
+    },
+    "typography_detected": {
+      "primary_font": "Open Sans (weights: 300, 600, 700)",
+      "font_cdn": "Google Fonts",
+      "font_awesome": "Font Awesome icons integrated"
+    },
+    "navigation_items": [
+      {
+        "type": "superfish_menu",
+        "css_file": "/libraries/drupal-superfish/css/superfish.css"
+      }
+    ]
+  },
+  "developer_assets": {
+    "html_css_patterns": [
+      "BEM-style CSS naming: .field--name-field-*",
+      "CSS hiding pattern: display: none !important for commerce cart fields",
+      "Drupal module pattern: [module]-[component].html.twig templates implied",
+      "Custom cart styling with .commerce-cart and .cart-block-contents classes"
+    ],
+    "neon_or_retro_code": [],
+    "js_react_nextjs_logic": [],
+    "python_backend_clues": []
+  },
+  "charlys_component_mapping": {
+    "useful_for_ask_charly_chat": [
+      "Sticker editor functionality - user can configure dimensions and labels",
+      "Cart editing with inline dimensions display",
+      "Quantity tier-based pricing model"
+    ],
+    "useful_for_services_grid": [
+      "Service categories: Screen printing, Embroidery, Vehicle wraps, DTG, Signage, Promotional products, Branding/graphic design",
+      "Multi-service provider model combining physical and digital offerings"
+    ],
+    "useful_for_featured_products": [
+      "Custom stickers with preset dimension options",
+      "Square-inch based pricing model",
+      "Custom apparel with variation fields",
+      "Vehicle wrap products"
+    ]
+  },
+  "technology_stack_detected": {
+    "cms": "Drupal 10",
+    "ecommerce": "Commerce 2 (Drupal Commerce)",
+    "frontend_libraries": [
+      "jQuery UI",
+      "Superfish menus",
+      "Font Awesome",
+      "Animate.css"
+    ],
+    "analytics": ["Google Tag Manager (GTM-MRRWP65)", "Google Analytics (G-CB79FDD0QE)", "Facebook Pixel", "Pinterest Tag"],
+    "fonts": "Google Fonts - Open Sans"
+  }
+}

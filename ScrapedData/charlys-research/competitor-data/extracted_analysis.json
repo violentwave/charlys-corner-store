@@ -1,0 +1,142 @@
+{
+  "metadata_and_seo": {
+    "source_url": null,
+    "page_category": "e-commerce_styled_components",
+    "extracted_title_tag": null,
+    "extracted_meta_desc": null,
+    "main_h1": null,
+    "organic_keywords_found": []
+  },
+  "extracted_content": {
+    "hero_messaging": {
+      "headline": null,
+      "sub_headline": null,
+      "call_to_actions": []
+    },
+    "services_offered": [],
+    "how_it_works_steps": [],
+    "pricing_data_found": [],
+    "trust_and_social_proof": []
+  },
+  "design_and_ui_architecture": {
+    "layout_structure": {
+      "framework": "responsive_css_with_breakpoints",
+      "breakpoints": [
+        "max-width: 399px (mobile-small)",
+        "min-width: 400px and max-width: 699px (mobile)",
+        "min-width: 700px and max-width: 1023px (tablet)",
+        "min-width: 1024px and max-width: 1299px (desktop-small)",
+        "min-width: 1300px (desktop-large)"
+      ],
+      "container_max_widths": {
+        "tablet": "672px / 42.75rem",
+        "desktop_small": "967px / 63rem",
+        "desktop_large": "1242px / 80.25rem"
+      },
+      "grid_system": "flexbox_based",
+      "components_detected": [
+        "announcement_banner",
+        "customer_chat_widget",
+        "toast_notification",
+        "newsletter_footer"
+      ]
+    },
+    "color_palette_detected": {
+      "primary": "#a639b2 (vibrant purple/magenta)",
+      "dark": "#242424 (near black)",
+      "white": "#ffffff",
+      "success_green": "#198038",
+      "accent_orange": "#fa3c00",
+      "green_transparent": "rgba(25, 128, 56, 0.1)"
+    },
+    "typography_detected": {
+      "font_families": [
+        "SharpSans / Sharp Sans (primary)",
+        "Helvetica",
+        "Arial",
+        "Trebuchet MS",
+        "sans-serif (fallback)"
+      ],
+      "font_sizes": [
+        "0.8125rem (~13px) - promotional text",
+        "0.875rem (~14px) - body/terms text",
+        "12px - small UI text",
+        "14px - standard UI text"
+      ],
+      "font_weights": [
+        "400 (normal)",
+        "500 (medium)",
+        "700 (bold)"
+      ]
+    },
+    "navigation_items": []
+  },
+  "developer_assets": {
+    "html_css_patterns": {
+      "scss_usage": true,
+      "css_naming_convention": "BEM-like with sc- prefix (styled-components pattern)",
+      "responsive_patterns": [
+        "mobile-first with media queries",
+        "conditional display via display:block/none",
+        "responsive typography switching"
+      ],
+      "animation_patterns": [
+        {
+          "name": "slideUp",
+          "type": "toast entrance animation",
+          "duration": "0.3s",
+          "easing": "ease-out"
+        }
+      ],
+      "component_patterns": [
+        "flexbox with justify-content/align-items centering",
+        "gap utilities for spacing (0.25rem, 0.75rem, 2px)",
+        "z-index layering (9999 for toasts)",
+        "box-shadow for elevation (0 4px 12px rgba(0,0,0,0.15))"
+      ]
+    },
+    "neon_or_retro_code": {
+      "detected": false,
+      "notes": "No neon effects, glows, or retro styling detected in this content. The purple (#a639b2) could be adapted for neon theme."
+    },
+    "js_react_nextjs_logic": {
+      "framework_hints": [
+        "Styled-components pattern (sc- prefix on classes)",
+        "CSS-in-JS usage"
+      ],
+      "detected_features": [
+        "Live chat widget (LiveEngage integration)",
+        "Klaviyo email marketing integration",
+        "Toast notification system"
+      ]
+    },
+    "python_backend_clues": []
+  },
+  "charlys_component_mapping": {
+    "useful_for_ask_charly_chat": {
+      "reusable_patterns": [
+        "Customer chat widget responsive layout",
+        "Online/offline status indicator styling",
+        "Icon + text horizontal layout pattern"
+      ],
+      "adaptable_elements": [
+        "Chat icon container (24x24px)",
+        "Status indicator dot pattern",
+        "Responsive text visibility switching"
+      ]
+    },
+    "useful_for_services_grid": {
+      "reusable_patterns": [],
+      "notes": "No service grid detected in provided content"
+    },
+    "useful_for_featured_products": {
+      "reusable_patterns": [],
+      "notes": "No product showcase detected in provided content"
+    }
+  },
+  "analysis_notes": {
+    "content_limitations": "Provided source is primarily CSS/styled-component definitions without semantic HTML content. No extractable text content, titles, meta descriptions, or structured data found.",
+    "extractable_insights": "Design system architecture, color palette, typography stack, responsive breakpoints, and UI component patterns are extractable from CSS.",
+    "recommendation": "For full extraction of hero messaging, services, pricing, and SEO metadata, provide the actual rendered HTML or visit the live URL."
+  }
+}

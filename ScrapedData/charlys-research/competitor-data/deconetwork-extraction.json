@@ -1,0 +1,97 @@
+{
+  "metadata_and_seo": {
+    "source_url": "https://www.deconetwork.com/best-websites-for-screen-printing-built-with-deconetwork/",
+    "page_category": "marketing_article",
+    "extracted_title_tag": "Best Websites For Screen Printing Built With DecoNetwork",
+    "extracted_meta_desc": "DecoNetwork offers the best websites for screen printing with advanced design tools, seamless order management, and superior printing capabilities.",
+    "main_h1": null,
+    "organic_keywords_found": [
+      "screen printing",
+      "best websites",
+      "deconetwork",
+      "design tools",
+      "order management",
+      "printing capabilities",
+      "t-shirt printing",
+      "custom apparel"
+    ]
+  },
+  "extracted_content": {
+    "hero_messaging": {
+      "headline": "Best Websites For Screen Printing Built With DecoNetwork",
+      "sub_headline": "DecoNetwork offers the best websites for screen printing with advanced design tools, seamless order management, and superior printing capabilities.",
+      "call_to_actions": []
+    },
+    "services_offered": [
+      "Website creation for screen printing businesses",
+      "Advanced design tools",
+      "Seamless order management",
+      "Superior printing capabilities"
+    ],
+    "how_it_works_steps": [],
+    "pricing_data_found": [],
+    "trust_and_social_proof": [
+      "Article by Victor Marquez",
+      "Facebook presence: @DecoNetwork",
+      "Twitter/X presence: @DecoNetwork",
+      "Google Site Verification active",
+      "Published July 6, 2024",
+      "Last modified October 7, 2024"
+    ]
+  },
+  "design_and_ui_architecture": {
+    "layout_structure": [
+      "WordPress-based layout",
+      "Elementor page builder sections",
+      "Directorist directory integration"
+    ],
+    "color_palette_detected": {
+      "primary": "#000000 (black)",
+      "secondary": "#F2F3F5 (light gray)",
+      "success": "#28A800 (green)",
+      "info": "#2c99ff (blue)",
+      "warning": "#f28100 (orange)",
+      "danger": "#f80718 (red)",
+      "body_text": "#404040 (dark gray)",
+      "light_gray": "#bcbcbc",
+      "background_gray": "#f4f4f4"
+    },
+    "typography_detected": [
+      "Roboto Flex (Google Fonts)",
+      "Font Awesome icons",
+      "Simple Line Icons"
+    ],
+    "navigation_items": []
+  },
+  "developer_assets": {
+    "html_css_patterns": [
+      "WordPress standard header structure",
+      "Elementor conditional CSS loading",
+      "OceanWP theme conventions",
+      "CSS custom properties (variables) for theming",
+      "Autoptimize CSS aggregation"
+    ],
+    "neon_or_retro_code": [],
+    "js_react_nextjs_logic": [
+      "Google Tag Manager integration",
+      "Facebook Pixel tracking",
+      "WordPress Popular Posts API",
+      "Zoho SalesIQ chat widget"
+    ],
+    "python_backend_clues": []
+  },
+  "charlys_component_mapping": {
+    "useful_for_ask_charly_chat": [
+      "Meta description framing: 'advanced design tools, seamless order management'",
+      "Keywords: screen printing, order management, printing capabilities"
+    ],
+    "useful_for_services_grid": [
+      "Services to highlight: website creation, design tools, order management, printing capabilities",
+      "Success/danger color coding for status indicators"
+    ],
+    "useful_for_featured_products": [
+      "OG image dimensions: 1280x720 (16:9 ratio)",
+      "Social proof elements: author attribution, publish dates, update timestamps"
+    ]
+  }
+}

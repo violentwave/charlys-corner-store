@@ -1,0 +1,39 @@
+{
+  "metadata_and_seo": {
+    "source_url": null,
+    "page_category": "error_page",
+    "extracted_title_tag": "403 Forbidden",
+    "extracted_meta_desc": null,
+    "main_h1": "403 Forbidden",
+    "organic_keywords_found": []
+  },
+  "extracted_content": {
+    "hero_messaging": {
+      "headline": null,
+      "sub_headline": null,
+      "call_to_actions": []
+    },
+    "services_offered": [],
+    "how_it_works_steps": [],
+    "pricing_data_found": [],
+    "trust_and_social_proof": []
+  },
+  "design_and_ui_architecture": {
+    "layout_structure": "error_page_centered",
+    "color_palette_detected": null,
+    "typography_detected": null,
+    "navigation_items": []
+  },
+  "developer_assets": {
+    "html_css_patterns": [],
+    "neon_or_retro_code": [],
+    "js_react_nextjs_logic": [],
+    "python_backend_clues": []
+  },
+  "charlys_component_mapping": {
+    "useful_for_ask_charly_chat": false,
+    "useful_for_services_grid": false,
+    "useful_for_featured_products": false
+  },
+  "extraction_note": "403 Forbidden - Access denied. No extractable content available for Charlys Corner Store research."
+}

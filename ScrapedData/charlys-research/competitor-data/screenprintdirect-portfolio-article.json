@@ -1,0 +1,76 @@
+{
+  "metadata_and_seo": {
+    "source_url": "https://screenprintdirect.com/blogs/screen_printing_101/how-to-create-a-screen-printing-portfolio-that-attracts-clients",
+    "page_category": "blog_article",
+    "extracted_title_tag": "How to create a screen printing portfolio that attracts clients– Screen Print Direct",
+    "extracted_meta_desc": "Your portfolio is a sales tool, not a scrapbook A strong screen printing portfolio isn't just a place to show off past work — it's one of your most important sales tools. Its job is to build trust fast and help the right clients say "Yep, this is the shop for us." That means the goal isn't to show everything you've pri",
+    "main_h1": null,
+    "organic_keywords_found": ["screen printing", "portfolio", "clients", "sales tool", "trust"]
+  },
+  "extracted_content": {
+    "hero_messaging": {
+      "headline": null,
+      "sub_headline": null,
+      "call_to_actions": []
+    },
+    "services_offered": [],
+    "how_it_works_steps": [],
+    "pricing_data_found": [],
+    "trust_and_social_proof": []
+  },
+  "design_and_ui_architecture": {
+    "layout_structure": "shopify_blog_theme",
+    "color_palette_detected": {
+      "primary_red": "#ec2024",
+      "primary_red_hover": "#b00f12",
+      "secondary_red": "#cc0000",
+      "black": "#000000",
+      "white": "#ffffff",
+      "success_green": "#00aa00",
+      "border_gray": "#dedede",
+      "flickity_arrow": "#ababab",
+      "review_star": "#ffbd00"
+    },
+    "typography_detected": {
+      "heading_font": "Poppins, sans-serif",
+      "heading_weight": 700,
+      "heading_style": "normal",
+      "body_font": "Roboto, sans-serif",
+      "body_weight": 400,
+      "body_bold_weight": 600,
+      "italic_variants": true
+    },
+    "navigation_items": []
+  },
+  "developer_assets": {
+    "html_css_patterns": {
+      "framework": "shopify_theme",
+      "css_variables": true,
+      "font_preloading": true,
+      "css_vars_ponyfill": "IE11 polyfill for CSS variables",
+      "preload_hints": ["theme.css", "theme.min.js"]
+    },
+    "neon_or_retro_code": [],
+    "js_react_nextjs_logic": [],
+    "python_backend_clues": []
+  },
+  "charlys_component_mapping": {
+    "useful_for_ask_charly_chat": {
+      "content_topic": "screen_printing_portfolio_creation",
+      "key_points": [
+        "Portfolio is a sales tool, not just a gallery",
+        "Quality over quantity - aim for 8-15 best prints",
+        "Show clean registration, opaque white underbases, smooth ink deposits",
+        "Build trust fast to convert clients"
+      ]
+    },
+    "useful_for_services_grid": {
+      "inspiration": "none_extracted",
+      "notes": "This is a blog article, not a services page"
+    },
+    "useful_for_featured_products": {
+      "inspiration": "none_extracted",
+      "notes": "Product-related content in meta tags only"
+    }
+  }
+}

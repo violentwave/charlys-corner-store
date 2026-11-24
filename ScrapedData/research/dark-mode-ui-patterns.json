@@ -1,0 +1,226 @@
+{
+  "source": "Muzli Dark Mode UI Inspiration 2026",
+  "extraction_date": "2026-05-17",
+  "project": "Charly's Corner Store",
+  "patterns": {
+    "typography": {
+      "primary_font": "Poppins",
+      "secondary_font": "Instrument Serif",
+      "font_weights": [300, 400, 500, 600],
+      "fallback_stack": "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace",
+      "patterns": [
+        "Light weights (300) for subtle text",
+        "Regular (400) for body content", 
+        "Medium (500) for emphasis",
+        "Semibold (600) for headings and CTAs"
+      ]
+    },
+    "color_scheme": {
+      "dark_mode_base": {
+        "background_primary": "#0a0a0f",
+        "background_secondary": "#12121a",
+        "background_card": "rgba(28, 26, 22, 0.82)",
+        "surface_elevated": "#1a1a24",
+        "border_subtle": "#2a2a35",
+        "border_strong": "#3a3a45"
+      },
+      "text_colors": {
+        "primary": "#f5f1e8",
+        "secondary": "#aaa39a",
+        "muted": "#6b6560",
+        "accent": "#d8a657"
+      },
+      "neon_accents": {
+        "primary_neon": "#ff00ff",
+        "cyan_neon": "#00ffff",
+        "electric_blue": "#0080ff",
+        "hot_pink": "#ff1493",
+        "acid_green": "#39ff14",
+        "purple_glow": "#bf00ff",
+        "orange_neon": "#ff6600",
+        "yellow_neon": "#ffff00"
+      },
+      "gradients": [
+        "linear-gradient(135deg, #ff00ff 0%, #00ffff 100%)",
+        "linear-gradient(90deg, #ff1493, #ff00ff, #bf00ff)",
+        "radial-gradient(circle at 50% 50%, rgba(255,0,255,0.2) 0%, transparent 70%)"
+      ]
+    },
+    "spacing_system": {
+      "base_unit": "0.25rem",
+      "scale": {
+        "xs": "0.25rem",
+        "sm": "0.5rem",
+        "md": "1rem",
+        "lg": "1.5rem",
+        "xl": "2rem",
+        "2xl": "3rem",
+        "3xl": "4rem",
+        "4xl": "5rem",
+        "5xl": "6rem",
+        "6xl": "8rem",
+        "7xl": "10rem"
+      },
+      "component_patterns": {
+        "card_padding": "1.5rem to 2rem",
+        "section_spacing": "5rem to 10rem",
+        "element_gap": "0.5rem to 1.5rem",
+        "grid_gap": "1rem to 2rem"
+      }
+    },
+    "layout_patterns": {
+      "grid_systems": [
+        {
+          "name": "Responsive Auto-Fit",
+          "pattern": "grid-cols-[repeat(auto-fit,minmax(300px,1fr))]",
+          "use_case": "Product galleries, card layouts"
+        },
+        {
+          "name": "Sidebar Layout",
+          "pattern": "grid-cols-[1fr,300px] or grid-cols-[1fr,390px]",
+          "use_case": "Product detail with sidebar"
+        },
+        {
+          "name": "Masonry Dense",
+          "pattern": "grid-flow-row-dense",
+          "use_case": "Image galleries, inspiration boards"
+        },
+        {
+          "name": "Three Column",
+          "pattern": "grid-cols-[30px,1fr,30px]",
+          "use_case": "Centered content with side elements"
+        }
+      ],
+      "container_widths": {
+        "sm": "640px",
+        "md": "768px",
+        "lg": "1024px",
+        "xl": "1280px",
+        "2xl": "1536px"
+      },
+      "aspect_ratios": {
+        "video": "16/9",
+        "standard": "4/3",
+        "widescreen": "100/58",
+        "square": "1/1"
+      }
+    },
+    "ui_components": {
+      "cards": {
+        "border_radius": "0.5rem to 1rem",
+        "shadow": "0 0 #0000 (flat) or subtle glow",
+        "background": "rgba(28, 26, 22, 0.82) with backdrop blur",
+        "border": "1px solid rgba(255,255,255,0.1)",
+        "glow_effects": [
+          "box-shadow: 0 0 20px rgba(255,0,255,0.3)",
+          "box-shadow: 0 0 40px rgba(0,255,255,0.2)"
+        ]
+      },
+      "buttons": {
+        "sizes": {
+          "sm": "height: 2.25rem (36px)",
+          "md": "height: 2.5rem (40px)",
+          "lg": "height: 3rem (48px)",
+          "xl": "height: 3.5rem (56px)"
+        },
+        "patterns": [
+          "Pill shape (rounded-full) for primary actions",
+          "Subtle border for secondary actions",
+          "Neon glow on hover for emphasis"
+        ]
+      },
+      "navigation": {
+        "sticky_header": "position: sticky with backdrop-filter blur",
+        "z_index": "z-50 or higher for overlays",
+        "mobile_menu": "transform translate with slide animations"
+      }
+    },
+    "effects_animations": {
+      "transitions": {
+        "fast": "150ms ease",
+        "normal": "300ms ease",
+        "slow": "500ms ease"
+      },
+      "transforms": [
+        "scale(0.5) for zoom effects",
+        "translate-x utilities for slide animations",
+        "rotate for loading spinners"
+      ],
+      "neon_glows": [
+        "text-shadow: 0 0 10px currentColor",
+        "box-shadow: 0 0 20px var(--neon-color), 0 0 40px var(--neon-color)",
+        "filter: drop-shadow(0 0 8px rgba(255,0,255,0.8))"
+      ],
+      "backdrop_effects": [
+        "backdrop-blur for glass morphism",
+        "semi-transparent overlays with blur"
+      ]
+    },
+    "responsive_patterns": {
+      "breakpoints": {
+        "sm": "640px",
+        "md": "768px",
+        "lg": "1024px",
+        "xl": "1280px",
+        "2xl": "1536px"
+      },
+      "mobile_first": true,
+      "common_adaptations": [
+        "Stack grids to single column below md",
+        "Reduce padding on mobile (px-4 to px-8)",
+        "Hide decorative elements on small screens",
+        "Adjust font sizes (responsive scaling)"
+      ]
+    },
+    "miami_vice_synthwave_specific": {
+      "color_palette": {
+        "midnight_blue": "#0a0a1a",
+        "deep_purple": "#1a0a2e",
+        "hot_pink": "#ff0080",
+        "electric_cyan": "#00ffff",
+        "sunset_orange": "#ff6b35",
+        "neon_yellow": "#ffff00",
+        "chrome_silver": "#c0c0c0",
+        "grid_lines": "rgba(255,0,255,0.15)"
+      },
+      "visual_motifs": [
+        "Sunset gradients (pink to orange to purple)",
+        "Chrome/metallic text effects",
+        "Grid floors (retro perspective)",
+        "Palm tree silhouettes",
+        "Geometric shapes with neon borders"
+      ],
+      "typography_styles": [
+        "Bold sans-serif with tracking-wide for headers",
+        "Italicized serif for accents",
+        "Chrome/metallic gradient text fills",
+        "Neon outline text (text-stroke with glow)"
+      ]
+    }
+  },
+  "recommendations_for_charlys": {
+    "primary_colors": {
+      "background": "#0a0a0f",
+      "surface": "#12121a",
+      "card": "rgba(18, 18, 26, 0.9)",
+      "accent_primary": "#ff00ff",
+      "accent_secondary": "#00ffff",
+      "text_primary": "#f5f1e8",
+      "text_secondary": "#aaa39a"
+    },
+    "component_suggestions": {
+      "hero_section": "Full-width with neon gradient text and retro grid background",
+      "product_cards": "Dark glass-morphism with neon border on hover",
+      "navigation": "Sticky with backdrop blur, neon underline on active",
+      "buttons": "Pill shape with neon glow, gradient fills for CTAs",
+      "typography": "Poppins for UI, Instrument Serif for accent text"
+    },
+    "layout_structure": {
+      "header": "Sticky navigation with logo left, nav center, cart right",
+      "hero": "Centered content with large gradient headline",
+      "products": "Auto-fit grid (minmax 300px) for product gallery",
+      "sidebar": "Filter panel with glass-morphism effect",
+      "footer": "Dark with neon accent links"
+    }
+  }
+}

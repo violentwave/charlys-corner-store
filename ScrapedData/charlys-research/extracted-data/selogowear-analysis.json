@@ -1,0 +1,225 @@
+{
+  "metadata_and_seo": {
+    "source_url": "https://selogowear.com/port-st-lucie-florida",
+    "page_category": "custom apparel printing services",
+    "extracted_title_tag": "Embroidery | Screen Printing | Port St Lucie",
+    "extracted_meta_desc": "SE Logo Wear in Port St Lucie provides screen printing, embroidery, banners, promotional products, custom apparel & t-shirts for Port St Lucie, FL & beyond.",
+    "main_h1": null,
+    "organic_keywords_found": [
+      "embroidery",
+      "screen printing",
+      "port st lucie",
+      "banners",
+      "promotional products",
+      "custom apparel",
+      "t-shirts",
+      "port st lucie fl",
+      "se logo wear"
+    ]
+  },
+  "extracted_content": {
+    "hero_messaging": {
+      "headline": null,
+      "sub_headline": null,
+      "call_to_actions": []
+    },
+    "services_offered": [
+      {
+        "service": "Screen Printing",
+        "description": "Custom screen printing services"
+      },
+      {
+        "service": "Embroidery",
+        "description": "Professional embroidery services"
+      },
+      {
+        "service": "Banners",
+        "description": "Custom banner production"
+      },
+      {
+        "service": "Promotional Products",
+        "description": "Branded promotional items"
+      },
+      {
+        "service": "Custom Apparel",
+        "description": "Custom clothing and apparel"
+      },
+      {
+        "service": "T-Shirts",
+        "description": "Custom t-shirt printing"
+      }
+    ],
+    "how_it_works_steps": [],
+    "pricing_data_found": [],
+    "trust_and_social_proof": []
+  },
+  "design_and_ui_architecture": {
+    "layout_structure": {
+      "builder_platform": "GoDaddy Website Builder 8.0",
+      "header_type": "sticky header with transparent-to-solid transition",
+      "navigation_type": "horizontal nav with mobile hamburger menu",
+      "sections_detected": [
+        "header/navbar",
+        "hero section with video background",
+        "content sections"
+      ],
+      "mobile_menu": "slide-out drawer from left"
+    },
+    "color_palette_detected": {
+      "primary": "#002f6c",
+      "primary_rgb": "rgb(0, 47, 108)",
+      "primary_transparent": "rgba(0, 47, 108, 0.25)",
+      "primary_sticky": "rgba(0, 47, 108, 0.9)",
+      "text_white": "rgb(255, 255, 255)",
+      "text_gray": "rgb(198, 198, 198)",
+      "text_muted": "rgb(196, 199, 214)",
+      "text_dark_muted": "rgb(164, 164, 164)",
+      "background_light": "rgb(246, 246, 246)",
+      "background_white": "rgb(255, 255, 255)",
+      "background_dark_overlay": "rgb(22, 22, 22)",
+      "accent_blue": "rgb(63, 128, 212)",
+      "accent_blue_light": "rgb(168, 189, 255)",
+      "theme_color_meta": "#002f6c"
+    },
+    "typography_detected": {
+      "primary_font": "'League Spartan', arial, helvetica, sans-serif",
+      "fallback_fonts": "Helvetica, arial, sans-serif",
+      "heading_sizes": {
+        "h1": "28px",
+        "section_title": "22px"
+      },
+      "body_size": "16px",
+      "small_text": "14px",
+      "uppercase_letter_spacing": "0.071em"
+    },
+    "navigation_items": [
+      {
+        "type": "logo",
+        "position": "left",
+        "aspect_ratio": "1.111",
+        "height": "80px"
+      },
+      {
+        "type": "nav_links",
+        "position": "right",
+        "uppercase": true,
+        "letter_spacing": "0.071em"
+      },
+      {
+        "type": "mobile_menu_toggle",
+        "position": "right",
+        "dropdown_animation": "transform rotate with 0.33s ease-in-out"
+      }
+    ]
+  },
+  "developer_assets": {
+    "html_css_patterns": {
+      "css_framework": "custom GoDaddy builder CSS with glamor inline styles",
+      "naming_convention": "BEM-like with c1- prefix and alphanumeric classes",
+      "responsive_patterns": [
+        "flexbox layouts with flex-wrap:nowrap",
+        "percentage-based widths (70%, 30%, 50%)",
+        "max-width constraints",
+        "aspect-ratio for images and videos"
+      ],
+      "sticky_header": {
+        "technique": "CSS transition on background property over 0.3s",
+        "scroll_behavior": "transparent to rgba(0, 47, 108, 0.9) on scroll",
+        "z_index": 3
+      },
+      "mobile_menu_drawer": {
+        "technique": "transform translateX(-249vw) to slide in",
+        "overlay": "fixed position covering 100% height",
+        "backdrop": "shadow and dark overlay"
+      }
+    },
+    "neon_or_retro_code": [],
+    "js_react_nextjs_logic": {
+      "mobile_menu": {
+        "toggle_animation": "CSS transform with 0.3s ease-in-out",
+        "icon_rotation": "0.33s ease-in-out transition",
+        "scroll_lock": "touch-action:none, overflow:hidden, position:fixed"
+      },
+      "sticky_behavior": {
+        "background_transition": "background .3s CSS transition",
+        "opacity_change": "hr element fades on scroll"
+      },
+      "video_embed": {
+        "platform": "Vimeo",
+        "aspect_ratio": "16:9 (56.25% padding-bottom technique)"
+      }
+    },
+    "python_backend_clues": []
+  },
+  "charlys_component_mapping": {
+    "useful_for_ask_charly_chat": {
+      "insights": [
+        "Competitor SE Logo Wear serves same geographic market (Port St. Lucie)",
+        "Services overlap: screen printing, embroidery, custom apparel",
+        "Differentiator opportunity: neon-retro 80s aesthetic vs corporate blue"
+      ],
+      "service_positioning": "SE Logo targets 'beyond' Port St Lucie - suggests delivery/shipping model",
+      "missing_elements": "No pricing visible, no online ordering system, no live chat"
+    },
+    "useful_for_services_grid": {
+      "competitor_services": [
+        "Screen Printing",
+        "Embroidery",
+        "Banners",
+        "Promotional Products",
+        "Custom Apparel",
+        "T-Shirts"
+      ],
+      "potential_differentiators": [
+        "Retro/vintage 80s aesthetic specialization",
+        "Neon color palette options",
+        "Synthwave design templates"
+      ]
+    },
+    "useful_for_featured_products": {
+      "product_categories_found": [
+        "T-shirts",
+        "Custom apparel",
+        "Banners",
+        "Promotional products"
+      ],
+      "visual_merchandising_notes": [
+        "Hero video background for visual impact",
+        "Logo positioned left with 80px height",
+        "Dark overlay on hero for text readability"
+      ],
+      "ui_patterns_to_adapt": [
+        {
+          "element": "sticky header with transparency",
+          "charlys_adaptation": "use neon gradient instead of solid blue"
+        },
+        {
+          "element": "mobile slide-out menu",
+          "charlys_adaptation": "add glow effects and synthwave animations"
+        },
+        {
+          "element": "video hero section",
+          "charlys_adaptation": "retro grid animation or neon cityscape"
+        }
+      ]
+    }
+  },
+  "competitive_analysis_notes": {
+    "platform": "GoDaddy Website Builder (entry-level DIY)",
+    "seo_strengths": [
+      "Location-specific title tag",
+      "Comprehensive meta description with service keywords",
+      "OpenGraph and Twitter Card metadata",
+      "Proper favicon and apple-touch-icon setup"
+    ],
+    "content_gaps": [
+      "No visible pricing information",
+      "No online quote/order system",
+      "No portfolio/gallery visible in this snippet",
+      "No customer testimonials in this snippet",
+      "No clear call-to-action buttons visible"
+    ],
+    "design_character": "Corporate/professional aesthetic (navy blue, clean sans-serif)",
+    "charlys_opportunity": "Neon-retro 80s aesthetic provides strong visual differentiation in same market"
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "metadata_and_seo": {
+    "source_url": "https://customoneonline.com/pages/screen-printing-port-st-lucie-fl",
+    "page_category": "local_service_page",
+    "extracted_title_tag": "Same Day Custom T-shirts & Screen Printing Port St Lucie, FL",
+    "extracted_meta_desc": "Same-day done right—local same-day custom t-shirts and screen printing in Port St Lucie, Florida. Fast, reliable, and affordable every time.",
+    "main_h1": null,
+    "organic_keywords_found": [
+      "same day",
+      "custom t-shirts",
+      "screen printing",
+      "port st lucie",
+      "florida",
+      "local",
+      "fast",
+      "affordable"
+    ]
+  },
+  "extracted_content": {
+    "hero_messaging": {
+      "headline": null,
+      "sub_headline": null,
+      "call_to_actions": []
+    },
+    "services_offered": [
+      "screen printing",
+      "custom t-shirts",
+      "same-day service"
+    ],
+    "how_it_works_steps": [],
+    "pricing_data_found": [],
+    "trust_and_social_proof": []
+  },
+  "design_and_ui_architecture": {
+    "layout_structure": "shopify_theme_ignite",
+    "color_palette_detected": {
+      "primary_background": "rgba(0, 0, 0, 0.94)",
+      "modal_overlay": "dark_overlay",
+      "text_on_dark": "white"
+    },
+    "typography_detected": {
+      "font_family": "Jost",
+      "font_source": "Shopify CDN"
+    },
+    "navigation_items": []
+  },
+  "developer_assets": {
+    "html_css_patterns": [
+      "glide__arrow border_none box_shadow_none",
+      "glide__slides margin_0 list_style_none",
+      "zakeke-cart-preview-window fixed_fullscreen_overlay flex_center",
+      "responsive_media_queries_768px"
+    ],
+    "neon_or_retro_code": [],
+    "js_react_nextjs_logic": [
+      "glidejs_slider_v3.4.1",
+      "zakeke_product_customizer_integration",
+      "shopify_cart_preview_system",
+      "mutation_observer_for_script_blocking",
+      "custom_event_emitters_wnw_load",
+      "google_tag_manager_GTM-T6FFH3G8"
+    ],
+    "python_backend_clues": []
+  },
+  "charlys_component_mapping": {
+    "useful_for_ask_charly_chat": [
+      "same_day_service_messaging",
+      "local_seo_keywords_port_st_lucie"
+    ],
+    "useful_for_services_grid": [
+      "screen_printing",
+      "custom_tshirts",
+      "same_day_service"
+    ],
+    "useful_for_featured_products": [
+      "zakeke_cart_preview_ui_pattern",
+      "product_customization_interface"
+    ]
+  }
+}

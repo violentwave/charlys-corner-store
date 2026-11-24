@@ -1,0 +1,151 @@
+{
+  "metadata_and_seo": {
+    "source_url": null,
+    "page_category": "ecommerce_platform_css",
+    "extracted_title_tag": null,
+    "extracted_meta_desc": null,
+    "main_h1": null,
+    "organic_keywords_found": []
+  },
+  "extracted_content": {
+    "hero_messaging": {
+      "headline": null,
+      "sub_headline": null,
+      "call_to_actions": []
+    },
+    "services_offered": [],
+    "how_it_works_steps": [],
+    "pricing_data_found": [],
+    "trust_and_social_proof": []
+  },
+  "design_and_ui_architecture": {
+    "layout_structure": {
+      "framework": "custom_css_grid_system",
+      "container_max_widths": {
+        "xs": "528px",
+        "sm": "744px",
+        "md": "960px",
+        "lg": "1152px"
+      },
+      "grid_columns": 12,
+      "responsive_breakpoints": {
+        "xs": "540px",
+        "sm": "768px",
+        "md": "992px",
+        "lg": "1200px",
+        "xl": "1600px"
+      },
+      "layout_patterns": [
+        "flexbox_based",
+        "utility_first_css",
+        "bootstrap_inspired_grid"
+      ]
+    },
+    "color_palette_detected": {
+      "primary_red": "#ed4642",
+      "primary_red_dark": "#e40f0a",
+      "accent_cyan": "#17BCB5",
+      "text_colors": {
+        "dark": "#222",
+        "muted": "#555",
+        "gray_400": "#b1b1b1",
+        "gray_600": "#666666",
+        "gray_700": "#555",
+        "gray_900": "#222",
+        "white": "#fff"
+      },
+      "ui_colors": {
+        "link_blue": "hsl(207.24deg, 81.72%, 36.47%)",
+        "border_gray": "#e5e5e5",
+        "border_dark": "#222",
+        "background_light": "#f8f8f8"
+      }
+    },
+    "typography_detected": {
+      "primary_font": "ProximaNova",
+      "fallback_font": "sans-serif",
+      "japanese_font": "Noto Sans JP Scaled",
+      "heading_sizes": {
+        "h1": "40px (48px desktop)",
+        "h2": "36px",
+        "h3": "24px",
+        "h4": "18px",
+        "h5": "16px"
+      },
+      "body_sizes": {
+        "ui_subheading_lg": "24px",
+        "ui_subheading": "18px",
+        "ui_body": "16px",
+        "ui_caption": "14px",
+        "ui_legal": "12px",
+        "base": "14px"
+      },
+      "font_weights": {
+        "normal": 400,
+        "bold": 700
+      }
+    },
+    "navigation_items": []
+  },
+  "developer_assets": {
+    "html_css_patterns": {
+      "css_architecture": "utility_class_system",
+      "prefix": "pf-",
+      "key_patterns": [
+        "pf-d-* (display utilities: flex, block, inline, none)",
+        "pf-flex-* (flexbox direction and alignment)",
+        "pf-justify-content-* (flexbox justification)",
+        "pf-align-items-* (flexbox alignment)",
+        "pf-text-* (text color utilities)",
+        "pf-bg-* (background color utilities)",
+        "pf-border-* (border utilities)",
+        "pf-rounded-* (border radius utilities)",
+        "pf-h* (heading typography classes)",
+        "pf-ui-* (UI typography classes)"
+      ],
+      "responsive_modifiers": [
+        "xs (540px+)",
+        "sm (768px+)",
+        "md (992px+)",
+        "lg (1200px+)"
+      ],
+      "form_control_classes": [
+        "pf-form-control",
+        "pf-border",
+        "pf-rounded"
+      ]
+    },
+    "neon_or_retro_code": null,
+    "js_react_nextjs_logic": [],
+    "python_backend_clues": []
+  },
+  "charlys_component_mapping": {
+    "useful_for_ask_charly_chat": [],
+    "useful_for_services_grid": [],
+    "useful_for_featured_products": []
+  },
+  "analysis_notes": {
+    "content_type": "css_only",
+    "source_platform_inference": "Printful_or_similar_print_on_demand",
+    "key_insights": [
+      "Clean utility-first CSS architecture with 'pf-' prefix",
+      "Responsive 12-column grid system with 5 breakpoints",
+      "Red (#ed4642) and Cyan (#17BCB5) primary brand colors",
+      "ProximaNova typeface with structured heading hierarchy",
+      "No actual content (headlines, descriptions, CTAs) present in provided code",
+      "Mobile-first responsive approach with progressive enhancement"
+    ],
+    "neon_retro_relevance": {
+      "applicable_colors": {
+        "neon_pink_alternative": "#ed4642 (primary red)",
+        "neon_cyan_alternative": "#17BCB5 (accent cyan)"
+      },
+      "ui_patterns_to_adapt": [
+        "Responsive grid system structure",
+        "Utility class naming convention",
+        "Form control styling patterns",
+        "Flexbox alignment utilities"
+      ]
+    }
+  }
+}

@@ -1,0 +1,42 @@
+/*
+ * Charly's Corner Store — "Neon Coast" design tokens.
+ * Source of truth: docs/03-DESIGN-SYSTEM.md. Change values here, never hard-code hex in components.
+ */
+:root {
+  /* Surfaces — indigo-tinted blacks */
+  --bg-0: #0a0a14;
+  --bg-1: #12121f;
+  --bg-2: #1a1a2e;
+  --bg-3: #24243d;
+  --border: #2e2e4a;
+  --border-strong: #3e3e5e;
+
+  /* Text */
+  --text-1: #f5f3ff;
+  --text-2: #b8b5d6;
+  --text-3: #7c7a9c; /* large text only */
+
+  /* Neon accents — pink = act, cyan = navigate/focus, yellow = money, green = success */
+  --neon-pink: #ff2e97;
+  --neon-cyan: #00f0ff;
+  --neon-purple: #b026ff;
+  --neon-orange: #ff6b35;
+  --neon-yellow: #ffe14d;
+  --neon-green: #39ff88;
+  --danger: #ff3366;
+
+  /* Gradients */
+  --grad-sunset: linear-gradient(135deg, #ff2e97 0%, #ff6b35 55%, #ffe14d 100%);
+  --grad-vice: linear-gradient(90deg, #ff2e97 0%, #00f0ff 100%);
+  --grad-horizon: linear-gradient(180deg, #0a0a14 0%, #1a0a2e 55%, #ff2e97 140%);
+  --grad-chrome: linear-gradient(180deg, #ffffff 0%, #c9c9e0 45%, #6e6e8f 50%, #e6e6f5 100%);
+
+  /* Glows */
+  --glow-pink: 0 0 8px rgb(255 46 151 / 0.55), 0 0 24px rgb(255 46 151 / 0.35);
+  --glow-cyan: 0 0 8px rgb(0 240 255 / 0.55), 0 0 24px rgb(0 240 255 / 0.3);
+
+  /* Motion */
+  --dur-fast: 150ms;
+  --dur-base: 300ms;
+  --dur-slow: 500ms;
+}

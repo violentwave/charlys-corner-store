@@ -1,0 +1,58 @@
+{
+  "metadata_and_seo": {
+    "source_url": "https://reallygooddesigns.com/retro-website-designs/",
+    "page_category": "article",
+    "extracted_title_tag": "30 Unique Retro Website Designs Inspired By The Past",
+    "extracted_meta_desc": "Explore our set of top 30 retro website designs to discover timeless styles that instantly evoke nostalgia and inspire creativity.",
+    "main_h1": null,
+    "organic_keywords_found": ["old school websites", "retro web design", "retro website exmaples", "retro websites", "vintage web design", "vintage websites", "web design"]
+  },
+  "extracted_content": {
+    "hero_messaging": {
+      "headline": null,
+      "sub_headline": null,
+      "call_to_actions": []
+    },
+    "services_offered": [],
+    "how_it_works_steps": [],
+    "pricing_data_found": [],
+    "trust_and_social_proof": []
+  },
+  "design_and_ui_architecture": {
+    "layout_structure": "WordPress article/blog layout with standard header/content/footer structure",
+    "color_palette_detected": [
+      "#000000 (black)",
+      "#ffffff (white)",
+      "#f78da7 (pale pink)",
+      "#cf2e2e (vivid red)",
+      "#ff6900 (luminous vivid orange)",
+      "#fcb900 (luminous vivid amber)",
+      "#7bdcb5 (light green cyan)",
+      "#00d084 (vivid green cyan)",
+      "#8ed1fc (pale cyan blue)",
+      "#0693e3 (vivid cyan blue)",
+      "#9b51e0 (vivid purple)"
+    ],
+    "typography_detected": "WordPress preset font sizes: small (13px), medium (20px), large (36px), x-large (42px)",
+    "navigation_items": []
+  },
+  "developer_assets": {
+    "html_css_patterns": [
+      "WordPress block-based layout with wp-block-button__link styling",
+      "CSS gradients: vivid-cyan-blue-to-vivid-purple, luminous-vivid-amber-to-luminous-vivid-orange, luminous-dusk",
+      "Grid and flex layouts via :where(.is-layout-grid) and :where(.is-layout-flex)",
+      "Box shadows: natural, deep, sharp, outlined, crisp"
+    ],
+    "neon_or_retro_code": [
+      "CSS gradient 'luminous-dusk': linear-gradient(135deg,rgb(255,203,112) 0%,rgb(199,81,192) 50%,rgb(65,88,208) 100%)",
+      "CSS gradient 'cool-to-warm-spectrum': linear-gradient(135deg,rgb(74,234,220) 0%,rgb(151,120,209) 20%,rgb(207,42,186) 40%,rgb(238,44,130) 60%,rgb(251,105,98) 80%,rgb(254,248,76) 100%)"
+    ],
+    "js_react_nextjs_logic": null,
+    "python_backend_clues": null
+  },
+  "charlys_component_mapping": {
+    "useful_for_ask_charly_chat": false,
+    "useful_for_services_grid": false,
+    "useful_for_featured_products": false
+  }
+}

@@ -1,0 +1,66 @@
+# Roadmap
+
+> Phased plan. Each phase ends deployable on a preview URL. Check items off as PRs merge. One PR ≈ one checkbox where possible.
+
+## Phase 0: Setup (day 1)
+- [x] Create **private** GitHub repo `violentwave/charlys-corner-store`; push starter files, `ScrapedData/`, `Assets/`
+- [x] Scaffold Next.js 16.4 (App Router, TS strict, Tailwind v4, ESLint, pnpm), Prettier, Vitest, Playwright, design tokens, self-hosted fonts, placeholder home with logo
+- [x] GitHub Actions CI: lint, typecheck, unit tests, build, then e2e
+- [x] `opencode.json` + `AGENTS.md` so opencode loads the project rules
+- [ ] Link the local folder to the repo and run opencode (Logan, see `docs/07-WORKFLOW.md` → Local setup)
+- [ ] Vercel project linked to the repo (preview per PR)
+- [ ] Branch protection on `main` (require CI to pass)
+- [ ] Send the owner the remaining open questions (Brief §6)
+- [ ] Download all current-site images and copy (migration backup)
+- [ ] Fix the logo typo ("Apperal" → "Apparel") and get a vector version
+
+## Phase 1: Design foundation
+- [ ] `src/styles/tokens.css` from `03-DESIGN-SYSTEM.md`; Tailwind theme mapped to tokens
+- [ ] Fonts via `next/font`
+- [ ] Primitives: Button (primary/secondary/ghost), Card, Input, Select, Tabs, Dialog, Toast, Badge, CouponTicket
+- [ ] Layout: sticky neon nav (mobile drawer), footer (NAP, socials, nav, "Have a Ruffin awesome day")
+- [ ] `/styleguide` dev-only page showing every component
+- [ ] Hero component: horizon gradient, perspective grid, sun, palms (reduced-motion safe)
+
+## Phase 2: Parity pages (static content first)
+- [ ] Home: hero, services grid, featured products, builder CTA, how-it-works, use cases, testimonials placeholder, referral survey
+- [ ] About: Charly story, photos, contact form
+- [ ] Business & Promo: copy, gallery (migrated images), quote form
+- [ ] Services: screen print / DTF / embroidery explainer
+- [ ] FAQ
+- [ ] Contact: NAP, map, hours, form
+- [ ] 404 page with Charly
+
+## Phase 3: Forms and backend
+- [ ] Supabase project, migrations for tables in `02-TECH…`
+- [ ] Zod schemas shared client/server; Turnstile; rate limiting
+- [ ] `/upload` (existing-order artwork), `/api/uploads`
+- [ ] `/api/contact`, `/api/quotes`
+- [ ] Resend + React Email: owner notification template, customer confirmation template
+
+## Phase 4: Mockup builder (flagship)
+- [ ] Garment templates (asset decision) for T-shirt, Raglan, Hoodie, Hat (+ Polo, Tank)
+- [ ] Garment config data + recolor compositor (mask + multiply shading), unit-tested
+- [ ] Canvas: upload, transform, print areas, front/back, presets, undo/redo, keyboard
+- [ ] DPI warning; sizes/qty; notes
+- [ ] Email gate + `/api/mockups` + coupon issuance + customer and owner emails
+- [ ] Success screen, download, "request quote," restore-design deep link
+- [ ] Playwright e2e for the full flow; mobile QA
+
+## Phase 5: Shop and checkout
+- [ ] Payments provider decision (Square vs Stripe) and catalog import of the 9 current products + variants
+- [ ] `/shop` grid (hover image swap), product pages, cart, checkout
+- [ ] Memorial/fundraiser collection with donation note
+- [ ] Order webhook → `orders` table → unlock 2nd-order coupon → "your 15% is unlocked" email
+- [ ] Coupon redemption and enforcement
+
+## Phase 6: SEO, analytics, launch
+- [ ] Metadata, OG images, sitemap, robots, JSON-LD (LocalBusiness, Product, FAQ, Breadcrumb)
+- [ ] City/service landing pages (Brief §2.4)
+- [ ] Analytics + builder funnel events; Search Console
+- [ ] Accessibility audit (axe + manual keyboard pass); Lighthouse targets
+- [ ] Owner walkthrough and content sign-off
+- [ ] DNS cutover from Weebly; 301 redirects for old `.html` URLs; verify forms in production
+
+## v2 backlog
+"Ask Charly" AI chat · team/fundraiser online stores · reviews integration · sticker/DTF gang-sheet builder · admin dashboard for leads/mockups · Konami easter egg 🌴

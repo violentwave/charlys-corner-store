@@ -1,0 +1,84 @@
+{
+  "metadata_and_seo": {
+    "source_url": "https://shirt.co/t-shirt-printing/port-st-lucie-fl/",
+    "page_category": "local_landing_page",
+    "extracted_title_tag": "T-Shirt Printing Port St. Lucie, FL | Custom T-Shirt Printing | Shirt.Co",
+    "extracted_meta_desc": "T-Shirt Printing Port St. Lucie, FL. Shirt.Co provides quality t-shirt printing services for {businesses and organizations|companies and individuals in the Port St. Lucie, area. Get in touch with our team now to learn more about Port St. Lucie t-shirt printing.",
+    "main_h1": null,
+    "organic_keywords_found": ["t-shirt printing", "port st lucie", "custom t-shirt printing", "shirt printing", "port st. lucie fl"]
+  },
+  "extracted_content": {
+    "hero_messaging": {
+      "headline": null,
+      "sub_headline": null,
+      "call_to_actions": []
+    },
+    "services_offered": [],
+    "how_it_works_steps": [],
+    "pricing_data_found": [],
+    "trust_and_social_proof": {
+      "schema_org_data": {
+        "company_name": "Shirt.Co",
+        "logo_url": "https://shirt.co/wp-content/uploads/2025/06/SHIRT.CO-LOGO-SMALL-EMAIL-ICON-SIZE.png",
+        "social_profiles": [
+          "https://www.facebook.com/STLShirtCo/",
+          "https://x.com/STLShirtCo",
+          "https://www.instagram.com/stlshirtco/"
+        ],
+        "location_focus": "Port St. Lucie, FL"
+      },
+      "breadcrumb_structure": ["Home", "T-Shirt Printing", "Port St. Lucie, FL"]
+    }
+  },
+  "design_and_ui_architecture": {
+    "layout_structure": {
+      "platform": "WordPress",
+      "seo_plugin": "Yoast SEO v27.6",
+      "tracking_stack": ["Google Tag Manager", "Facebook Pixel", "LinkedIn Insight", "Google Analytics"]
+    },
+    "color_palette_detected": {
+      "theme_color": "#008658",
+      "primary": "teal-green"
+    },
+    "typography_detected": {
+      "primary_font": "Barlow Condensed (100-900 weights)",
+      "secondary_font": "PT Sans (400, 700 weights)",
+      "source": "Google Fonts"
+    },
+    "navigation_items": {
+      "breadcrumb": ["Home", "T-Shirt Printing", "Port St. Lucie, FL"]
+    }
+  },
+  "developer_assets": {
+    "html_css_patterns": {
+      "framework": "WordPress",
+      "uses_yoast_schema": true,
+      "schema_types": ["WebPage", "ImageObject", "BreadcrumbList", "WebSite", "Organization"],
+      "oembed_enabled": true,
+      "dns_prefetch_optimization": ["maps.googleapis.com", "www.google.com", "www.googletagmanager.com", "use.fontawesome.com", "pagead2.googlesyndication.com"]
+    },
+    "neon_or_retro_code": null,
+    "js_react_nextjs_logic": null,
+    "python_backend_clues": null
+  },
+  "charlys_component_mapping": {
+    "useful_for_ask_charly_chat": {
+      "competitor_name": "Shirt.Co",
+      "local_focus": "Port St. Lucie, FL",
+      "seo_approach": "location-based landing pages with schema.org structured data",
+      "social_presence": ["Facebook", "X/Twitter", "Instagram"],
+      "og_image_strategy": "product photography (t-shirt printing press)"
+    },
+    "useful_for_services_grid": {
+      "detected_services": null,
+      "service_page_structure": "uses WordPress with custom post types for locations",
+      "cta_approach": "emphasizes 'Get in touch with our team now'"
+    },
+    "useful_for_featured_products": {
+      "hero_image": "https://shirt.co/wp-content/uploads/2021/03/t-shirt-printing-press.jpg",
+      "image_dimensions": "1280x884",
+      "image_type": "JPEG",
+      "caption": "t-shirt-printing-on-press"
+    }
+  }
+}

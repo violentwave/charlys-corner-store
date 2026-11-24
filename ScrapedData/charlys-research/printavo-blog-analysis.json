@@ -1,0 +1,120 @@
+{
+  "metadata_and_seo": {
+    "source_url": "https://www.printavo.com/blog/how-to-make-a-website-for-screen-printing/",
+    "page_category": "blog_article",
+    "extracted_title_tag": "How To: Make a Website for Screen Printing",
+    "extracted_meta_desc": "Want to make more sales, bolster your brand, and maintain a strong presence? Then your screen printing business needs a professional website.",
+    "main_h1": null,
+    "organic_keywords_found": ["screen printing", "website", "professional website", "sales", "marketing", "brand"],
+    "yoast_seo_plugin": true,
+    "wordpress_platform": true,
+    "divi_theme": true,
+    "author": "Luke Gardner",
+    "published_date": "2020-11-26T18:00:00+00:00",
+    "modified_date": "2023-07-28T14:29:57+00:00",
+    "word_count": 1575,
+    "article_sections": ["Sales and Marketing", "Screen Printing"],
+    "og_image": "https://www.printavo.com/wp-content/uploads/2022/07/MdIcRuIAQLKTPOLzB6qj.jpeg",
+    "canonical_url": "https://www.printavo.com/blog/how-to-make-a-website-for-screen-printing/",
+    "twitter_card": "summary_large_image",
+    "estimated_reading_time": "8 minutes"
+  },
+  "extracted_content": {
+    "hero_messaging": {
+      "headline": null,
+      "sub_headline": null,
+      "call_to_actions": []
+    },
+    "services_offered": [],
+    "how_it_works_steps": [],
+    "pricing_data_found": [],
+    "trust_and_social_proof": {
+      "testimonials": [],
+      "client_logos": [],
+      "social_media_links": ["https://www.facebook.com/printavo"],
+      "publisher_info": "Printavo - Simple Screen Printing Management Software"
+    }
+  },
+  "design_and_ui_architecture": {
+    "layout_structure": {
+      "platform": "WordPress",
+      "theme": "Divi",
+      "responsive": true,
+      "header_scripts_detected": [
+        "Google Analytics",
+        "Google Tag Manager",
+        "HubSpot tracking",
+        "Attributionapp tracking",
+        "Apollo.io tracking",
+        "Pinterest tracking",
+        "CookieYes consent"
+      ]
+    },
+    "color_palette_detected": null,
+    "typography_detected": {
+      "primary_font": "Open Sans",
+      "font_weights": [300, 400, 600, 700, 800],
+      "font_styles": ["normal", "italic"],
+      "google_fonts": true
+    },
+    "navigation_items": null,
+    "tracking_integrations": [
+      "HubSpot (portal 3717916)",
+      "Google Analytics (G-8JBZWM5CLD)",
+      "Google Ads (AW-1009087944, AW-10994280158)",
+      "Google Tag Manager (GTM-KXVPTR)",
+      "Attributionapp",
+      "Apollo.io",
+      "Pinterest"
+    ]
+  },
+  "developer_assets": {
+    "html_css_patterns": {
+      "meta_charset": "UTF-8",
+      "meta_viewport": "IE=edge",
+      "pingback_url": "https://www.printavo.com/xmlrpc.php",
+      "html5_shim": "conditional IE lt 9"
+    },
+    "neon_or_retro_code": null,
+    "js_react_nextjs_logic": {
+      "framework": "WordPress/PHP (Divi theme)",
+      "no_react_nextjs_detected": true
+    },
+    "python_backend_clues": null,
+    "wordpress_specific": {
+      "theme": "Divi",
+      "seo_plugin": "Yoast SEO v26.7",
+      "schema_markup": true,
+      "schema_types": ["Article", "WebPage", "BreadcrumbList", "Organization", "Person"]
+    }
+  },
+  "charlys_component_mapping": {
+    "useful_for_ask_charly_chat": {
+      "seo_approach": "Comprehensive Yoast SEO implementation with schema markup",
+      "content_strategy": "Educational blog content targeting screen printing business owners",
+      "keyword_focus": "screen printing website, business website, professional website"
+    },
+    "useful_for_services_grid": {
+      "competitor_model": "Print management software + content marketing",
+      "article_categories": ["Sales and Marketing", "Screen Printing"]
+    },
+    "useful_for_featured_products": {
+      "positioning": "Software solution for screen printing businesses",
+      "value_prop": "Simple screen printing management software",
+      "content_marketing": "Educational blog posts to drive organic traffic"
+    }
+  },
+  "competitive_insights": {
+    "company": "Printavo",
+    "business_model": "SaaS for screen printing businesses",
+    "content_strategy": "SEO-driven educational blog content",
+    "target_audience": "screen printing shop owners and managers",
+    "authority_signals": ["schema.org markup", "social proof via article metrics", "established publication dates"]
+  },
+  "content_quality_indicators": {
+    "reading_time": "8 minutes",
+    "word_count": 1575,
+    "last_updated": "2023-07-28",
+    "author_credibility": "Named author (Luke Gardner) with author schema"
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "metadata_and_seo": {
+    "source_url": "https://www.instaprintshirts.com",
+    "page_category": "screen_printing_custom_apparel",
+    "extracted_title_tag": null,
+    "extracted_meta_desc": null,
+    "main_h1": null,
+    "organic_keywords_found": []
+  },
+  "extracted_content": {
+    "hero_messaging": {
+      "headline": null,
+      "sub_headline": null,
+      "call_to_actions": []
+    },
+    "services_offered": [],
+    "how_it_works_steps": [],
+    "pricing_data_found": [],
+    "trust_and_social_proof": []
+  },
+  "design_and_ui_architecture": {
+    "layout_structure": "wix_drag_drop_editor",
+    "color_palette_detected": [],
+    "typography_detected": [],
+    "navigation_items": []
+  },
+  "developer_assets": {
+    "html_css_patterns": [
+      "Wix Thunderbolt renderer platform",
+      "Inline script polyfills for Intl.Segmenter",
+      "Legacy core-js polyfills via parastorage CDN",
+      "JSON configuration injection via script#wix-essential-viewer-model",
+      "Performance API polyfill with navigation timing"
+    ],
+    "neon_or_retro_code": [],
+    "js_react_nextjs_logic": [
+      "Wix proprietary viewer framework (Thunderbolt)",
+      "Object.freeze for security hardening via defineStrictMethod",
+      "Global object mutation protection via strictDefine"
+    ],
+    "python_backend_clues": []
+  },
+  "charlys_component_mapping": {
+    "useful_for_ask_charly_chat": {
+      "extracted": false,
+      "notes": "No chat widget or conversational interface detected in provided code"
+    },
+    "useful_for_services_grid": {
+      "extracted": false,
+      "notes": "No services section content present in this technical snippet"
+    },
+    "useful_for_featured_products": {
+      "extracted": false,
+      "notes": "No product grid or featured items visible in this head-only content"
+    }
+  },
+  "technical_infrastructure": {
+    "platform": "Wix.com Website Builder",
+    "cdn_base": "https://static.parastorage.com",
+    "media_cdn": "https://static.wixstatic.com",
+    "site_assets_url": "https://siteassets.parastorage.com",
+    "features_detected": [
+      "Multilingual support",
+      "Site members/Wix Code SDK",
+      "SEO Wix Code SDK",
+      "Session management",
+      "Cookies/consent policy management",
+      "SPA navigation",
+      "Dynamic pages",
+      "Protected pages",
+      "Panorama (Wix analytics)"
+    ]
+  }
+}

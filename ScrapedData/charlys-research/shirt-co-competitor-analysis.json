@@ -1,0 +1,403 @@
+{
+  "source": "https://shirt.co/custom-t-shirt/port-st-lucie-fl/",
+  "extracted_at": "2026-05-17",
+  "competitor": "Shirt.Co (STL Shirt Co)",
+  
+  "custom_tshirt_printing_services": {
+    "core_services": [
+      {
+        "name": "Screen Printing",
+        "description": "High-quality screen printing services for vibrant, long-lasting prints on custom apparel",
+        "url": "https://shirt.co/services/screen-printing/"
+      },
+      {
+        "name": "Embroidery",
+        "description": "Professional embroidery services for corporate apparel and custom designs",
+        "url": "https://shirt.co/embroidery/"
+      },
+      {
+        "name": "DTF (Direct to Film)",
+        "description": "Direct to Film transfers for custom apparel",
+        "url": "https://shirt.co/services/"
+      },
+      {
+        "name": "Wide Format Printing",
+        "description": "Large format printing services",
+        "url": "https://shirt.co/wide-format-printing/"
+      }
+    ],
+    "specialty_services": [
+      {
+        "name": "Custom Hats",
+        "description": "Expert printing and embroidery services for custom headwear",
+        "url": "https://shirt.co/services/custom-hats/"
+      },
+      {
+        "name": "Online Web Stores",
+        "description": "Completely free online store setup for organizations and businesses",
+        "url": "https://shirt.co/services/online-stores/"
+      },
+      {
+        "name": "Promotional Products",
+        "description": "Custom promotional merchandise",
+        "url": "https://shirt.co/services/promo-products/"
+      }
+    ],
+    "union_certification": {
+      "status": "Union Certified",
+      "organization": "Allied Printing Trades Council",
+      "badge": "Union Bug",
+      "materials": "American-made materials only",
+      "local": "Local 76 - Allied Printing"
+    },
+    "target_use_cases": [
+      "Businesses",
+      "Nonprofit Organizations",
+      "School Fundraising",
+      "Sports Teams or Clubs",
+      "Special Occasions",
+      "Event Staff",
+      "Giveaways",
+      "Gifts"
+    ]
+  },
+
+  "same_day_printing": {
+    "rush_services": {
+      "name": "Rush Services",
+      "url": "https://shirt.co/rush-services/",
+      "features": [
+        "Deliver 1 or 1,000 custom T-shirts in one week or less",
+        "Rush shipping to anywhere in continental U.S. in just a few days",
+        "Fast turnaround times on orders throughout the U.S."
+      ],
+      "quote_speed": "Free quotes in under 2 hours"
+    },
+    "expedited_shipping": {
+      "available": true,
+      "coverage": "Nationwide",
+      "speed": "Few days to continental U.S."
+    },
+    "no_minimums": {
+      "applies_to": "Most products",
+      "details": "No minimum order quantities"
+    }
+  },
+
+  "screen_printing_processes": {
+    "process_type": "Union Screen Printing",
+    "certification": "Allied Printing Trades Council Certified",
+    "experience": "Over 45 years of experience (since 1975)",
+    "materials": "Best American-made materials",
+    "quality_promise": "When you look good, we look good",
+    "design_assistance": {
+      "available": true,
+      "description": "Staff of skilled custom T-shirt designers who can make a logo or turn work-in-progress scribble, doodle, or sketch into a custom T-shirt logo",
+      "turnaround": "Can deliver 1 or 1,000 custom T-shirts in one week or less"
+    },
+    "design_options": [
+      "Custom tie-dyed jerseys",
+      "Embroidered argyle designs on left chest",
+      "Mauve polo shirts",
+      "Hot pink fonts",
+      "With or without sleeves"
+    ]
+  },
+
+  "pricing": {
+    "quote_system": {
+      "speed": "Free quotes in under 2 hours",
+      "method": "Online form at /get-a-quote/",
+      "contact": "Phone: 636-926-2777"
+    },
+    "minimum_order": {
+      "status": "No minimums on most products",
+      "details": "Can order single items or bulk (1 to 1,000+)"
+    },
+    "contact_form_fields": [
+      "Your Name (required)",
+      "Phone Number (required)",
+      "Email (required)",
+      "Budget (required)",
+      "How can we help? (required)"
+    ],
+    "shipping": {
+      "promotion": "Free Shipping on ALL Orders Nation Wide!",
+      "expedited": "Available for rush orders"
+    },
+    "online_stores": {
+      "cost": "Completely free online store setup"
+    }
+  },
+
+  "seo_keywords": {
+    "primary_keywords": [
+      "custom T shirt",
+      "custom T shirts",
+      "T shirt custom",
+      "custom t-shirt",
+      "screen printing",
+      "custom screen printing",
+      "union screen printing",
+      "embroidery services",
+      "custom hats",
+      "promotional products"
+    ],
+    "location_keywords": [
+      "Port St. Lucie FL",
+      "St. Louis MO",
+      "custom t-shirt near me",
+      "local custom shirts"
+    ],
+    "long_tail_keywords": [
+      "custom T shirts for businesses",
+      "school fundraising t-shirts",
+      "sports team custom jerseys",
+      "event staff shirts",
+      "rush t-shirt orders",
+      "expedited screen printing"
+    ],
+    "meta_tags": {
+      "title": "Custom T Shirt Port St. Lucie, FL | T Shirt Custom Shirt.Co | Custom T shirts in Port St. Lucie, FL",
+      "description": "Custom T shirt Port St. Lucie, FL. Shirt.Co near Port St. Lucie, FL, is your leading designer and printer of custom T shirts in the Port St. Lucie, FL area. Contact us today for your custom order near Port St. Lucie, FL. We also provide expedited shipping for customers outside of the Port St. Lucie, FL area.",
+      "canonical": "https://shirt.co/custom-t-shirt/port-st-lucie-fl/",
+      "og_title": "Custom T Shirt Port St. Lucie, FL | T Shirt Custom Shirt.Co | Custom T shirts in Port St. Lucie, FL",
+      "og_description": "Custom T shirt Port St. Lucie, FL. Shirt.Co near Port St. Lucie, FL, is your leading designer and printer of custom T shirts in the Port St. Lucie, FL area. Contact us today for your custom order near Port St. Lucie, FL. We also provide expedited shipping for customers outside of the Port St. Lucie, FL area.",
+      "og_image": "https://shirt.co/wp-content/uploads/2020/06/custom-t-shirts-st-louis.jpg",
+      "twitter_card": "summary_large_image"
+    },
+    "schema_markup": {
+      "types": ["WebPage", "ImageObject", "BreadcrumbList", "WebSite", "Organization"],
+      "breadcrumb_structure": [
+        {"position": 1, "name": "Home"},
+        {"position": 2, "name": "Custom T Shirt"},
+        {"position": 3, "name": "Port St. Lucie, FL"}
+      ]
+    }
+  },
+
+  "design_elements": {
+    "brand_identity": {
+      "company_name": "Shirt.Co",
+      "established": "1975",
+      "slogan": "Obsessed with customer service",
+      "certification": "Union Certified · Allied Printing",
+      "rating": "4.9 · 685+ Google Reviews"
+    },
+    "color_scheme": {
+      "primary": "#008658 (theme color - green)",
+      "logo_variants": ["White logo", "Primary color logo"]
+    },
+    "typography": {
+      "primary_font": "Barlow Condensed",
+      "secondary_font": "PT Sans",
+      "tertiary_font": "Figtree",
+      "quaternary_font": "Outfit",
+      "font_weights": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+    },
+    "visual_assets": {
+      "logo": {
+        "white": "https://shirt.co/wp-content/uploads/2026/04/logo-white-scaled-1.webp",
+        "primary": "https://shirt.co/wp-content/uploads/2026/04/Primary-Logo-500x203-px-300x122-1.webp",
+        "favicon": "https://shirt.co/wp-content/uploads/2024/05/cropped-shirtco-favicon-32x32.png"
+      },
+      "hero_images": [
+        "Custom t-shirts stacked display",
+        "Screen printing equipment in action",
+        "American flag embroidered hats on production line",
+        "Fall-themed custom shirt with pumpkin design"
+      ],
+      "union_badge": {
+        "image": "https://shirt.co/wp-content/uploads/2026/04/union_bug_cwa_white-300x75-1.webp",
+        "alt": "Union Bug"
+      }
+    },
+    "layout_patterns": {
+      "header": [
+        "Free shipping banner",
+        "Since 1975 badge",
+        "Union certification badge",
+        "Contact info (email, phone)",
+        "Multi-site navigation (SHIRT.CO, HAT.CO, DTFS.CO)"
+      ],
+      "navigation": [
+        "Services mega-menu",
+        "Online Stores with submenu",
+        "About with expanded submenu",
+        "Get a Quote CTA button"
+      ],
+      "content_sections": [
+        "Hero with location heading",
+        "Service description with image",
+        "Shipping map visualization",
+        "Use case scenarios with bold text emphasis",
+        "Related services grid",
+        "Contact form section",
+        "City landing page links (200+ cities)"
+      ],
+      "footer": [
+        "Multi-site network bar (Hat.co, DTFS.co, Union Decoration)",
+        "Logo with tagline",
+        "Google rating display",
+        "Review CTA",
+        "Site links organized by category",
+        "Contact information",
+        "Hours of operation",
+        "Copyright and union affiliation"
+      ]
+    },
+    "ui_components": {
+      "call_to_action": [
+        "Get a Quote (primary button)",
+        "Call Us (secondary button)",
+        "Send Email (form submit)"
+      ],
+      "service_cards": {
+        "structure": "Image + Title + Description + View Service link",
+        "examples": [
+          "Custom Hats",
+          "Online Stores", 
+          "Screen Printing"
+        ]
+      },
+      "trust_signals": [
+        "Google Reviews count",
+        "Union certification badge",
+        "Years in business (Since 1975)",
+        "Free shipping badge",
+        "No minimums mention"
+      ]
+    }
+  },
+
+  "code_patterns": {
+    "platform": "WordPress with Elementor",
+    "seo_plugin": "Yoast SEO v27.6",
+    "analytics": {
+      "google_tag_manager": "GTM-NRCLSNPR",
+      "google_analytics": "GT-MQJ4L5N",
+      "facebook_pixel": "525758257587289",
+      "google_adsense": "ca-pub-3537341330081654"
+    },
+    "schema_markup": {
+      "format": "JSON-LD",
+      "types_implemented": ["WebPage", "ImageObject", "BreadcrumbList", "WebSite", "Organization"],
+      "example_structure": {
+        "WebPage": "Full page metadata with primaryImageOfPage",
+        "BreadcrumbList": "3-level hierarchy (Home > Custom T Shirt > City)",
+        "Organization": "Name, URL, logo, sameAs social profiles"
+      }
+    },
+    "performance_optimizations": {
+      "dns_prefetch": [
+        "maps.googleapis.com",
+        "www.google.com",
+        "www.googletagmanager.com",
+        "use.fontawesome.com",
+        "pagead2.googlesyndication.com"
+      ],
+      "font_preconnect": [
+        "fonts.googleapis.com",
+        "fonts.gstatic.com"
+      ],
+      "lazy_loading": {
+        "css_containment": "e-con.e-parent lazyloading with background-image none",
+        "breakpoints": ["n+4", "n+3 (max-height: 1024px)", "n+2 (max-height: 640px)"]
+      },
+      "image_optimization": {
+        "format": "WebP with fallbacks",
+        "sizes": "auto intrinsic sizing"
+      }
+    },
+    "css_frameworks": [
+      "Elementor (v4.0.8)",
+      "UIKit",
+      "Tailwind-style utility classes"
+    ],
+    "form_system": "Gravity Forms",
+    "chat_widget": "Tidio",
+    "maps_integration": "Google Maps API",
+    "css_variables": {
+      "wordpress_presets": [
+        "--wp--preset--aspect-ratio",
+        "--wp--preset--color",
+        "--wp--preset--gradient",
+        "--wp--preset--font-size",
+        "--wp--preset--spacing"
+      ]
+    },
+    "custom_css_patterns": {
+      "button_hover": ".bthv with opacity transition",
+      "mobile_responsive": "@media only screen and (max-width: 1099px)",
+      "form_styling": ".gravity-theme .validation_message color overrides"
+    },
+    "url_structure": {
+      "city_pages": "/custom-t-shirt/{city-state}/",
+      "services": "/services/{service-name}/",
+      "blog": "/latest-news/{post-slug}/",
+      "landing_pages": "SEO-optimized for 200+ cities"
+    },
+    "meta_tags_pattern": {
+      "robots": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+      "viewport": "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no",
+      "theme_color": "#008658",
+      "format_detection": "telephone=no"
+    }
+  },
+
+  "business_model_insights": {
+    "location_strategy": {
+      "physical_location": "4600 S. St. Peters Pkwy, St. Charles, MO 63304",
+      "virtual_presence": "200+ city-specific landing pages",
+      "target_cities_sample": [
+        "Port St. Lucie, FL",
+        "St. Louis, MO", 
+        "Chicago, IL",
+        "New York, NY",
+        "Los Angeles, CA"
+      ]
+    },
+    "brand_ecosystem": [
+      {
+        "name": "Shirt.co",
+        "purpose": "Custom T-Shirts & Apparel"
+      },
+      {
+        "name": "Hat.co",
+        "purpose": "Custom Headwear"
+      },
+      {
+        "name": "DTFS.co",
+        "purpose": "DTF Transfers"
+      }
+    ],
+    "social_presence": {
+      "facebook": "https://www.facebook.com/STLShirtCo/",
+      "twitter": "@STLShirtCo",
+      "instagram": "@stlshirtco"
+    },
+    "content_marketing": {
+      "blog_topics": [
+        "Top 10 Custom Apparel FAQs",
+        "How to Plan Your Custom Shirt Order Timeline",
+        "The Ultimate Guide to Caring for Custom Shirts",
+        "The Ultimate Guide to T-Shirt Printing Methods",
+        "The Complete Guide to Custom Shirt Sizing",
+        "How to Design the Right Shirt for Events",
+        "Best Custom Shirt Companies"
+      ]
+    }
+  },
+
+  "competitive_differentiators": [
+    "Union Certified (Allied Printing Trades Council)",
+    "Since 1975 (over 45 years experience)",
+    "Free shipping on all orders nationwide",
+    "No minimums on most products",
+    "Quotes in under 2 hours",
+    "Delivery in one week or less (1 to 1,000 shirts)",
+    "Completely free online stores",
+    "American-made materials",
+    "4.9 rating with 685+ Google Reviews"
+  ]
+}

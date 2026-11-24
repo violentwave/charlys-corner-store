@@ -1,0 +1,123 @@
+{
+  "metadata_and_seo": {
+    "source_url": "https://thestitchnprintstore.com/",
+    "page_category": "homepage",
+    "extracted_title_tag": "#1 Custom Embroidery, Screen Printing, T-Shirt Printing in USA",
+    "extracted_meta_desc": "The Stitch N Print Store provide businesses with Custom Shirts, T-Shirts Designs, Embroideries & Screen Printing Services Near Me. Contact Us For Orders",
+    "main_h1": null,
+    "organic_keywords_found": [
+      "Custom Embroidery",
+      "Screen Printing",
+      "T-Shirt Printing",
+      "Custom Shirts",
+      "USA",
+      "businesses",
+      "Embroideries",
+      "Services Near Me"
+    ]
+  },
+  "extracted_content": {
+    "hero_messaging": {
+      "headline": null,
+      "sub_headline": null,
+      "call_to_actions": []
+    },
+    "services_offered": [
+      "Custom Embroidery",
+      "Screen Printing",
+      "T-Shirt Printing",
+      "Custom Shirts",
+      "T-Shirts Designs",
+      "Embroideries"
+    ],
+    "how_it_works_steps": [],
+    "pricing_data_found": [
+      {
+        "price_range_indicator": "$",
+        "currencies_accepted": "USD",
+        "payment_methods": "Cash, Check, Credit Card, Venmo, Zelle"
+      }
+    ],
+    "trust_and_social_proof": [
+      {
+        "type": "business_location",
+        "street_address": "16-32 Cross Bay Blvd",
+        "locality": "Queens",
+        "region": "NY",
+        "postal_code": "11693",
+        "country": "US"
+      },
+      {
+        "type": "contact_info",
+        "telephone": "718-747-9111",
+        "email": "cs@snpstores.cm"
+      },
+      {
+        "type": "business_hours",
+        "monday_friday": "10:00 - 18:00",
+        "saturday_sunday": "10:00 - 15:00"
+      },
+      {
+        "type": "social_links",
+        "facebook": "http://www.facebook.com/thestitchnprintstore/",
+        "twitter": "https://twitter.com/stitchnprint_us",
+        "instagram": "http://www.instagram.com/the_stitch_n_print_store/"
+      },
+      {
+        "type": "business_verification",
+        "tax_id": "823532052",
+        "area_served": "Queens, NY"
+      }
+    ]
+  },
+  "design_and_ui_architecture": {
+    "layout_structure": "WordPress site with Yoast SEO - structure not visible in head section",
+    "color_palette_detected": {
+      "wp_preset_colors": [
+        "#000000 (black)",
+        "#ffffff (white)",
+        "#abb8c3 (cyan-bluish-gray)",
+        "#f78da7 (pale-pink)",
+        "#cf2e2e (vivid-red)",
+        "#ff6900 (luminous-vivid-orange)",
+        "#fcb900 (luminous-vivid-amber)",
+        "#7bdcb5 (light-green-cyan)",
+        "#00d084 (vivid-green-cyan)",
+        "#8ed1fc (pale-cyan-blue)",
+        "#0693e3 (vivid-cyan-blue)",
+        "#9b51e0 (vivid-purple)"
+      ],
+      "button_background": "#32373c"
+    },
+    "typography_detected": null,
+    "navigation_items": []
+  },
+  "developer_assets": {
+    "html_css_patterns": [
+      "WordPress global inline styles with CSS variables (--wp--preset--color--*)",
+      "Classic theme button styles with 9999px border-radius (pill shape)",
+      "CSS gradient definitions for preset color combinations",
+      "Schema.org structured data via JSON-LD"
+    ],
+    "neon_or_retro_code": [],
+    "js_react_nextjs_logic": [],
+    "python_backend_clues": []
+  },
+  "charlys_component_mapping": {
+    "useful_for_ask_charly_chat": [
+      "Business location data for local SEO targeting (Queens, NY)",
+      "Service offerings list for chatbot knowledge base",
+      "Business hours for availability queries",
+      "Contact information for lead generation"
+    ],
+    "useful_for_services_grid": [
+      "Custom Embroidery",
+      "Screen Printing",
+      "T-Shirt Printing",
+      "Custom Shirts",
+      "T-Shirts Designs",
+      "Embroideries"
+    ],
+    "useful_for_featured_products": []
+  }
+}

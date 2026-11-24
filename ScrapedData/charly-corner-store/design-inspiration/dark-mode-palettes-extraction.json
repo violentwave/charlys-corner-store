@@ -1,0 +1,278 @@
+{
+  "source": "Vev Blog - 6 Dark Mode Website Color Palette Ideas",
+  "source_url": "https://www.vev.design/blog/dark-mode-website-color-palette/",
+  "extraction_date": "2026-05-17",
+  "project_context": "Charly's Corner Store - Neon-Retro 80s Themed E-commerce Website",
+  
+  "dark_mode_color_palettes": [
+    {
+      "name": "Monochromatic Minimalism",
+      "description": "Clean, elegant, professional look using varying shades of gray and black. Provides depth and contrast while maintaining minimalist aesthetic.",
+      "colors": {
+        "background": "#121212",
+        "primary_text": "#E0E0E0",
+        "secondary_text": "#B0B0B0",
+        "borders_dividers": "#444444",
+        "accent": "#888888"
+      },
+      "use_cases": ["Tech blogs", "Portfolio sites", "Professional landing pages"],
+      "why_it_works": "Minimal use of color directs focus to content and improves readability without distracting the user.",
+      "retro_80s_applicability": "LOW - Too muted for neon-retro aesthetic, but good for admin/dashboard areas"
+    },
+    {
+      "name": "Neon Highlights",
+      "description": "Dynamic, futuristic feel combining dark backgrounds with bright, neon accents. Colors stand out vividly against dark backdrop.",
+      "colors": {
+        "background": "#0D0D0D",
+        "primary_text": "#FFFFFF",
+        "accent_1": "#00FF85",
+        "accent_2": "#1E90FF",
+        "hover_effects": "#FF0099"
+      },
+      "color_roles": {
+        "neon_green": "#00FF85 - Primary accent, CTAs, highlights",
+        "electric_blue": "#1E90FF - Secondary accent, links, interactive elements",
+        "vivid_pink": "#FF0099 - Hover states, emphasis, special promotions"
+      },
+      "use_cases": ["Tech startups", "Creative portfolios", "Gaming websites"],
+      "why_it_works": "High contrast between neon and dark mode creates high-energy vibe while maintaining readability and visual clarity.",
+      "retro_80s_applicability": "HIGH - Perfect match for Miami Vice/synthwave aesthetic"
+    },
+    {
+      "name": "Warm Tones",
+      "description": "Cozy, welcoming dark mode using deep oranges, reds, and browns. Evokes comfort and nostalgia.",
+      "colors": {
+        "background": "#1C1C1C",
+        "primary_text": "#F5E8D8",
+        "accent_1": "#FF6F61",
+        "accent_2": "#DAA520",
+        "hover_effects": "#FF4500"
+      },
+      "use_cases": ["Lifestyle blogs", "Coffee shops", "Artisanal ecommerce"],
+      "why_it_works": "Warm tones create welcoming contrast with dark backgrounds, making site feel inviting and intimate.",
+      "retro_80s_applicability": "MEDIUM - Sunset/sunrise gradients complement neon aesthetic"
+    },
+    {
+      "name": "Muted Pastels",
+      "description": "Soft and calming palette with gentle blues, pinks, and lavenders. Serene and approachable.",
+      "colors": {
+        "background": "#2C2C2C",
+        "primary_text": "#E4E4E4",
+        "accent_1": "#A8DADC",
+        "accent_2": "#FFC1CC",
+        "button_cta": "#B39CD0"
+      },
+      "use_cases": ["Creative agencies", "Wellness websites", "Personal portfolios"],
+      "why_it_works": "Soft pastels contrast beautifully against dark backgrounds without overwhelming the eye.",
+      "retro_80s_applicability": "MEDIUM - Soft pinks and lavenders work with 80s vaporwave aesthetic"
+    },
+    {
+      "name": "Deep Jewel Tones",
+      "description": "Rich, luxurious palette with emerald green, sapphire blue, and ruby red. Sleek, modern appearance.",
+      "colors": {
+        "background": "#1A1A1A",
+        "primary_text": "#F0F0F0",
+        "accent_1": "#004D61",
+        "accent_2": "#822659",
+        "button_cta": "#3E5641"
+      },
+      "use_cases": ["Luxury brands", "Fashion boutiques", "Design studios"],
+      "why_it_works": "Jewel tones add sophistication and depth, making website feel premium and high-end.",
+      "retro_80s_applicability": "LOW-MEDIUM - Rich but not vibrant enough for pure 80s neon"
+    },
+    {
+      "name": "Contrasting Vibrancy",
+      "description": "Bold, playful approach pairing dark backgrounds with highly saturated accent colors. Brings energy to design.",
+      "colors": {
+        "background": "#181818",
+        "primary_text": "#F7F7F7",
+        "accent_1": "#FF5722",
+        "accent_2": "#673AB7",
+        "hover_effects": "#FFEB3B"
+      },
+      "use_cases": ["Entertainment platforms", "Media companies", "Creative agencies"],
+      "why_it_works": "Bright colors inject energy into dark design while preserving sleek modernity.",
+      "retro_80s_applicability": "HIGH - Saturated colors align with bold 80s aesthetic"
+    }
+  ],
+
+  "recommended_palette_for_charlys_corner_store": {
+    "name": "Miami Vice Neon-Retro Fusion",
+    "description": "Custom palette combining best elements from Neon Highlights and Contrasting Vibrancy palettes, optimized for 80s screen-printing ecommerce",
+    "base_colors": {
+      "background_primary": "#0D0D0D",
+      "background_secondary": "#121212",
+      "background_card": "#1A1A1A",
+      "text_primary": "#FFFFFF",
+      "text_secondary": "#E0E0E0",
+      "text_muted": "#B0B0B0"
+    },
+    "neon_accents": {
+      "hot_pink": "#FF0099",
+      "electric_cyan": "#00FFFF",
+      "neon_green": "#00FF85",
+      "electric_blue": "#1E90FF",
+      "vivid_orange": "#FF5722",
+      "bright_yellow": "#FFEB3B"
+    },
+    "gradient_combinations": [
+      {
+        "name": "Miami Sunset",
+        "colors": ["#FF0099", "#FF5722", "#FFEB3B"],
+        "use": "Hero sections, featured products"
+      },
+      {
+        "name": "Electric Night",
+        "colors": ["#00FFFF", "#1E90FF", "#673AB7"],
+        "use": "Navigation, CTAs, highlights"
+      },
+      {
+        "name": "Neon Jungle",
+        "colors": ["#00FF85", "#00FFFF", "#FF0099"],
+        "use": "Special promotions, badges, sale items"
+      }
+    ],
+    "usage_guidelines": {
+      "primary_cta": "#FF0099 (hot pink) with #FFFFFF text",
+      "secondary_cta": "#00FFFF (electric cyan) with #0D0D0D text",
+      "links": "#1E90FF (electric blue)",
+      "hover_states": "#FFEB3B (bright yellow) or #00FF85 (neon green)",
+      "sale_badges": "#FF0099 background with #FFFFFF text",
+      "new_arrivals": "#00FF85 (neon green) badge",
+      "borders_glows": "1-2px solid with 0 0 10px/20px box-shadow using neon colors"
+    }
+  },
+
+  "ui_design_patterns": {
+    "dark_mode_best_practices": [
+      "Use pure black (#0D0D0D or #121212) for backgrounds, not dark gray",
+      "Maintain sufficient contrast ratios (WCAG AA compliance: 4.5:1 for text)",
+      "Use accent colors sparingly - 60/30/10 rule (60% neutral, 30% secondary, 10% accent)",
+      "Avoid pure white (#FFFFFF) for large text blocks - use off-white (#E0E0E0, #F0F0F0)",
+      "Implement subtle depth with layered backgrounds (#121212 base, #1A1A1A cards, #2C2C2C elevated)"
+    ],
+    "neon_specific_patterns": [
+      "Use neon colors for: CTAs, active states, hover effects, highlights, badges",
+      "Add glow effects (box-shadow) to neon elements for authentic 80s feel",
+      "Combine 2-3 neon colors in gradients for hero sections",
+      "Use dark backgrounds to let neon colors 'pop' naturally",
+      "Maintain at least 70% dark space to avoid visual overload",
+      "Use neon sparingly - one primary neon + one secondary maximum per component"
+    ],
+    "component_patterns": {
+      "buttons": {
+        "primary": "Neon background (#FF0099 or #00FFFF) with dark text, glow on hover",
+        "secondary": "Dark background with neon border, fill on hover",
+        "ghost": "Transparent with neon text, underline or glow on hover"
+      },
+      "cards": {
+        "background": "#1A1A1A or #181818",
+        "border": "1px solid #333 or subtle neon glow",
+        "hover": "Lift effect + neon border glow",
+        "shadow": "0 4px 20px rgba(0,0,0,0.5)"
+      },
+      "navigation": {
+        "background": "#0D0D0D or transparent with blur",
+        "active": "Neon underline or glow",
+        "hover": "Neon text color transition"
+      },
+      "forms": {
+        "input_background": "#2C2C2C",
+        "input_border": "#444444 default, neon on focus",
+        "placeholder": "#888888",
+        "focus_ring": "Neon color with glow"
+      }
+    }
+  },
+
+  "css_tips": {
+    "css_variables_setup": {
+      "code": ":root {\n  /* Backgrounds */\n  --bg-primary: #0D0D0D;\n  --bg-secondary: #121212;\n  --bg-card: #1A1A1A;\n  --bg-elevated: #2C2C2C;\n  \n  /* Text */\n  --text-primary: #FFFFFF;\n  --text-secondary: #E0E0E0;\n  --text-muted: #B0B0B0;\n  \n  /* Neon Accents */\n  --neon-pink: #FF0099;\n  --neon-cyan: #00FFFF;\n  --neon-green: #00FF85;\n  --neon-blue: #1E90FF;\n  --neon-orange: #FF5722;\n  --neon-yellow: #FFEB3B;\n  \n  /* Functional */\n  --border-default: #444444;\n  --border-focus: var(--neon-cyan);\n  --shadow-glow-pink: 0 0 20px rgba(255, 0, 153, 0.5);\n  --shadow-glow-cyan: 0 0 20px rgba(0, 255, 255, 0.5);\n}",
+      "description": "Define all colors as CSS variables for single-source-of-truth maintenance"
+    },
+    "neon_glow_effects": {
+      "box_shadow_glow": "box-shadow: 0 0 10px #FF0099, 0 0 20px #FF0099, 0 0 40px #FF0099;",
+      "text_glow": "text-shadow: 0 0 5px #00FFFF, 0 0 10px #00FFFF;",
+      "button_glow_hover": "transition: box-shadow 0.3s ease; box-shadow: 0 0 15px rgba(255, 0, 153, 0.6);",
+      "card_glow": "box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 0, 153, 0.1);"
+    },
+    "gradient_css": {
+      "miami_sunset": "background: linear-gradient(135deg, #FF0099 0%, #FF5722 50%, #FFEB3B 100%);",
+      "electric_night": "background: linear-gradient(135deg, #00FFFF 0%, #1E90FF 50%, #673AB7 100%);",
+      "neon_jungle": "background: linear-gradient(135deg, #00FF85 0%, #00FFFF 50%, #FF0099 100%);",
+      "text_gradient": "background: linear-gradient(90deg, #FF0099, #00FFFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent;"
+    },
+    "accessibility_dark_mode": {
+      "contrast_check": "Ensure 4.5:1 contrast ratio for normal text, 3:1 for large text",
+      "focus_indicators": "Use neon colors for focus rings: outline: 2px solid var(--neon-cyan);",
+      "reduced_motion": "Respect prefers-reduced-motion for glow animations",
+      "code_example": "@media (prefers-reduced-motion: reduce) {\n  * {\n    animation-duration: 0.01ms !important;\n    transition-duration: 0.01ms !important;\n  }\n}"
+    },
+    "dark_mode_toggle": {
+      "approach": "Use data-attribute on html element",
+      "css": "html[data-theme='dark'] { --bg-primary: #0D0D0D; }\nhtml[data-theme='light'] { --bg-primary: #FFFFFF; }",
+      "js_toggle": "document.documentElement.setAttribute('data-theme', 'dark');"
+    }
+  },
+
+  "best_practices": {
+    "design_system_approach": [
+      "Define colors as Variables (CSS custom properties) - single source of truth",
+      "Build component variants for light/dark modes using same structure, different visuals",
+      "Save approved components to a Library for team consistency",
+      "Document usage guidelines for each color (primary CTA, secondary, hover, etc.)",
+      "Create a color usage matrix showing which colors work together"
+    ],
+    "implementation_workflow": [
+      "1. Define palette hex codes in CSS variables",
+      "2. Map variables to semantic names (--color-cta, --color-link, etc.)",
+      "3. Build base components (buttons, cards, inputs) with dark mode colors",
+      "4. Create neon glow utility classes for effects",
+      "5. Test contrast ratios for accessibility compliance",
+      "6. Document the system for team reference"
+    ],
+    "maintenance_tips": [
+      "Use linting to catch hardcoded colors outside variables",
+      "Create visual regression tests for color consistency",
+      "Establish naming conventions and stick to them",
+      "Version control your design system changes",
+      "Regular audits for color drift across pages"
+    ],
+    "performance": [
+      "Prefer CSS variables over inline styles for colors",
+      "Use will-change sparingly on animated neon elements",
+      "Consider using CSS containment for neon-heavy sections",
+      "Optimize glow effects - avoid excessive blur radius",
+      "Use GPU-accelerated properties (transform, opacity) for animations"
+    ]
+  },
+
+  "80s_specific_recommendations": {
+    "inspiration_sources": [
+      "Miami Vice (hot pink + turquoise + white)",
+      "Synthwave aesthetic (purple + cyan + grid lines)",
+      "Retro arcade (neon green + black + pixel fonts)",
+      "Vaporwave (pink + purple + glitch effects)",
+      "Outrun (sunset gradients + grid landscapes)"
+    ],
+    "typography_pairings": [
+      {
+        "display": "Retro script or bold geometric fonts (Neon Glow effect)",
+        "body": "Clean sans-serif with high contrast (Aeonik, Inter, Geist)",
+        "accent": "Monospace for technical/pricing info (JetBrains Mono)"
+      }
+    ],
+    "texture_effects": [
+      "Subtle scanline overlay (CSS repeating-linear-gradient)",
+      "Grid background patterns (CSS grid or SVG)",
+      "Noise texture for retro film grain feel",
+      "Chrome/metallic text effects for headers"
+    ],
+    "animation_patterns": [
+      "Subtle neon pulse animation (glow intensity)",
+      "Glitch effect on hover for interactive elements",
+      "Grid scroll animation for backgrounds",
+      "Color cycle on focus states"
+    ]
+  }
+}

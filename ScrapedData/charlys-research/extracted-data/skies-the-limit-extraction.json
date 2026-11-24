@@ -1,0 +1,86 @@
+{
+  "metadata_and_seo": {
+    "source_url": null,
+    "page_category": "AMP Landing Page (boilerplate CSS only)",
+    "extracted_title_tag": null,
+    "extracted_meta_desc": null,
+    "main_h1": null,
+    "organic_keywords_found": []
+  },
+  "extracted_content": {
+    "hero_messaging": {
+      "headline": null,
+      "sub_headline": null,
+      "call_to_actions": []
+    },
+    "services_offered": [],
+    "how_it_works_steps": [],
+    "pricing_data_found": [],
+    "trust_and_social_proof": []
+  },
+  "design_and_ui_architecture": {
+    "layout_structure": "AMP-standard container layout with responsive design patterns",
+    "color_palette_detected": {
+      "primary_loader": "#aaa (gray)",
+      "loader_shim": "rgba(0,0,0,.6) (semi-transparent black)",
+      "background_placeholder": "#f8f8f8 (light gray)",
+      "validation_error": "red",
+      "validation_bubble": "#fff (white) with box-shadow rgba(0,0,0,.5)"
+    },
+    "typography_detected": {
+      "base": "font-size: 1rem; line-height: 1.5rem",
+      "font_family": "sans-serif (in loader ad label)"
+    },
+    "navigation_items": []
+  },
+  "developer_assets": {
+    "html_css_patterns": [
+      "AMP framework with i-amphtml-* class naming convention",
+      "CSS custom properties using --loader-delay-offset variable",
+      "CSS keyframe animations for loader spin and fade effects",
+      "CSS Grid/Flexbox patterns with -ms- flex prefixes for IE support",
+      "aspect-ratio media query support detection",
+      "CSS containment with layout-size-defined containers"
+    ],
+    "neon_or_retro_code": [],
+    "js_react_nextjs_logic": [],
+    "python_backend_clues": []
+  },
+  "charlys_component_mapping": {
+    "useful_for_ask_charly_chat": [],
+    "useful_for_services_grid": [],
+    "useful_for_featured_products": []
+  },
+  "extraction_notes": {
+    "content_status": "PARTIAL_EXTRACTION - Only AMP CSS boilerplate present in provided content",
+    "actual_content_found": false,
+    "boilerplate_elements": [
+      "AMP runtime CSS (v012603032146000)",
+      "AMP loader component CSS with spinner animations",
+      "AMP form extension styles",
+      "viewport meta: width=device-width, minimum-scale=1, user-scalable=0",
+      "charset meta: utf-8",
+      "preconnect to cdn.ampproject.org"
+    ],
+    "missing_elements": [
+      "<title> tag",
+      "<meta name='description'>",
+      "<body> content",
+      "Heading tags (h1-h6)",
+      "Navigation menu",
+      "Service descriptions",
+      "Pricing information",
+      "Contact information",
+      "Footer content",
+      "Any visible page text content"
+    ],
+    "technical_observations": [
+      "Uses AMP (Accelerated Mobile Pages) framework",
+      "iOS-specific embed handling classes present",
+      "Screen reader accessibility support with i-amphtml-screen-reader",
+      "Touch-action pan-y pinch-zoom for mobile",
+      "Form validation bubble styling with red error states",
+      "Accordion component styles available but not used"
+    ]
+  }
+}

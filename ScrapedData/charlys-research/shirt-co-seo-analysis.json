@@ -1,0 +1,120 @@
+{
+  "source": "https://shirt.co/custom-t-shirt/port-st-lucie-fl/",
+  "extracted_date": "2026-05-17",
+  "seo_keywords": {
+    "primary": [
+      "Custom T Shirt Port St. Lucie, FL",
+      "T Shirt Custom Shirt.Co",
+      "Custom T shirts in Port St. Lucie, FL"
+    ],
+    "location_based": [
+      "Port St. Lucie",
+      "FL",
+      "near Port St. Lucie, FL"
+    ],
+    "service_keywords": [
+      "custom T shirts",
+      "custom order",
+      "designer",
+      "printer",
+      "expedited shipping"
+    ],
+    "meta_description_pattern": "Custom T shirt [CITY], [STATE]. [BRAND] near [CITY], [STATE], is your leading designer and printer of custom T shirts in the [CITY], [STATE] area. Contact us today for your custom order near [CITY], [STATE]. We also provide expedited shipping for customers outside of the [CITY], [STATE] area."
+  },
+  "services": {
+    "custom_t_shirt_design": {
+      "description": "Leading designer and printer of custom T shirts",
+      "location_focused": true,
+      "call_to_action": "Contact us today for your custom order"
+    },
+    "rush_printing": {
+      "found": false,
+      "similar_terms": ["expedited shipping"],
+      "notes": "Mentions expedited shipping but not rush printing specifically"
+    }
+  },
+  "experience_claims": {
+    "years_experience": {
+      "found": false,
+      "claimed_years": null,
+      "notes": "45 years experience not found in this content excerpt"
+    }
+  },
+  "design_patterns": {
+    "url_structure": "/custom-t-shirt/[city]-[state]/",
+    "page_type": "City/State landing page",
+    "title_pattern": "Custom T Shirt [City], [State] | T Shirt Custom [Brand] | Custom T shirts in [City], [State]",
+    "canonical_url_pattern": "https://shirt.co/custom-t-shirt/[city]-[state]/",
+    "og_image": {
+      "url": "https://shirt.co/wp-content/uploads/2020/06/custom-t-shirts-st-louis.jpg",
+      "dimensions": "1280x314",
+      "alt_pattern": "custom-t-shirt-[city]-[state]|[brand]-[city]-[state]|[city]-[state]-custom-t-shirts"
+    },
+    "schema_markup": [
+      "WebPage",
+      "ImageObject",
+      "BreadcrumbList",
+      "WebSite",
+      "Organization"
+    ],
+    "yoast_seo": {
+      "plugin_version": "27.6",
+      "features_used": [
+        "Title optimization",
+        "Meta description",
+        "Canonical URL",
+        "Open Graph tags",
+        "Twitter Card",
+        "Schema.org JSON-LD"
+      ]
+    }
+  },
+  "social_presence": {
+    "facebook": "https://www.facebook.com/STLShirtCo/",
+    "x_twitter": "@STLShirtCo",
+    "instagram": "https://www.instagram.com/stlshirtco/"
+  },
+  "brand_elements": {
+    "company_name": "Shirt.Co",
+    "logo": "SHIRT.CO-LOGO-SMALL-EMAIL-ICON-SIZE.png",
+    "fonts": [
+      "Barlow Condensed (100-900, italic)",
+      "PT Sans (400, 700, italic)"
+    ],
+    "theme_color": "#008658"
+  },
+  "technical_seo": {
+    "wordpress": true,
+    "plugins_detected": [
+      "Yoast SEO v27.6",
+      "Google Tag Manager",
+      "Reviews Feed",
+      "Feeds for YouTube",
+      "Gravity Forms"
+    ],
+    "structured_data": {
+      "breadcrumb": ["Home", "Custom T Shirt", "Port St. Lucie, FL"],
+      "organization": {
+        "name": "Shirt.Co",
+        "logo": "SHIRT.CO-LOGO-SMALL-EMAIL-ICON-SIZE.png",
+        "logo_dimensions": "667x272"
+      }
+    }
+  },
+  "content_gaps_for_charlys": {
+    "missing_from_this_excerpt": [
+      "45 years experience claim",
+      "Specific rush printing service details",
+      "Detailed design service offerings",
+      "Pricing information",
+      "Turnaround times",
+      "Portfolio/gallery examples"
+    ],
+    "recommendations": {
+      "seo": "Create city/state landing pages with similar URL structure: /custom-t-shirt/[city]-[state]/",
+      "meta_description": "Include years of experience (45) in meta descriptions for credibility",
+      "rush_service": "Create dedicated 'Rush Printing' or 'Same-Day' service pages with clear CTAs",
+      "schema": "Implement full schema markup including LocalBusiness with area served"
+    }
+  }
+}

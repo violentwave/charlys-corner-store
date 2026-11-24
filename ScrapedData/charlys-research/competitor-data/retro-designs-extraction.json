@@ -1,0 +1,67 @@
+{
+  "metadata_and_seo": {
+    "source_url": "https://reallygooddesigns.com/retro-website-designs/",
+    "page_category": "article",
+    "extracted_title_tag": "30 Unique Retro Website Designs Inspired By The Past",
+    "extracted_meta_desc": "Explore our set of top 30 retro website designs to discover timeless styles that instantly evoke nostalgia and inspire creativity.",
+    "main_h1": null,
+    "organic_keywords_found": ["old school websites", "retro web design", "retro website exmaples", "retro websites", "vintage web design", "vintage websites", "web design"]
+  },
+  "extracted_content": {
+    "hero_messaging": {
+      "headline": "30 Unique Retro Website Designs Inspired By The Past",
+      "sub_headline": "Explore our set of top 30 retro website designs to discover timeless styles that instantly evoke nostalgia and inspire creativity.",
+      "call_to_actions": []
+    },
+    "services_offered": [],
+    "how_it_works_steps": [],
+    "pricing_data_found": [],
+    "trust_and_social_proof": []
+  },
+  "design_and_ui_architecture": {
+    "layout_structure": "WordPress blog article layout with grid-based showcase gallery",
+    "color_palette_detected": {
+      "wordpress_presets": ["#000000", "#abb8c3", "#ffffff", "#f78da7", "#cf2e2e", "#ff6900", "#fcb900", "#7bdcb5", "#00d084", "#8ed1fc", "#0693e3", "#9b51e0"],
+      "gradient_presets": ["vivid-cyan-blue-to-vivid-purple", "light-green-cyan-to-vivid-green-cyan", "luminous-vivid-amber-to-luminous-vivid-orange", "cool-to-warm-spectrum", "blush-light-purple", "blush-bordeaux", "luminous-dusk", "electric-grass", "midnight"]
+    },
+    "typography_detected": {
+      "font_sizes": ["13px", "20px", "36px", "42px"],
+      "preconnect_domains": ["https://fonts.gstatic.com"]
+    },
+    "navigation_items": []
+  },
+  "developer_assets": {
+    "html_css_patterns": [
+      "WordPress block-based layout with .is-layout-flex and .is-layout-grid classes",
+      "CSS custom properties (variables) for design system (--wp--preset--color--*)",
+      "Autoptimize CSS caching layer",
+      "Yoast SEO Premium schema.org JSON-LD structured data implementation"
+    ],
+    "neon_or_retro_code": [
+      "Retro gradient definitions: cool-to-warm-spectrum with 6 color stops",
+      "Electric grass gradient: rgb(202,248,128) to rgb(113,206,126)",
+      "Midnight gradient: rgb(2,3,129) to rgb(40,116,252)",
+      "Luminous dusk: rgb(255,203,112), rgb(199,81,192), rgb(65,88,208)",
+      "Vivid color palette suitable for neon/synthwave theming"
+    ],
+    "js_react_nextjs_logic": [],
+    "python_backend_clues": []
+  },
+  "charlys_component_mapping": {
+    "useful_for_ask_charly_chat": [
+      "Retro design inspiration catalog structure",
+      "WordPress SEO schema patterns for article content",
+      "Yoast SEO JSON-LD structured data templates"
+    ],
+    "useful_for_services_grid": [
+      "Grid-based showcase layout using .is-layout-grid CSS",
+      "Flex layout patterns with .is-layout-flex for card arrangements",
+      "Gradient color palette suitable for neon 80s apparel theming"
+    ],
+    "useful_for_featured_products": [
+      "Card shadow presets: natural, deep, sharp, outlined, crisp",
+      "Aspect ratio presets: 1:1, 4:3, 3:4, 3:2, 2:3, 16:9, 9:16",
+      "Image container styling with contain-intrinsic-size for lazy loading"
+    ]
+  }
+}

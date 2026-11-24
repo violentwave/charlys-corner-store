@@ -1,0 +1,70 @@
+{
+  "metadata_and_seo": {
+    "source_url": "https://dribbble.com/search/retro-theme-website",
+    "page_category": "design inspiration search results gallery",
+    "extracted_title_tag": "Browse thousands of Retro Theme Website images for design inspiration | Dribbble",
+    "extracted_meta_desc": "Explore thousands of high-quality retro theme website images on Dribbble. Your resource to get inspired, discover and connect with designers worldwide.",
+    "main_h1": null,
+    "organic_keywords_found": ["retro theme website", "design inspiration", "high-quality", "designers", "website images"]
+  },
+  "extracted_content": {
+    "hero_messaging": {
+      "headline": null,
+      "sub_headline": null,
+      "call_to_actions": []
+    },
+    "services_offered": [],
+    "how_it_works_steps": [],
+    "pricing_data_found": [],
+    "trust_and_social_proof": []
+  },
+  "design_and_ui_architecture": {
+    "layout_structure": "search results gallery grid with masonry-style thumbnail display, filter sidebar, pagination controls",
+    "color_palette_detected": {
+      "primary": "#FFFFFF (white background)",
+      "accent": "#0076ff (progress bar blue)",
+      "brand": "#EA64D9 (Dribbble pink/purple)"
+    },
+    "typography_detected": {
+      "primary_fonts": [
+        "Mona Sans (headings/display)",
+        "WF Visual Sans Regular (body)",
+        "WF Visual Sans SemiBold (emphasis)"
+      ],
+      "secondary_fonts": [
+        "Source Serif 4 (serif accents)",
+        "IBM Plex Mono (monospace/code)"
+      ]
+    },
+    "navigation_items": []
+  },
+  "developer_assets": {
+    "html_css_patterns": {
+      "turbo_progress_bar": "fixed position progress bar with CSS transitions for width and opacity, z-index 2147483647",
+      "font_preloading": "rel=preload for woff2 font files with crossorigin=anonymous",
+      "conditional_css_loading": "IE conditional comments with media=all onload handler for async CSS",
+      "responsive_viewport": "width=device-width, initial-scale=1.0, minimum-scale=1.0, interactive-widget=resizes-content"
+    },
+    "neon_or_retro_code": [],
+    "js_react_nextjs_logic": {
+      "module_system": "Vite-based ES modules with preload/modulepreload directives",
+      "cookie_consent": "CookieYes integration with analytics gating via cookieyes_consent_update event",
+      "ab_testing": "Custom <drb-ab-test> web component for A/B test data capture",
+      "analytics": "Google Tag Manager with consent-aware loading pattern"
+    },
+    "python_backend_clues": []
+  },
+  "charlys_component_mapping": {
+    "useful_for_ask_charly_chat": [],
+    "useful_for_services_grid": {
+      "gallery_card_pattern": "Masonry grid with thumbnail cards, hover states, designer attribution",
+      "filter_sidebar": "Tag-based filtering with clear visual hierarchy",
+      "lazy_loading": "lazysizes library integration for performant image loading"
+    },
+    "useful_for_featured_products": {
+      "card_structure": "Thumbnail + title + creator + stats (views/likes) pattern",
+      "image_optimization": "WebP/AVIF with lazy loading and blur-up placeholder technique",
+      "hover_interactions": "Overlay reveal on hover with action buttons"
+    }
+  }
+}

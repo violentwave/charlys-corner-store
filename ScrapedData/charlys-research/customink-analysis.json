@@ -1,0 +1,78 @@
+{
+  "metadata_and_seo": {
+    "source_url": "https://www.customink.com/",
+    "page_category": "homepage",
+    "extracted_title_tag": null,
+    "extracted_meta_desc": null,
+    "main_h1": null,
+    "organic_keywords_found": []
+  },
+  "extracted_content": {
+    "hero_messaging": {
+      "headline": null,
+      "sub_headline": null,
+      "call_to_actions": []
+    },
+    "services_offered": [
+      "custom-t-shirts",
+      "promo-products",
+      "apparel"
+    ],
+    "how_it_works_steps": [],
+    "pricing_data_found": [],
+    "trust_and_social_proof": []
+  },
+  "design_and_ui_architecture": {
+    "layout_structure": "web-component-based-architecture",
+    "color_palette_detected": {
+      "primary": "#1e39d2",
+      "background": "rgba(0, 0, 0, 0.04)",
+      "text": "rgba(38, 38, 39, 1)",
+      "muted": "rgba(128, 126, 163, 0.6)"
+    },
+    "typography_detected": {
+      "primary_font": "SharpSans, Sharp Sans, Helvetica, Arial, Trebuchet MS, sans-serif"
+    },
+    "navigation_items": [
+      "Search overlay with autocomplete",
+      "Cart functionality",
+      "Favorites",
+      "Customer chat",
+      "Local store locator"
+    ]
+  },
+  "developer_assets": {
+    "html_css_patterns": [
+      "CSS custom properties for theming with aa-* prefix (Algolia autocomplete)",
+      "Responsive breakpoints: mobile (<700px), tablet (700-1023px), desktop (1024-1299px), large desktop (1300px+)",
+      "Container widths: 672px, 967px, 1242px for pigment-wrapper",
+      "Klaviyo form integration with newsletter styling"
+    ],
+    "neon_or_retro_code": [],
+    "js_react_nextjs_logic": [
+      "Stencil.js web components: ci-*, customer-* custom elements",
+      "Hydration pattern with .hydrated class for visibility control",
+      "Algolia autocomplete integration (aa-* CSS classes)"
+    ],
+    "python_backend_clues": []
+  },
+  "charlys_component_mapping": {
+    "useful_for_ask_charly_chat": [
+      "ci-chat-popup component pattern",
+      "customer-chat component"
+    ],
+    "useful_for_services_grid": [
+      "ci-custom-t-shirts",
+      "ci-promo-products",
+      "ci-apparel",
+      "ci-solutions"
+    ],
+    "useful_for_featured_products": [
+      "ci-cart",
+      "ci-cart-image",
+      "ci-rating",
+      "ci-favorites",
+      "ci-drawer (for product details)"
+    ]
+  }
+}

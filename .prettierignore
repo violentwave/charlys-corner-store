@@ -1,0 +1,7 @@
+pnpm-lock.yaml
+ScrapedData/
+Assets/
+docs/
+.next/
+playwright-report/
+test-results/

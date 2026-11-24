@@ -1,0 +1,123 @@
+{
+  "metadata_and_seo": {
+    "source_url": "https://www.printrenegades.com/",
+    "page_category": "homepage",
+    "extracted_title_tag": "Best Screen Printing, DTG & Embroidery Los Angeles | Print Renegades",
+    "extracted_meta_desc": "Offering silk screen printing, DTG, DTF & Embroidery on custom apparel like t-shirts, hoodies, sweatshirts, tote bags & more in the Los Angeles Arts District.",
+    "main_h1": null,
+    "organic_keywords_found": [
+      "screen printing",
+      "DTG",
+      "DTF",
+      "Embroidery",
+      "custom apparel",
+      "t-shirts",
+      "hoodies",
+      "sweatshirts",
+      "tote bags",
+      "Los Angeles",
+      "Arts District"
+    ]
+  },
+  "extracted_content": {
+    "hero_messaging": {
+      "headline": null,
+      "sub_headline": null,
+      "call_to_actions": []
+    },
+    "services_offered": [
+      "silk screen printing",
+      "DTG (Direct to Garment)",
+      "DTF (Direct to Film)",
+      "Embroidery",
+      "custom apparel printing"
+    ],
+    "how_it_works_steps": [],
+    "pricing_data_found": [],
+    "trust_and_social_proof": [
+      {
+        "type": "google_rating",
+        "rating_value": "4.9",
+        "review_count": "76"
+      }
+    ]
+  },
+  "design_and_ui_architecture": {
+    "layout_structure": "Webflow site - single column mobile responsive layout detected from CSS classes",
+    "color_palette_detected": null,
+    "typography_detected": [
+      "Montserrat (100-900 weights)",
+      "Oswald (200-700 weights)",
+      "Roboto (300-700 weights)"
+    ],
+    "navigation_items": []
+  },
+  "developer_assets": {
+    "html_css_patterns": [
+      "Webflow CSS framework",
+      "Ionic web components (hydrated visibility pattern)",
+      "Tailwind-style utility classes"
+    ],
+    "neon_or_retro_code": [],
+    "js_react_nextjs_logic": [
+      "WebFont.load() for Google Fonts",
+      "Facebook Pixel (fbq)",
+      "Google Tag Manager",
+      "HubSpot analytics",
+      "Microsoft Clarity",
+      "reCAPTCHA v2"
+    ],
+    "python_backend_clues": []
+  },
+  "charlys_component_mapping": {
+    "useful_for_ask_charly_chat": [
+      "Ionic chat component pattern detection",
+      "Form handling patterns from JSON-LD schema"
+    ],
+    "useful_for_services_grid": [
+      "Service keywords: screen printing, DTG, DTF, Embroidery",
+      "Product types: t-shirts, hoodies, sweatshirts, tote bags"
+    ],
+    "useful_for_featured_products": [
+      "Apparel categories identified from meta description",
+      "Location-based SEO structure (Port St. Lucie equivalent structure)"
+    ]
+  },
+  "business_schema_extracted": {
+    "name": "Print Renegades",
+    "telephone": "+1-213-536-5233",
+    "address": {
+      "street": "2457 Hunter Street, #A",
+      "city": "LOS ANGELES",
+      "state": "CA",
+      "postal": "90021"
+    },
+    "hours": {
+      "monday": "9:30 AM - 6:00 PM",
+      "tuesday": "9:30 AM - 6:00 PM",
+      "wednesday": "9:30 AM - 6:00 PM",
+      "thursday": "9:30 AM - 6:00 PM",
+      "friday": "9:30 AM - 6:00 PM"
+    },
+    "social_profiles": [
+      "https://www.facebook.com/losangelesscreenprinters/",
+      "https://twitter.com/printrenegades",
+      "https://www.instagram.com/printrenegades/",
+      "https://www.youtube.com/channel/UCjbWFCYraJJ2D9trN8o1RVA",
+      "https://www.linkedin.com/company/print-renegades/"
+    ]
+  },
+  "extraction_notes": {
+    "content_fully_loaded": false,
+    "truncation_point": "CSS font styles mid-file",
+    "missing_sections": [
+      "hero section content",
+      "navigation menu items",
+      "pricing tables",
+      "color scheme values",
+      "service grid details",
+      "footer content"
+    ],
+    "data_source": "HTML head/meta/schema only - body content truncated"
+  }
+}

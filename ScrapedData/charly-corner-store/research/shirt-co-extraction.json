@@ -1,0 +1,131 @@
+{
+  "source_url": "https://shirt.co/custom-t-shirt/port-st-lucie-fl/",
+  "extraction_date": "2026-05-17",
+  "extraction_scope": "HTML head/metadata only - body content not provided",
+  
+  "company_profile": {
+    "name": "Shirt.Co",
+    "also_known_as": "STL Shirt Co",
+    "location_focus": "Port St. Lucie, FL",
+    "additional_locations": ["St. Louis, MO"],
+    "business_type": "Custom t-shirt design and printing",
+    "services": [
+      "Custom t-shirt design",
+      "Custom t-shirt printing",
+      "Expedited shipping"
+    ],
+    "shipping": "Expedited shipping available for customers outside the Port St. Lucie, FL area"
+  },
+
+  "seo_keywords": {
+    "primary_keywords": [
+      "custom t shirt",
+      "custom t shirts",
+      "custom t-shirt",
+      "custom t-shirts",
+      "t shirt custom",
+      "t-shirt custom"
+    ],
+    "location_keywords": [
+      "Port St. Lucie FL",
+      "Port St. Lucie Florida",
+      "near Port St. Lucie FL"
+    ],
+    "long_tail_keywords": [
+      "custom t shirt Port St. Lucie FL",
+      "custom t shirts in Port St. Lucie FL",
+      "leading designer and printer of custom t shirts"
+    ],
+    "meta_title": "Custom T Shirt Port St. Lucie, FL | T Shirt Custom Shirt.Co | Custom T shirts in Port St. Lucie, FL",
+    "meta_description": "Custom T shirt Port St. Lucie, FL. Shirt.Co near Port St. Lucie, FL, is your leading designer and printer of custom T shirts in the Port St. Lucie, FL area. Contact us today for your custom order near Port St. Lucie, FL. We also provide expedited shipping for customers outside of the Port St. Lucie, FL area.",
+    "og_title": "Custom T Shirt Port St. Lucie, FL | T Shirt Custom Shirt.Co | Custom T shirts in Port St. Lucie, FL",
+    "canonical_url": "https://shirt.co/custom-t-shirt/port-st-lucie-fl/",
+    "url_slug_pattern": "custom-t-shirt/[city]-[state]/"
+  },
+
+  "design_patterns": {
+    "color_scheme": {
+      "theme_color": "#008658",
+      "primary": "green (#008658)"
+    },
+    "typography": {
+      "headings": "Barlow Condensed (100-900 weights, italic variants)",
+      "body": "PT Sans (400, 700, italic variants)"
+    },
+    "image_assets": {
+      "hero_image": "custom-t-shirts-st-louis.jpg",
+      "hero_dimensions": "1280x314",
+      "logo": "SHIRT.CO-LOGO-SMALL-EMAIL-ICON-SIZE.png",
+      "logo_dimensions": "667x272"
+    },
+    "breadcrumb_structure": [
+      "Home",
+      "Custom T Shirt",
+      "Port St. Lucie, FL"
+    ]
+  },
+
+  "technical_stack": {
+    "cms": "WordPress",
+    "seo_plugin": "Yoast SEO v27.6",
+    "analytics": [
+      "Google Tag Manager (GTM-NRCLSNPR)",
+      "Google Analytics (AW-10835576472)",
+      "Facebook Pixel (1581238186157444, 525758257587289)",
+      "LinkedIn Insight Tag"
+    ],
+    "schema_markup": [
+      "WebPage",
+      "ImageObject",
+      "BreadcrumbList",
+      "WebSite",
+      "Organization",
+      "SearchAction"
+    ]
+  },
+
+  "social_media_presence": {
+    "facebook": {
+      "url": "https://www.facebook.com/STLShirtCo/",
+      "handle": "STLShirtCo"
+    },
+    "x_twitter": {
+      "handle": "@STLShirtCo"
+    },
+    "instagram": {
+      "url": "https://www.instagram.com/stlshirtco/",
+      "handle": "@stlshirtco"
+    }
+  },
+
+  "local_seo_strategy": {
+    "landing_page_approach": "City-state specific landing pages for service areas",
+    "template_pattern": "URL structure: /custom-t-shirt/{city}-{state}/",
+    "content_template": "{service} {city}, {state}. {company} near {city}, {state}...",
+    "geo_targeting": "Multiple location pages (Port St. Lucie FL, St. Louis area)",
+    "estimated_reading_time": "3 minutes"
+  },
+
+  "missing_information": {
+    "note": "The provided content is truncated HTML <head> only. Full body content needed for:",
+    "requires_body_content": [
+      "Screen printing company rankings",
+      "Detailed design-your-own feature specifications",
+      "Pricing information",
+      "Product catalog/categories",
+      "Customer testimonials/ratings",
+      "Detailed service descriptions",
+      "Turnaround times",
+      "Minimum order quantities",
+      "File upload/design tool specifications"
+    ]
+  },
+
+  "competitive_insights": {
+    "seo_approach": "Aggressive local SEO with city-specific landing pages",
+    "keyword_stuffing_pattern": "Heavy repetition of location + service keywords",
+    "content_strategy": "Template-based pages for multiple geographic markets",
+    "technical_seo": "Comprehensive schema markup, Open Graph, Twitter Cards",
+    "multi_location_strategy": true
+  }
+}

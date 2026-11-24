@@ -1,0 +1,91 @@
+{
+  "metadata_and_seo": {
+    "source_url": "https://www.awwwards.com/websites/retro/",
+    "page_category": "other",
+    "extracted_title_tag": "Best Retro Websites | Web Design Inspiration",
+    "extracted_meta_desc": "Beautiful Retro Designs for Inspiration. Selection of Awwwards winning retro websites. A retro design can add a dynamic, functional, cozy, fun and even modern feel to a website.",
+    "main_h1": null,
+    "organic_keywords_found": ["retro", "web design inspiration", "awwwards", "vintage websites", "retro design", "dynamic", "functional", "cozy", "modern"]
+  },
+  "extracted_content": {
+    "hero_messaging": {
+      "headline": null,
+      "sub_headline": null,
+      "call_to_actions": []
+    },
+    "services_offered": [],
+    "how_it_works_steps": [],
+    "pricing_data_found": [],
+    "trust_and_social_proof": []
+  },
+  "design_and_ui_architecture": {
+    "layout_structure": [
+      "sticky header -> filter navigation bar -> grid layout gallery -> website cards"
+    ],
+    "color_palette_detected": [
+      "#3ea094 (theme color)",
+      "#FA5D29 (color-orange/errors/red)",
+      "#FF602C (color-connect)",
+      "#FF9667 (count/badge background)",
+      "#FFAE94 (color-connect-2)",
+      "#FFC5B1 (color-connect-3)",
+      "#AAEEC4 (color-inspire)",
+      "#C8E4D3 (color-inspire-2)",
+      "#E2F4E9 (color-inspire-3)",
+      "#502bd8 (color-awards)",
+      "#6749d1 (color-awards-2)",
+      "#917eda (color-awards-3)",
+      "#c0ab3c (color-read)",
+      "#CDC38B (color-read-2)",
+      "#DBD6C0 (color-read-3)",
+      "#FFF083 (color-learn/yellow)",
+      "#FFF9D0 (color-learn-2)",
+      "#fffbe2 (color-learn-3)",
+      "#74bcff (color-jobs)",
+      "#99ccfc (color-jobs-2)",
+      "#b4d7f8 (color-jobs-3)",
+      "#49B3FC (color-blue)",
+      "#f8f0ee (color-featured)",
+      "#222 (color-primary/dark)",
+      "#121212 (bg-primary dark mode)",
+      "#383838 (sf-bg dark)"
+    ],
+    "typography_detected": [
+      "Inter Tight (variable font, weight 100-900)"
+    ],
+    "navigation_items": [
+      "Filters",
+      "Categories dropdown",
+      "Colors dropdown",
+      "Tags dropdown",
+      "View options (grid/list)"
+    ]
+  },
+  "developer_assets": {
+    "html_css_patterns": [
+      "CSS Grid with 12 columns: grid-template-columns: repeat(var(--grid-columns, 12), 1fr)",
+      "CSS Custom Properties for theming: :root with extensive variable definitions",
+      "Flexbox for navigation: display: flex; align-items: center",
+      "Mobile-first responsive design with @media(max-width: 1000px)",
+      "Position fixed overlay with backdrop blur effect",
+      "CSS custom scrollbar styling: ::-webkit-scrollbar",
+      "Aspect ratio for images: aspect-ratio: 3/1.35 and 16/12",
+      "Container query-like layout with clamp() for fluid spacing: padding: var(--pad-inner)"
+    ],
+    "neon_or_retro_code": [],
+    "js_react_nextjs_logic": [
+      "Filter dropdown toggle with .is-open class",
+      "Smooth scroll behavior: scroll-behavior: smooth",
+      "Modal/dropdown animation: transition: all .3s and @keyframes for pulse/dot animations",
+      "Dark mode support via body.dark class with CSS variable overrides",
+      "CSS-only animation for dropdown pulsing: @keyframes aniCountPulse",
+      "Dropdown hide/show sequence animation: @keyframes aniDropdownHideShow"
+    ],
+    "python_backend_clues": []
+  },
+  "charlys_component_mapping": {
+    "useful_for_ask_charly_chat": null,
+    "useful_for_services_grid": "The grid pattern with .grid class using CSS Grid with 12 columns is useful. The filter navigation bar with .nav-filters__item styling using rounded borders (8px), hover transitions, and subtle backgrounds provides inspiration for service cards.",
+    "useful_for_featured_products": "The website card layout uses a 12-column grid system with aspect-ratio images. The card hover states with box-shadow transitions and the color-coded category badges (.nav-filters__count with #FF9667 background) provide patterns for product cards."
+  }
+}

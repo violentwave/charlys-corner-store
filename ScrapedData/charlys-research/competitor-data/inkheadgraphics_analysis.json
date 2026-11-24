@@ -1,0 +1,128 @@
+{
+  "metadata_and_seo": {
+    "source_url": "https://www.inkheadgraphics.com",
+    "page_category": "homepage",
+    "extracted_title_tag": "Inkhead Graphics",
+    "extracted_meta_desc": "SHIRTS. SIGNS. PRINTING. DESIGN. VEHICLE WRAPS. PROMO. Your One Stop Print Shop! Port St. Lucie, Florida, Screen Printing, screenprinting, custom tshirts, custom t-shirts, tees, embroidery, banners, vehicle graphics, vinyl, storefronts, Signs, Boat Wraps, Vinyl Signs, Vinyl Graphics, Vinyl lettering, custom design, logo, branding, marketing, printing, Port Saint Lucie, Port St. Lucie, Jensen, Jensen Beach, Stuart, Fort Pierce, Embroidery, DTG, Direct To Garment, Sublimation, Storefront Signs, Yard Signs, Magnets, A-Frame Signs, Golf Tournament Signs, Backlit signs, Marquee Signs",
+    "main_h1": null,
+    "organic_keywords_found": [
+      "screen printing",
+      "screenprinting",
+      "custom t-shirts",
+      "custom tshirts",
+      "tees",
+      "embroidery",
+      "banners",
+      "vehicle graphics",
+      "vinyl",
+      "signs",
+      "boat wraps",
+      "vinyl signs",
+      "vinyl graphics",
+      "vinyl lettering",
+      "custom design",
+      "logo",
+      "branding",
+      "marketing",
+      "Port St. Lucie",
+      "Port Saint Lucie",
+      "Jensen Beach",
+      "Stuart",
+      "Fort Pierce",
+      "DTG",
+      "Direct To Garment",
+      "sublimation",
+      "storefront signs",
+      "yard signs",
+      "magnets",
+      "A-Frame Signs",
+      "golf tournament signs",
+      "backlit signs",
+      "marquee signs",
+      "vehicle wraps"
+    ]
+  },
+  "extracted_content": {
+    "hero_messaging": {
+      "headline": null,
+      "sub_headline": null,
+      "call_to_actions": []
+    },
+    "services_offered": [],
+    "how_it_works_steps": [],
+    "pricing_data_found": [],
+    "trust_and_social_proof": []
+  },
+  "design_and_ui_architecture": {
+    "layout_structure": "Squarespace commerce template - specific layout structure not visible in provided head content",
+    "color_palette_detected": [],
+    "typography_detected": {
+      "primary_font": "Montserrat",
+      "secondary_font": "Raleway",
+      "font_weights": ["100", "400", "500", "600", "700"],
+      "italic_available": true
+    },
+    "navigation_items": []
+  },
+  "developer_assets": {
+    "html_css_patterns": {
+      "platform": "Squarespace",
+      "commerce_enabled": true,
+      "css_framework": "Squarespace proprietary (styles-compressed)",
+      "preload_connections": ["images.squarespace-cdn.com", "fonts.gstatic.com"]
+    },
+    "neon_or_retro_code": [],
+    "js_react_nextjs_logic": {
+      "framework": "Squarespace proprietary JS (YUI3 based)",
+      "bundling": "Rollup-based compressed scripts",
+      "commerce_features": [
+        "product-quick-view",
+        "forms",
+        "popup-overlay",
+        "announcement-bar",
+        "search-preview"
+      ]
+    },
+    "python_backend_clues": null
+  },
+  "charlys_component_mapping": {
+    "useful_for_ask_charly_chat": {
+      "extracted_keywords": [
+        "screen printing",
+        "embroidery",
+        "DTG",
+        "Direct To Garment",
+        "sublimation",
+        "vehicle wraps",
+        "vinyl graphics",
+        "signs",
+        "banners",
+        "custom t-shirts"
+      ],
+      "service_areas": ["Port St. Lucie", "Jensen Beach", "Stuart", "Fort Pierce"],
+      "business_type": "One Stop Print Shop",
+      "tagline": "SHIRTS. SIGNS. PRINTING. DESIGN. VEHICLE WRAPS. PROMO."
+    },
+    "useful_for_services_grid": {
+      "inferred_services": [
+        {
+          "category": "Apparel",
+          "items": ["Screen Printing", "Embroidery", "DTG (Direct To Garment)", "Sublimation", "Custom T-Shirts/Tees"]
+        },
+        {
+          "category": "Signage",
+          "items": ["Storefront Signs", "Yard Signs", "A-Frame Signs", "Backlit Signs", "Marquee Signs", "Banners"]
+        },
+        {
+          "category": "Vehicle/Promo",
+          "items": ["Vehicle Wraps", "Boat Wraps", "Vinyl Graphics", "Vinyl Lettering", "Magnets"]
+        }
+      ]
+    },
+    "useful_for_featured_products": {
+      "product_categories": ["custom t-shirts", "tees", "embroidered apparel", "banners", "signs", "magnets"],
+      "target_audience": ["golf tournaments", "businesses needing storefronts", "vehicle owners"],
+      "location_focus": "Port St. Lucie, Florida area"
+    }
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "metadata_and_seo": {
+    "source_url": "https://sunrisewear.com/",
+    "page_category": "homepage",
+    "extracted_title_tag": null,
+    "extracted_meta_desc": null,
+    "main_h1": null,
+    "organic_keywords_found": []
+  },
+  "extracted_content": {
+    "hero_messaging": {
+      "headline": null,
+      "sub_headline": null,
+      "call_to_actions": []
+    },
+    "services_offered": [],
+    "how_it_works_steps": [],
+    "pricing_data_found": [],
+    "trust_and_social_proof": []
+  },
+  "design_and_ui_architecture": {
+    "layout_structure": "Shopify storefront with overlay/spinner loading pattern - full-screen modal overlay for Locker app authentication",
+    "color_palette_detected": {
+      "primary": "#191919 (dark overlay background)",
+      "text": "#ddd (light text on dark)",
+      "accent": "#555 (borders/dividers)"
+    },
+    "typography_detected": "monospace 14px for overlay content",
+    "navigation_items": []
+  },
+  "developer_assets": {
+    "html_css_patterns": [
+      "Fixed position modal overlay with transform centering",
+      "CSS spinner animation with SVG circle stroke-dasharray",
+      "Flexbox centering for loading states",
+      "CSS transition animations (bottom/opacity 0.2s)",
+      "Keypress unlock sequence (Konami-style: 76,79,67,75,83,77,73,84,72,49,49)"
+    ],
+    "neon_or_retro_code": [],
+    "js_react_nextjs_logic": [
+      "Shopify Trekkie analytics",
+      "Locksmith app integration (embedded authentication)",
+      "HubSpot tracking (hubId: 39823078)",
+      "Facebook Pixel (ID: 755087571918823)",
+      "Google Analytics (G-6JX1782BH4)",
+      "Google Ads (AW-604347007)",
+      "Recharge subscription widget",
+      "Uploadery app",
+      "Customizery app"
+    ],
+    "python_backend_clues": []
+  },
+  "charlys_component_mapping": {
+    "useful_for_ask_charly_chat": [],
+    "useful_for_services_grid": [],
+    "useful_for_featured_products": []
+  },
+  "raw_analysis_notes": {
+    "platform": "Shopify",
+    "store": "sunrisewear-com.myshopify.com",
+    "apps_detected": [
+      "Locksmith (content protection)",
+      "HubSpot CRM",
+      "Facebook Pixel",
+      "Google Analytics 4",
+      "Google Ads",
+      "GovX (military discount)",
+      "Uploadery (file uploads)",
+      "Customizery (product customization)",
+      "Recharge (subscriptions)"
+    ],
+    "content_status": "Fragment only contains script injections, no visible page content"
+  }
+}

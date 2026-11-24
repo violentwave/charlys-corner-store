@@ -1,0 +1,44 @@
+{
+  "metadata_and_seo": {
+    "source_url": null,
+    "page_category": "security_block_page",
+    "extracted_title_tag": null,
+    "extracted_meta_desc": null,
+    "main_h1": null,
+    "organic_keywords_found": []
+  },
+  "extracted_content": {
+    "hero_messaging": {
+      "headline": null,
+      "sub_headline": null,
+      "call_to_actions": []
+    },
+    "services_offered": [],
+    "how_it_works_steps": [],
+    "pricing_data_found": [],
+    "trust_and_social_proof": []
+  },
+  "design_and_ui_architecture": {
+    "layout_structure": "security_block_frame",
+    "color_palette_detected": [],
+    "typography_detected": [],
+    "navigation_items": []
+  },
+  "developer_assets": {
+    "html_css_patterns": [],
+    "neon_or_retro_code": [],
+    "js_react_nextjs_logic": [],
+    "python_backend_clues": []
+  },
+  "charlys_component_mapping": {
+    "useful_for_ask_charly_chat": false,
+    "useful_for_services_grid": false,
+    "useful_for_featured_products": false
+  },
+  "extraction_notes": {
+    "status": "blocked_by_incapsula",
+    "incident_id": "48000120524593101-1116032812188697361",
+    "message": "Request unsuccessful - page protected by Incapsula security/WAF. No extractable content available.",
+    "recommendation": "Use alternative scraping method (browser automation with Incapsula bypass) or select different competitor URLs that are not WAF-protected."
+  }
+}

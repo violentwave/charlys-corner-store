@@ -1,0 +1,83 @@
+{
+  "metadata_and_seo": {
+    "source_url": "https://hypebeast.com/",
+    "page_category": "lifestyle_media_publisher",
+    "extracted_title_tag": null,
+    "extracted_meta_desc": null,
+    "main_h1": null,
+    "organic_keywords_found": []
+  },
+  "extracted_content": {
+    "hero_messaging": {
+      "headline": null,
+      "sub_headline": null,
+      "call_to_actions": []
+    },
+    "services_offered": [],
+    "how_it_works_steps": [],
+    "pricing_data_found": [],
+    "trust_and_social_proof": []
+  },
+  "design_and_ui_architecture": {
+    "layout_structure": "not_visible_in_provided_html",
+    "color_palette_detected": {
+      "primary": "#003afa",
+      "secondary": "#00c999",
+      "dangerous": "#ed7474",
+      "text_primary": "#4672ff",
+      "backgrounds": ["#fff", "rgba(0,0,0,0)"]
+    },
+    "typography_detected": {
+      "families": ["Helvetica", "Arial", "sans-serif", "Roboto", "Open Sans"],
+      "sizes": ["15px", "0.875em", "1rem", "1.5rem"]
+    },
+    "navigation_items": []
+  },
+  "developer_assets": {
+    "html_css_patterns": [
+      "CSS-in-JS with base64 source maps embedded",
+      "SCSS module patterns with camelCase class naming",
+      "CSS custom properties for z-index: var(--termly-z-index)",
+      "Keyframes animations for toast notifications (@keyframes go2264125279, go302008000)",
+      "Filter drop-shadow effects: filter: drop-shadow(0 4px 10px rgba(39, 42, 60, 0.15))"
+    ],
+    "neon_or_retro_code": [],
+    "js_react_nextjs_logic": [
+      "React component styling with CSS modules",
+      "Window global config: window.TERMLY_CUSTOM_BLOCKING_MAP",
+      "Video.js integration for fluid aspect ratio (padding-top: 56.25%)",
+      "Goober CSS-in-JS library for toast animations"
+    ],
+    "python_backend_clues": []
+  },
+  "charlys_component_mapping": {
+    "useful_for_ask_charly_chat": [
+      "Toast notification animation patterns for retro cyberpunk alerts",
+      "Consent banner styling structure (Glassmorphism potential with rgba backgrounds)"
+    ],
+    "useful_for_services_grid": [],
+    "useful_for_featured_products": [
+      "Video.js responsive video container pattern",
+      "Shadow effects: box-shadow: 0px 4px 10px rgba(0,50,123,.1)"
+    ]
+  },
+  "analytics_stack_detected": [
+    "Google Tag Manager (GTM-68NN)",
+    "Google Analytics 4 (G-FPSZ48KG02)",
+    "Facebook Pixel (395102701159578)",
+    "TikTok Pixel (CBQGSQ3C77U606K8959G)",
+    "Twitter/X Universal Website Tag",
+    "Quantcast (quant.js)",
+    "Scorecard Research",
+    "Hadron ID (Prebid)",
+    "Microsoft Clarity (kuwada0c8t)",
+    "Termly Consent Management Platform"
+  ],
+  "ui_components_found": [
+    "Termly floating preferences button (60px circular, absolute positioned)",
+    "GPC notification banner (flex layout, max-width 500px, rounded corners)",
+    "Video.js fluid video player",
+    "Toast notification system (goober CSS-in-JS)"
+  ],
+  "note": "Provided content was primarily head section with analytics/tracking scripts. No visible page content (hero, products, services, navigation) was present in the HTML sample. Recommended: scrape body content for meaningful Charly's Corner Store inspiration."
+}

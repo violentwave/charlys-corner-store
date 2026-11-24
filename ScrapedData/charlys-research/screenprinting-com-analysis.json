@@ -1,0 +1,139 @@
+{
+  "source": "https://www.screenprinting.com",
+  "company": "ScreenPrinting.com by Ryonet",
+  "extraction_date": "2026-05-17",
+  "screen_printing_supplies": {
+    "core_categories": [
+      {
+        "category": "Inks",
+        "products": ["Plastisol ink"],
+        "notes": "Featured prominently in homepage messaging"
+      },
+      {
+        "category": "Screens",
+        "products": ["High-tension screens"],
+        "notes": "Emphasized as quality differentiator"
+      },
+      {
+        "category": "Presses",
+        "products": ["Manual screen printing presses", "Automatic screen printing presses"],
+        "notes": "Both entry-level and professional equipment"
+      }
+    ],
+    "value_proposition": "Test everything in-house so you get tools that work right out of the box",
+    "quality_claims": [
+      "In-house testing",
+      "Professional-grade equipment",
+      "Ready-to-use out of the box"
+    ]
+  },
+  "education": {
+    "positioning": "Education provided alongside supplies and equipment",
+    "messaging": "Everything you need to print like a pro",
+    "implied_offerings": [
+      "Professional printing techniques",
+      "Equipment usage training",
+      "How-to resources for beginners to pros"
+    ]
+  },
+  "community": {
+    "social_presence": {
+      "twitter": "@ryonet"
+    },
+    "brand_voice": [
+      "Professional but accessible",
+      "Pro-focused messaging",
+      "Quality assurance emphasis"
+    ]
+  },
+  "seo_keywords": {
+    "primary_keywords": [
+      "screen printing supplies",
+      "screen printing equipment",
+      "screenprinting"
+    ],
+    "secondary_keywords": [
+      "plastisol ink",
+      "high-tension screens",
+      "manual screen printing press",
+      "automatic screen printing press",
+      "print like a pro"
+    ],
+    "long_tail_keywords": [
+      "screen printing supplies and equipment",
+      "tools that work right out of the box"
+    ],
+    "meta_title": "Screen Printing Supplies & Equipment | ScreenPrinting.com by Ryonet",
+    "meta_description": "At ScreenPrinting.com we stock the screen printing supplies, equipment, and education you need to print like a pro. From plastisol ink and high-tension screens to manual and automatic screen printing presses, we test everything in-house so you get tools that work right out of the box."
+  },
+  "content_strategy": {
+    "brand_positioning": "Professional supplier with in-house testing expertise",
+    "target_audience": [
+      "Professional screen printers",
+      "Beginners wanting pro results",
+      "Businesses needing reliable equipment"
+    ],
+    "key_messages": [
+      "Print like a pro",
+      "Tested in-house",
+      "Works right out of the box",
+      "Complete solution (supplies + equipment + education)"
+    ],
+    "content_themes": [
+      "Quality assurance",
+      "Professional results",
+      "Educational support",
+      "Equipment reliability"
+    ],
+    "visual_identity": {
+      "fonts": ["Montserrat (multiple weights: 400, 600, 700, 800)"],
+      "color_schemes": [
+        {
+          "name": "Primary",
+          "button_color": "#D91B87 (Pink/Magenta)",
+          "hover": "#E14AA0"
+        },
+        {
+          "name": "Dark",
+          "background": "#000000",
+          "text": "#FFFFFF"
+        },
+        {
+          "name": "Accent",
+          "background": "#FFDD00 (Yellow)",
+          "text": "#000000"
+        }
+      ],
+      "design_approach": "Bold, modern, professional with rounded buttons (28-50px radius)"
+    },
+    "ecommerce_features": [
+      "Flat rate shipping eligible products",
+      "In-stock indicators",
+      "Pre-order labels",
+      "Sale labels",
+      "Sold-out labels"
+    ]
+  },
+  "competitive_insights": {
+    "differentiators": [
+      "In-house product testing",
+      "Education included in value prop",
+      "Dual focus on supplies AND equipment",
+      "Professional-grade positioning"
+    ],
+    "pricing_indicators": [
+      "Flat rate shipping program",
+      "Sale/promotional pricing",
+      "Wide product range (44+ flat rate products listed)"
+    ]
+  },
+  "technical_implementation": {
+    "analytics": ["Google Analytics (GTM-57NSNKW)", "Google Tag Manager"],
+    "cookie_compliance": "TrueVault Polaris",
+    "platform": "Shopify (evident from cdn/shop URLs)",
+    "performance": {
+      "font_loading": "Swap display strategy for Montserrat",
+      "preloading": "CSS files preloaded"
+    }
+  }
+}

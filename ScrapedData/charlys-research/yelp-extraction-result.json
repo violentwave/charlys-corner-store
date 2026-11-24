@@ -1,0 +1,111 @@
+{
+  "metadata_and_seo": {
+    "source_url": "yelp.com/biz/rfn-bg-image-page",
+    "page_category": "business-directory-platform",
+    "extracted_title_tag": null,
+    "extracted_meta_desc": null,
+    "main_h1": null,
+    "organic_keywords_found": []
+  },
+  "extracted_content": {
+    "hero_messaging": {
+      "headline": null,
+      "sub_headline": null,
+      "call_to_actions": []
+    },
+    "services_offered": [],
+    "how_it_works_steps": [],
+    "pricing_data_found": [],
+    "trust_and_social_proof": []
+  },
+  "design_and_ui_architecture": {
+    "layout_structure": {
+      "framework": "emotion-css-in-js",
+      "modal_overlay_system": true,
+      "responsive_breakpoints": ["600px", "780px", "1024px", "1144px", "1240px", "1241px"],
+      "container_widths": {
+        "modal_min_width": "1224px",
+        "modal_width": "70%"
+      },
+      "fixed_elements": [
+        {
+          "type": "sidebar/action-menu",
+          "position": "fixed",
+          "right": "40px",
+          "top": "96px",
+          "z_index": 1081
+        }
+      ]
+    },
+    "color_palette_detected": {
+      "primary": "rgba(0,118,146,1)",
+      "primary_hex_approx": "#007692",
+      "border_color": "rgba(240,240,240,1)",
+      "overlay_dark": "rgba(45,46,47,0.6)",
+      "background_white": "white",
+      "modal_background": "white"
+    },
+    "typography_detected": {
+      "font_family": "'Open Sans','Helvetica Neue',Helvetica,Arial,sans-serif",
+      "font_weights": [600, "bold"],
+      "base_font_size": "14px",
+      "base_line_height": "20px",
+      "letter_spacing": "0.0px"
+    },
+    "navigation_items": [],
+    "background_image_reference": "https://s3-media0.fl.yelpcdn.com/assets/srv0/yelp_large_assets/7d2942694d0f/assets/img/biz_daisy_chain/rfn_bg_image.webp"
+  },
+  "developer_assets": {
+    "html_css_patterns": {
+      "css_reset": "comprehensive-meyer-reset",
+      "css_architecture": "emotion-css-in-js",
+      "responsive_utility_classes": [
+        "responsive-visible-small-inline",
+        "responsive-visible-small-block",
+        "responsive-visible-medium-inline",
+        "responsive-visible-medium-block",
+        "responsive-hidden-small",
+        "responsive-hidden-medium"
+      ],
+      "border_radius_values": ["3px", "4px", "8px"],
+      "hover_patterns": {
+        "text_decoration": "underline on hover",
+        "focus_visible": "outline with offset"
+      },
+      "modal_pattern": {
+        "backdrop": "fixed full-screen with dark overlay",
+        "container": "centered with max-height constraint",
+        "scroll_behavior": "hidden scrollbar with overflow auto"
+      }
+    },
+    "neon_or_retro_code": [],
+    "js_react_nextjs_logic": [],
+    "python_backend_clues": []
+  },
+  "charlys_component_mapping": {
+    "useful_for_ask_charly_chat": {
+      "extracted": false,
+      "reason": "No chat interface content present in CSS-only snippet"
+    },
+    "useful_for_services_grid": {
+      "extracted": false,
+      "reason": "No service content present in CSS-only snippet"
+    },
+    "useful_for_featured_products": {
+      "extracted": false,
+      "reason": "No product content present in CSS-only snippet"
+    },
+    "yelp_design_patterns_for_reference": {
+      "modal_system": "Useful for Charly's inquiry modal overlay",
+      "responsive_framework": "Comprehensive breakpoint system to adapt",
+      "color_scheme": "Teal primary with neutral grays - could be adapted for neon-cyan accent",
+      "typography_stack": "Clean sans-serif stack suitable for retro-modern hybrid"
+    }
+  },
+  "extraction_notes": {
+    "content_type_received": "CSS-only (emotion css-in-js framework)",
+    "actual_html_content": false,
+    "actual_text_content": false,
+    "limitation": "Only styling information was present in the provided snippet. No semantic HTML, content, or page structure was included. This appears to be a Yelp business page stylesheet without the rendered HTML content."
+  }
+}

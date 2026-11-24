@@ -1,0 +1,107 @@
+{
+  "metadata_and_seo": {
+    "source_url": "https://www.silverbacksports.com",
+    "page_category": "Homepage",
+    "extracted_title_tag": "Custom T-Shirts, Embroidery & Screen Printing | Port St. Lucie, FL",
+    "extracted_meta_desc": "Custom apparel made easy. Screen printing, embroidery & dye sublimation for teams, businesses & events. Proudly serving Port St. Lucie & the Treasure Coast.",
+    "main_h1": "Silverback Sports Custom Screen Printing and Embroidery",
+    "organic_keywords_found": ["custom t-shirts", "embroidery", "screen printing", "Port St. Lucie", "dye sublimation", "custom apparel", "Treasure Coast"]
+  },
+  "extracted_content": {
+    "hero_messaging": {
+      "headline": "Silverback Sports Custom Screen Printing and Embroidery",
+      "sub_headline": "At work or play, Silverback is on your team.",
+      "call_to_actions": ["sportswear", "business apparel", "get a free quote"]
+    },
+    "services_offered": [
+      "Screen Printing",
+      "Embroidery",
+      "Dye Sublimation",
+      "Business Apparel",
+      "Sportswear/Custom Sports Apparel",
+      "Promotional Products"
+    ],
+    "how_it_works_steps": [],
+    "pricing_data_found": [],
+    "trust_and_social_proof": [
+      "As a local, family-owned business",
+      "state-of-the-art facility located in the heart of Port St. Lucie, FL",
+      "unparalleled quality and customer service",
+      "builds a lasting partnership and always exceeds your expectations"
+    ]
+  },
+  "design_and_ui_architecture": {
+    "layout_structure": [
+      "fixed navigation bar with overlay menu",
+      "full-width hero section with background video",
+      "two-column sub-hero section with floating containers",
+      "tabbed services section with animation hooks",
+      "mobile-responsive design with breakpoint handling"
+    ],
+    "color_palette_detected": [
+      "black/dark background (#000 or similar) for navbar",
+      "white text (#fff) on dark backgrounds",
+      "accent colors for CTAs",
+      "Webflow CSS framework styling"
+    ],
+    "typography_detected": [
+      "Open Sans (300-800 weights, italic)",
+      "Archivo (300-700 weights)",
+      "DM Sans (300-700 weights)",
+      "Manrope (300-700 weights)",
+      "Nunito Sans (300-700 weights)",
+      "Roboto (300-700 weights)",
+      "Vazirmatn (300-700 weights)"
+    ],
+    "navigation_items": [
+      "Home",
+      "Catalogs (hidden)",
+      "Services (dropdown)",
+      "About",
+      "Our Work",
+      "FAQs",
+      "Group Ordering",
+      "Contact",
+      "Get a Free Quote (CTA button)"
+    ]
+  },
+  "developer_assets": {
+    "html_css_patterns": [
+      "Webflow framework classes: w-nav, w-nav-brand, w-nav-menu, w-nav-link, w-dropdown, w-button",
+      "Responsive design with media queries: @media (min-width:992px), @media (max-width:991px and min-width:768px)",
+      "CSS animation hooks: w-mod-js, data-w-id attributes for scroll triggers",
+      "Component classes: rl_navbar3_*, hero-*, button-primary, ghost-btn",
+      "Grid/Flex layout: _2-cols, flex-col, container classes"
+    ],
+    "neon_or_retro_code": [
+      "stroke text styling: h2-stroke classes with text-span wrappers",
+      "background-video wrapper with poster fallback",
+      "opacity and transform animations on scroll"
+    ],
+    "js_react_nextjs_logic": [
+      "Google WebFont loader for dynamic font loading",
+      "Facebook Pixel (fbq) tracking implementation",
+      "Google Analytics 4 with gtag configuration",
+      "Webflow interaction system with data-w-id triggers"
+    ],
+    "python_backend_clues": []
+  },
+  "charlys_component_mapping": {
+    "useful_for_ask_charly_chat": [
+      "Family-owned local business messaging",
+      "Port St. Lucie / Treasure Coast geo-targeting",
+      "Screen printing + embroidery + dye sublimation service combo",
+      "Work or play team-oriented value proposition",
+      "One-stop shop positioning"
+    ],
+    "useful_for_services_grid": [
+      "Screen Printing",
+      "Embroidery",
+      "Dye Sublimation",
+      "Business Apparel",
+      "Custom Sports Apparel/Sportswear",
+      "Promotional Products"
+    ],
+    "useful_for_featured_products": []
+  }
+}

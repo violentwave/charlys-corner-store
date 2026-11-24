@@ -1,0 +1,186 @@
+{
+  "metadata_and_seo": {
+    "source_url": "https://colorlib.com/wp/retro-websites/",
+    "page_category": "design_inspiration_article",
+    "extracted_title_tag": "19 Best Retro Websites For Design Inspiration 2026 - Colorlib",
+    "extracted_meta_desc": "Boost your creativity and improve your web design skills as you browse these retro websites collection as a superb inspiration.",
+    "main_h1": null,
+    "organic_keywords_found": [
+      "retro websites",
+      "design inspiration",
+      "web design",
+      "best retro websites 2026"
+    ]
+  },
+  "extracted_content": {
+    "hero_messaging": {
+      "headline": null,
+      "sub_headline": null,
+      "call_to_actions": []
+    },
+    "services_offered": [],
+    "how_it_works_steps": [],
+    "pricing_data_found": [],
+    "trust_and_social_proof": [
+      {
+        "type": "author_credibility",
+        "data": "Aigars Silkalns - Frontend web developer and web designer specializing in WordPress theme development with 10+ years experience in CSS, HTML (TailwindCSS, Bootstrap), JavaScript (React, Vue, Angular), and PHP"
+      },
+      {
+        "type": "publisher_info",
+        "data": "Colorlib - WordPress tutorials, theme reviews, and web design inspiration provider"
+      },
+      {
+        "type": "social_presence",
+        "data": [
+          "https://www.facebook.com/colorlib",
+          "https://x.com/colorlib",
+          "https://www.instagram.com/colorlib",
+          "https://www.linkedin.com/company/colorlib",
+          "https://youtube.com/c/Colorlib"
+        ]
+      }
+    ],
+    "featured_retro_websites_list": [
+      {"position": 1, "name": "Caava Design"},
+      {"position": 2, "name": "Virtual Gas Museum"},
+      {"position": 3, "name": "Basement"},
+      {"position": 4, "name": "Resp"},
+      {"position": 5, "name": "Harvard Film Archive"},
+      {"position": 6, "name": "Three59"},
+      {"position": 7, "name": "Park West Event"},
+      {"position": 8, "name": "Tens"},
+      {"position": 9, "name": "Hypergiant"},
+      {"position": 10, "name": "Martens Brewery"},
+      {"position": 11, "name": "Global Welsh"},
+      {"position": 12, "name": "Poolsuite"},
+      {"position": 13, "name": "Cameron's World"},
+      {"position": 14, "name": "Sugarfire Pie"},
+      {"position": 15, "name": "Abel's on Queen"},
+      {"position": 16, "name": "Mochi Online Shoppu"},
+      {"position": 17, "name": "Basement Chronicles"},
+      {"position": 18, "name": "We Luv Video"},
+      {"position": 19, "name": "Boogie Lover Band"}
+    ],
+    "article_metadata": {
+      "published": "2026-03-19T06:38:00+00:00",
+      "modified": "2026-04-02T07:25:37+00:00",
+      "word_count": 2382,
+      "reading_time": "14 minutes",
+      "author": "Aigars Silkalns",
+      "category": "Website Design"
+    }
+  },
+  "design_and_ui_architecture": {
+    "layout_structure": "wordpress_blog_single_column",
+    "color_palette_detected": {
+      "admin_theme_color": "#007cba",
+      "wp_preset_gradients": [
+        {"name": "vivid-green-cyan-to-vivid-cyan-blue", "value": "linear-gradient(135deg,#00d084,#0693e3)"},
+        {"name": "purple-crush", "value": "linear-gradient(135deg,#34e2e4,#4721fb 50%,#ab1dfe)"},
+        {"name": "hazy-dawn", "value": "linear-gradient(135deg,#faaca8,#dad0ec)"},
+        {"name": "subdued-olive", "value": "linear-gradient(135deg,#fafae1,#67a671)"},
+        {"name": "atomic-cream", "value": "linear-gradient(135deg,#fdd79a,#004a59)"},
+        {"name": "nightshade", "value": "linear-gradient(135deg,#330968,#31cdcf)"},
+        {"name": "midnight", "value": "linear-gradient(135deg,#020381,#2874fc)"}
+      ],
+      "term_colors": {
+        "wpex_term_63032": "#81d742"
+      }
+    },
+    "typography_detected": {
+      "font_sizes": {
+        "normal": "16px",
+        "huge": "42px"
+      },
+      "alignment_classes": ["has-text-align-center", "has-text-align-left", "has-text-align-right"]
+    },
+    "navigation_items": []
+  },
+  "developer_assets": {
+    "html_css_patterns": [
+      "WordPress block library CSS variables",
+      "CSS gradient presets using :root custom properties",
+      "Responsive image sizing with intrinsic-size contain",
+      "Schema.org structured data with JSON-LD",
+      "Yoast SEO meta tag patterns"
+    ],
+    "neon_or_retro_code": [
+      {
+        "gradient": "purple-crush",
+        "css": "linear-gradient(135deg,#34e2e4,#4721fb 50%,#ab1dfe)"
+      },
+      {
+        "gradient": "atomic-cream",
+        "css": "linear-gradient(135deg,#fdd79a,#004a59)"
+      },
+      {
+        "gradient": "nightshade",
+        "css": "linear-gradient(135deg,#330968,#31cdcf)"
+      },
+      {
+        "gradient": "midnight",
+        "css": "linear-gradient(135deg,#020381,#2874fc)"
+      }
+    ],
+    "js_react_nextjs_logic": [],
+    "python_backend_clues": [],
+    "seo_implementation": {
+      "plugin": "Yoast SEO v27.6",
+      "features": [
+        "Open Graph meta tags",
+        "Twitter Card meta tags",
+        "Schema.org Article markup",
+        "Schema.org ItemList for rankings",
+        "BreadcrumbList structured data",
+        "Canonical URLs",
+        "Author and publisher markup"
+      ]
+    }
+  },
+  "charlys_component_mapping": {
+    "useful_for_ask_charly_chat": [],
+    "useful_for_services_grid": [],
+    "useful_for_featured_products": [
+      {
+        "insight": "19 retro website examples for design inspiration",
+        "potential_applications": [
+          "Poolsuite - 80s Miami Vice aesthetic reference",
+          "Cameron's World - maximalist retro web collage style",
+          "Caava Design - vintage typography approach",
+          "Basement - dark retro aesthetic",
+          "Sugarfire Pie - vintage Americana styling"
+        ]
+      }
+    ],
+    "useful_for_seo_strategy": {
+      "title_format": "[Number] Best [Topic] For [Purpose] [Year] - [Brand]",
+      "description_approach": "Action-oriented benefit statement with collection/browse language",
+      "structured_data": [
+        "Article schema with author/publisher",
+        "ItemList schema for ranked content",
+        "BreadcrumbList for navigation context"
+      ]
+    },
+    "useful_for_color_gradients": {
+      "source": "WordPress block library gradients",
+      "recommended_for_charlys": [
+        {
+          "name": "purple-crush",
+          "css": "linear-gradient(135deg,#34e2e4,#4721fb 50%,#ab1dfe)",
+          "use": "Hero backgrounds, accent sections"
+        },
+        {
+          "name": "atomic-cream",
+          "css": "linear-gradient(135deg,#fdd79a,#004a59)",
+          "use": "CTA buttons, retro overlays"
+        },
+        {
+          "name": "midnight",
+          "css": "linear-gradient(135deg,#020381,#2874fc)",
+          "use": "Dark mode sections, footer"
+        }
+      ]
+    }
+  }
+}

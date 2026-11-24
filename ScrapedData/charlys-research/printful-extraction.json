@@ -1,0 +1,192 @@
+{
+  "source": {
+    "url": "https://www.printful.com",
+    "title": "Printful: Custom Print On Demand & Dropshipping",
+    "scraped_at": "2026-05-17"
+  },
+  "company_overview": {
+    "name": "Printful",
+    "service_model": "print-on-demand dropshipping",
+    "value_proposition": "Design and sell custom products online without inventory",
+    "signup": "free",
+    "social_media": {
+      "twitter": "@printful",
+      "twitter_creator": "@printfulp"
+    }
+  },
+  "seo_keywords": {
+    "primary": [
+      "custom print on demand",
+      "print on demand",
+      "dropshipping",
+      "custom products",
+      "online store",
+      "no inventory"
+    ],
+    "meta_description": "Design and sell custom products online with print-on-demand dropshipping. Sign up for free and start an online store without inventory.",
+    "og_title": "Printful: Custom Print On Demand & Dropshipping",
+    "og_description": "Design and sell custom products online with print-on-demand dropshipping. Sign up for free and start an online store without inventory."
+  },
+  "ecommerce_integration": {
+    "features": [
+      "Direct store connection",
+      "Multi-platform support",
+      "Global fulfillment network",
+      "Automated order processing"
+    ],
+    "platforms_supported": [
+      "Shopify (referenced in code)",
+      "WooCommerce",
+      "Etsy",
+      "Amazon",
+      "eBay"
+    ],
+    "notes": "Code references Shopify JS embedding and multi-platform checkout flows"
+  },
+  "design_tools": {
+    "mockup_generator": {
+      "exists": true,
+      "css_class": "mockup-generator",
+      "features": ["Visual product preview", "Template-based design placement"]
+    },
+    "product_customization": {
+      "exists": true,
+      "notes": "CSS indicates design system with component library for product customization UI"
+    }
+  },
+  "custom_products": {
+    "categories": [
+      {
+        "type": "apparel",
+        "display_pattern": "dual-image hover system",
+        "ui_behavior": "Scale animation on hover (1.0 → 1.15), image swap between default and hover states"
+      }
+    ],
+    "product_display": {
+      "hover_animation": {
+        "scale_effect": "1.0 to 1.15 on hover",
+        "transition_duration": "0.3s ease-in-out",
+        "image_layers": ["default-item", "hover-item"]
+      },
+      "badge_system": {
+        "style": "Positioned bottom-left with rgba(255,255,255,0.8) background",
+        "color": "#323841 text",
+        "border_radius": "implied from pf-rounded-large class"
+      }
+    }
+  },
+  "pricing": {
+    "profit_calculator": {
+      "exists": true,
+      "section_background": "#03253D (dark navy blue)",
+      "features": ["Range input for pricing", "Prefixed range inputs", "Real-time profit calculation"],
+      "input_max_width": "92px"
+    },
+    "model": "Print-on-demand (pay per order, no upfront inventory costs)",
+    "free_tier": true
+  },
+  "website_design_patterns": {
+    "color_palette": {
+      "primary_dark": "#03253D (profit calculator section)",
+      "accent_teal": "#003d3d (map/global section)",
+      "text_dark": "#323841 (badge text)",
+      "background_white": "rgba(255, 255, 255, 0.8) (badge background)"
+    },
+    "typography": {
+      "heading_mobile": {
+        "font_size": "18px",
+        "line_height": "24px"
+      },
+      "badge_text": {
+        "letter_spacing": "-0.01em"
+      },
+      "subheading_max_width": "280px (desktop)"
+    },
+    "layout": {
+      "container_max_width": "1200px",
+      "wrapper_padding": "max(12px, calc((100vw - 1168px) / 2))",
+      "responsive_breakpoints": {
+        "mobile": "max-width: 768px",
+        "tablet": "768px - 991px",
+        "desktop": "992px+",
+        "large_desktop": "1200px+"
+      }
+    },
+    "components": {
+      "cards": {
+        "border_radius": "10px (pf-rounded-large)"
+      },
+      "product_categories": {
+        "hover_effect": "Dual-layer image with scale animation",
+        "default_state": "opacity 0 (mobile), opacity 1 (desktop)",
+        "hover_state": "Image scales to 1.15, layers swap visibility",
+        "animation_timing": "0.3s ease-in-out"
+      },
+      "platform_reviews": {
+        "rating_line_height": "14px",
+        "separator_dimensions": "1px width, 34px height"
+      },
+      "stats_blocks": {
+        "gap": "32px",
+        "mobile_layout": "2-column flex wrap"
+      }
+    },
+    "global_sections": {
+      "map_widget": {
+        "background": "#003d3d",
+        "image_max_width": "790px"
+      },
+      "stats_container": {
+        "layout": "flex with space-around justification",
+        "mobile": "flex-wrap with 45% width stat blocks"
+      }
+    }
+  },
+  "technical_features": {
+    "localization": {
+      "languages": ["en", "en-GB", "en-CA", "es", "fr", "de", "it", "ja"],
+      "regions": ["UK", "CA", "ES", "FR", "DE", "IT", "JP"]
+    },
+    "analytics": ["Google Analytics", "Google Tag Manager"],
+    "support": ["Zendesk Chat"],
+    "video": ["YouTube integration"],
+    "cookies": "Cookie-first consent management"
+  },
+  "trust_signals": {
+    "platform_reviews": {
+      "exists": true,
+      "display": "Rating with separator bars"
+    },
+    "global_fulfillment": {
+      "exists": true,
+      "visual": "Map widget showing global reach"
+    }
+  },
+  "charlys_corner_store_relevance": {
+    "applicable_patterns": [
+      "Dark navy section backgrounds (#03253D) for calculators/CTAs",
+      "Product hover animations with dual-image layering",
+      "Badge system for product categories (white semi-transparent with dark text)",
+      "10px border-radius on cards and buttons",
+      "Responsive container with max-width 1200px",
+      "Global fulfillment map visualization",
+      "Profit calculator with range inputs",
+      "Platform review ratings with visual separators"
+    ],
+    "seo_strategy_notes": [
+      "Lead with 'custom print on demand' in title tag",
+      "Emphasize 'no inventory' and 'free signup' in meta descriptions",
+      "Use action-oriented language: 'design and sell', 'start an online store'",
+      "Include social proof in meta (ratings, reviews)",
+      "Multi-language hreflang tags for international SEO"
+    ],
+    "recommended_implementations": [
+      "Add profit calculator widget with dark blue background section",
+      "Implement product category grid with hover zoom effect (1.15 scale)",
+      "Create dual-image product display (static default, lifestyle hover)",
+      "Include trust signals with platform ratings",
+      "Use teal accent sections for geographic/global messaging",
+      "Add 10px rounded corners to all interactive elements"
+    ]
+  }
+}
