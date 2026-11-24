@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { navItems } from "@/lib/nav";
+
+const primaryNavItems = navItems.filter((item) => !item.footerOnly);
 import { site } from "@/lib/site";
 
 const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
@@ -77,7 +79,7 @@ export function SiteHeader() {
         </Link>
 
         <nav aria-label="Primary" className="hidden flex-1 items-center justify-center gap-1 lg:flex">
-          {navItems.map((item) => {
+          {primaryNavItems.map((item) => {
             const active = isActive(item.href);
             return (
               <Link
@@ -180,7 +182,7 @@ export function SiteHeader() {
             </button>
           </div>
           <nav aria-label="Mobile primary" className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
-            {navItems.map((item) => {
+            {primaryNavItems.map((item) => {
               const active = isActive(item.href);
               return (
                 <Link

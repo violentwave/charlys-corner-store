@@ -55,7 +55,10 @@ export const quoteSchema = z.object({
   phone,
   company: z.string().trim().max(120).optional(),
   items: z.string().trim().min(1, "Tell us what you'd like made").max(2000),
-  quantity: z.coerce.number().int().positive("Quantity must be at least 1").max(100000).optional(),
+  quantity: z.preprocess(
+    (v) => (v === "" || v === null || v === undefined ? undefined : v),
+    z.coerce.number().int().positive("Quantity must be at least 1").max(100000).optional(),
+  ),
   neededBy: z.string().trim().max(40).optional(),
   notes: z.string().trim().max(5000).optional(),
 });
