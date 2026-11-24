@@ -46,7 +46,7 @@ export default function AboutPage() {
 
       <Section id="custom-order" eyebrow="Custom order request" title="Tell us what you need">
         <div className="max-w-xl">
-          <ContactForm />
+          <ContactForm sourcePage="about" />
         </div>
       </Section>
     </>
