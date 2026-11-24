@@ -64,7 +64,8 @@ A task isn't done until `lint`, `typecheck`, and `test` pass (and `e2e` for buil
 - **Images:** `next/image`; garment templates live in `public/garments/{garment}/{view}/{base|shading|mask-<zone>}.png` and must be same-origin (canvas export).
 - **Copy voice:** fun, local, confident, a little punny (Charly is a dog: "Have a Ruffin awesome day"). No lorem ipsum in merged code; use clearly marked `TODO(content)` placeholders.
 - **Commits:** conventional commits; one logical change per commit; branch per task, created from an up-to-date `main`.
-- **Git hygiene:** never change git config (no `user.name`/`user.email`, local or global), never add or change remotes, never create GitHub repos, never merge to `main`. **opencode:** never push or open PRs; commit on the task branch and stop, and Logan pushes. **Claude (via the Claude GitHub App):** may push its own task branches and open PRs when Logan asks; Logan merges.
+- **Git hygiene:** never change git config (no `user.name`/`user.email`, local or global), never add or change remotes, never create GitHub repos, never force-push, never commit or push directly to `main`.
+- **Shipping (opencode or Claude):** when the task prompt includes a **Ship** section, the agent may push its task branch, open a PR with `gh`, wait for CI, and squash-merge it, but only when every CI check has passed. Never merge with failing or pending checks; after 3 failed fix attempts, stop and report. Without a Ship section: commit on the task branch and stop.
 - When done, report: files changed, how to test, open questions or follow-ups, and which roadmap checkbox this closes.
 
 <!-- BEGIN:nextjs-agent-rules -->

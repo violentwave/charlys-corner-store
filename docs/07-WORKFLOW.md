@@ -36,10 +36,9 @@ Start opencode from the repo root (`opencode`). It reads `AGENTS.md` and the doc
 
 1. **Plan in claude.ai.** Pick the next roadmap checkbox → ask Claude for an _opencode task prompt_ (scope, files to touch, acceptance criteria, tests).
 2. **Build in opencode.** Start from an up-to-date `main` (`git switch main && git pull`), then paste the prompt. opencode follows `AGENTS.md`. One branch per task: `feat/builder-recolor`, `fix/upload-size-limit`.
-3. **Verify:** `pnpm lint && pnpm typecheck && pnpm test` (+ `pnpm e2e` for builder/forms) and click through the preview deploy (or local `pnpm build && pnpm start`) on a phone.
-4. **Push + PR:** `git push -u origin <branch>`, open a PR (`gh pr create --fill`), wait for CI.
-5. **Review in claude.ai** (paste the diff: `git diff main...<branch>`) → squash-merge.
-6. **Sync docs.** If a decision was made, update the doc (Decision Log, roadmap checkbox) in the repo **and** in the claude.ai project so both stay in step.
+3. **Verify + ship (agent):** the agent runs format/lint/typecheck/test/e2e locally, then follows the prompt's **Ship** section: push, open PR, wait for CI, squash-merge when green, delete the branch, return to an updated `main`. Default since 2026-11-23 (Logan).
+4. **Spot-check:** click through `main` locally (`pnpm dev`) or on the deploy, on a phone. Ask Claude to review any merged PR by number; fixes go in a follow-up PR.
+5. **Sync docs.** If a decision was made, update the doc (Decision Log, roadmap checkbox) in the repo **and** in the claude.ai project so both stay in step.
 
 ## Task prompt template (for opencode)
 
@@ -52,7 +51,15 @@ Requirements:
 Acceptance criteria:
 - [ ] ...
 Tests: <unit/e2e to add>
-Done when: lint, typecheck, and tests pass; commit on branch <name>; summarize changed files and any follow-ups. Don't push.
+Done when: format:check, lint, typecheck, test (and e2e if UI/forms) pass; tick the roadmap checkbox in docs/06-ROADMAP.md in the same commit.
+Ship:
+1. git push -u origin HEAD
+2. gh pr create --base main --fill  (body: summary, files changed, how tested, roadmap checkbox)
+3. sleep 20 && gh pr checks --watch --fail-fast. If a check fails: gh run view --log-failed, fix on this branch, commit, git push, repeat (max 3 attempts, then stop and report).
+4. When all checks pass: gh pr merge --squash --delete-branch
+5. git switch main && git pull --prune
+6. Report: PR URL, merge commit SHA, files changed, follow-ups.
+Never force-push, push to main, or merge with failing/pending checks.
 ```
 
 ## Keeping the claude.ai project useful
@@ -67,5 +74,4 @@ Done when: lint, typecheck, and tests pass; commit on branch <name>; summarize c
 - Conventional commits: `feat:`, `fix:`, `chore:`, `docs:`, `style:`, `refactor:`, `test:`
 - Never commit `.env*` (except `.env.example`), customer uploads, or large binaries outside `public/garments/`
 - Squash-merge PRs into `main` (this also sets the commit author to you)
-- opencode never changes git config, creates remotes, or pushes; Logan pushes its branches
-- Claude (claude.ai/Claude Code session, via the Claude GitHub App) may push its own branches and open PRs; Logan merges
+- Agents (opencode, or Claude via the Claude GitHub App) push, open PRs, and squash-merge only when the prompt has a **Ship** section and CI is green. Never force-push, never push to `main`, never change git config or remotes.
