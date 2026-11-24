@@ -9,6 +9,7 @@ import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { OverlaysDemo } from "./overlays-demo";
 import { ReferralSurveyDemo } from "./referral-survey";
 
 export const metadata: Metadata = {
@@ -96,6 +97,11 @@ export default function StyleguidePage() {
           <Badge variant="yellow">Yellow (money)</Badge>
           <Badge variant="green">Green (success)</Badge>
         </div>
+      </section>
+
+      <section className="flex flex-col gap-4">
+        <h2 className="font-heading text-text-1 text-xl tracking-widest uppercase">Overlays</h2>
+        <OverlaysDemo />
       </section>
 
       <section className="flex flex-col gap-4">
