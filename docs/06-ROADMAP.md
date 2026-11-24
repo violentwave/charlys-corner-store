@@ -33,7 +33,7 @@
 - [x] Foundation (Claude): content layer `src/content/` (catalog with legacy prices, services, about, portfolio), shared Zod schemas `src/lib/schemas.ts`, portfolio images in `public/portfolio/`, legacy `.html` 308 redirects, honest coming-soon pages for `/shop` `/design` `/upload`
 - [x] Home: hero, services grid, featured products, builder CTA, how-it-works, use cases, past work, referral survey (prompt P2-1)
 - [x] About + Contact: Charly story, contact form UI (prompt P2-2)
-- [ ] Business & Promo + Services: product/promo grid, portfolio gallery, quote form UI; screen print / DTF / embroidery / print & promo explainer (prompt P2-3)
+- [x] Business & Promo + Services: product/promo grid, portfolio gallery, quote form UI; screen print / DTF / embroidery / print & promo explainer (prompt P2-3)
 - [ ] FAQ + 404 page with Charly (prompt P2-4)
 
 Forms in Phase 2 validate client-side with the shared schemas but do **not** send yet: submit shows an honest "online forms launch soon, email us" notice. Phase 3 wires them to the server.
