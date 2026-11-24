@@ -28,3 +28,27 @@ test("success toast appears with text and can be dismissed", async ({ page }) =>
   await page.getByRole("button", { name: /dismiss notification/i }).click();
   await expect(page.getByText("Saved", { exact: true })).toBeHidden();
 });
+
+test("dialog is vertically centered on desktop", async ({ page }) => {
+  test.skip((page.viewportSize()?.width ?? 0) < 640, "desktop only");
+  await page.goto("/styleguide");
+  await page.getByRole("button", { name: "Open dialog" }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  await page.waitForTimeout(300); // let the enter animation finish
+  const box = (await dialog.boundingBox())!;
+  const vh = page.viewportSize()!.height;
+  const center = box.y + box.height / 2;
+  expect(Math.abs(center - vh / 2)).toBeLessThan(4);
+});
+
+test("toasts stay inside a 360px viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 780 });
+  await page.goto("/styleguide");
+  await page.getByRole("button", { name: "Success toast" }).click();
+  const toast = page.locator("li").filter({ hasText: "Your changes are live." }).first();
+  await expect(toast).toBeVisible();
+  const box = (await toast.boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(360);
+});

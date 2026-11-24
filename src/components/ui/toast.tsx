@@ -74,6 +74,7 @@ export function Toaster() {
           <ToastPrimitive.Root
             key={t.id}
             duration={5000}
+            type={variant === "error" ? "foreground" : "background"}
             onOpenChange={(open) => {
               if (!open) remove(t.id);
             }}
@@ -100,7 +101,7 @@ export function Toaster() {
           </ToastPrimitive.Root>
         );
       })}
-      <ToastPrimitive.Viewport className="fixed right-4 bottom-4 z-[100] flex w-full max-w-sm flex-col gap-2 outline-none" />
+      <ToastPrimitive.Viewport className="fixed right-4 bottom-4 left-4 z-[100] flex flex-col gap-2 outline-none sm:left-auto sm:w-full sm:max-w-sm" />
     </ToastPrimitive.Provider>
   );
 }
