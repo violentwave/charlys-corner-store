@@ -17,7 +17,7 @@ export const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "bg-bg-0/70 fixed inset-0 z-50 backdrop-blur-sm transition-opacity duration-200 data-[state=closed]:opacity-0 data-[state=open]:opacity-100",
+      "bg-bg-0/70 fixed inset-0 z-50 backdrop-blur-sm data-[state=closed]:animate-[fade-out_150ms_ease-in] data-[state=open]:animate-[fade-in_200ms_ease-out] motion-reduce:animate-none",
       className,
     )}
     {...props}
@@ -34,12 +34,13 @@ export const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "border-border bg-bg-2/90 text-text-1 shadow-glow-cyan fixed z-50 grid gap-4 border p-6 backdrop-blur-md transition-transform duration-300",
+        "border-border bg-bg-2/90 text-text-1 shadow-glow-cyan fixed z-50 grid max-h-[85vh] gap-4 overflow-y-auto border p-6 backdrop-blur-md",
         // mobile: bottom sheet
-        "inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl",
-        // desktop: centered dialog
-        "sm:inset-auto sm:top-1/2 sm:left-1/2 sm:max-h-none sm:w-full sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl",
-        "data-[state=closed]:translate-y-4 data-[state=open]:translate-y-0 sm:data-[state=closed]:scale-95 sm:data-[state=open]:scale-100",
+        "inset-x-0 bottom-0 rounded-t-2xl",
+        // desktop: centered with margin auto (no translate, so state animations can't break centering)
+        "sm:inset-0 sm:m-auto sm:h-fit sm:w-[calc(100%-2rem)] sm:max-w-lg sm:rounded-2xl",
+        // enter/exit: keyframes (Radix waits for animationend before unmounting); off for reduced motion
+        "data-[state=closed]:animate-[dialog-out_150ms_ease-in] data-[state=open]:animate-[dialog-in_200ms_ease-out] motion-reduce:animate-none",
         className,
       )}
       {...props}

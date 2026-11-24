@@ -45,3 +45,16 @@ describe("Button", () => {
     expect(button).toHaveFocus();
   });
 });
+
+describe("Button asChild disabled", () => {
+  it("removes a disabled link from the tab order", () => {
+    render(
+      <Button asChild disabled>
+        <a href="/x">Go</a>
+      </Button>,
+    );
+    const link = screen.getByRole("link", { name: "Go" });
+    expect(link).toHaveAttribute("aria-disabled", "true");
+    expect(link).toHaveAttribute("tabindex", "-1");
+  });
+});

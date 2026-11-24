@@ -37,3 +37,6 @@ tmp/
 Thumbs.db
 *.log
 .vercel
+
+# local debug screenshots
+/debug-*.png

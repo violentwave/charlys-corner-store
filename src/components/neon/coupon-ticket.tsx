@@ -12,11 +12,13 @@ export interface CouponTicketProps {
   className?: string;
 }
 
-function formatExpiry(date: Date): string {
+/** Fixed to the shop's time zone so server render and browser hydration print the same date. */
+export function formatExpiry(date: Date): string {
   return date.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone: "America/New_York",
   });
 }
 
@@ -25,7 +27,9 @@ function formatMinimum(cents: number): string {
 }
 
 export function CouponTicket({ code, expiresAt, className }: CouponTicketProps) {
-  const [copied, setCopied] = React.useState(false);
+  const [status, setStatus] = React.useState<"" | "copied" | "selected">("");
+  const resetTimer = React.useRef<number | undefined>(undefined);
+  React.useEffect(() => () => window.clearTimeout(resetTimer.current), []);
   const codeRef = React.useRef<HTMLSpanElement>(null);
 
   const rules = `${COUPON_RULES.percentOff}% off your 2nd order · ${formatMinimum(
@@ -53,8 +57,9 @@ export function CouponTicket({ code, expiresAt, className }: CouponTicketProps) 
         selection?.addRange(range);
       }
     }
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 2000);
+    setStatus(ok ? "copied" : "selected");
+    window.clearTimeout(resetTimer.current);
+    resetTimer.current = window.setTimeout(() => setStatus(""), 3000);
   };
 
   return (
@@ -75,15 +80,15 @@ export function CouponTicket({ code, expiresAt, className }: CouponTicketProps) 
             {code}
           </span>
         </div>
-        <Button variant="secondary" size="sm" onClick={handleCopy}>
-          Copy
+        <Button variant="secondary" size="sm" onClick={handleCopy} aria-label={`Copy coupon code ${code}`}>
+          {status === "copied" ? "Copied!" : "Copy"}
         </Button>
       </div>
 
       <p className="text-text-2 mt-4 text-xs">{rules}</p>
 
       <span role="status" aria-live="polite" className="sr-only">
-        {copied ? "Code copied" : ""}
+        {status === "copied" ? "Code copied" : status === "selected" ? "Code selected. Press Ctrl+C to copy." : ""}
       </span>
     </div>
   );

@@ -14,6 +14,9 @@ test("CouponTicket copy shows Code copied", async ({ page, context }) => {
   await page.goto("/styleguide");
   const ticket = page.getByText("CHARLY-TEST-1234", { exact: true });
   await expect(ticket).toBeVisible();
-  await page.getByRole("button", { name: /copy/i }).first().click();
+  await page
+    .getByRole("button", { name: /copy coupon code/i })
+    .first()
+    .click();
   await expect(page.getByText("Code copied", { exact: true })).toBeVisible();
 });

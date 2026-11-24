@@ -111,6 +111,7 @@ export default function StyleguidePage() {
         <p className="text-text-3 text-xs">Sample coupon — not a real code.</p>
         <CouponTicket code="CHARLY-TEST-1234" expiresAt={new Date("2027-01-15T00:00:00Z")} />
         <Hero
+          titleAs="h2"
           eyebrow="Phase 1 preview"
           title="Neon Coast"
           subtitle="A Miami Vice skyline for a Treasure Coast print shop."
