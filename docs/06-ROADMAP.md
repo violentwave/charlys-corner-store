@@ -34,7 +34,7 @@
 - [x] Home: hero, services grid, featured products, builder CTA, how-it-works, use cases, past work, referral survey (prompt P2-1)
 - [x] About + Contact: Charly story, contact form UI (prompt P2-2)
 - [x] Business & Promo + Services: product/promo grid, portfolio gallery, quote form UI; screen print / DTF / embroidery / print & promo explainer (prompt P2-3)
-- [ ] FAQ + 404 page with Charly (prompt P2-4)
+- [x] FAQ + 404 page with Charly (prompt P2-4)
 
 Forms in Phase 2 validate client-side with the shared schemas but do **not** send yet: submit shows an honest "online forms launch soon, email us" notice. Phase 3 wires them to the server.
 Each page prompt is shipped by the agent (Ship section); Claude reviews every merged PR and fixes issues in a follow-up PR.
