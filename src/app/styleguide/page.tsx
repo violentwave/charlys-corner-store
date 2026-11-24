@@ -3,6 +3,8 @@ import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CouponTicket } from "@/components/neon/coupon-ticket";
+import { Hero } from "@/components/neon/hero";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field } from "@/components/ui/field";
@@ -102,6 +104,23 @@ export default function StyleguidePage() {
       <section className="flex flex-col gap-4">
         <h2 className="font-heading text-text-1 text-xl tracking-widest uppercase">Overlays</h2>
         <OverlaysDemo />
+      </section>
+
+      <section className="flex flex-col gap-4">
+        <h2 className="font-heading text-text-1 text-xl tracking-widest uppercase">Signature</h2>
+        <p className="text-text-3 text-xs">Sample coupon — not a real code.</p>
+        <CouponTicket code="CHARLY-TEST-1234" expiresAt={new Date("2027-01-15T00:00:00Z")} />
+        <Hero
+          eyebrow="Phase 1 preview"
+          title="Neon Coast"
+          subtitle="A Miami Vice skyline for a Treasure Coast print shop."
+          actions={
+            <>
+              <Button>Design Your Own</Button>
+              <Button variant="secondary">Shop</Button>
+            </>
+          }
+        />
       </section>
 
       <section className="flex flex-col gap-4">

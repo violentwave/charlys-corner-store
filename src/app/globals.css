@@ -61,6 +61,15 @@
   background: var(--grad-horizon);
 }
 
+@keyframes hero-grid-scroll {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 0 48px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
