@@ -27,6 +27,8 @@ Custom website for **Charly's Corner Store Tees & Apparel**, a custom apparel an
 src/app/            routes (App Router)          src/lib/site.ts      confirmed business facts (no invented values)
 src/components/layout/  header, footer          src/lib/nav.ts       nav items
 src/styles/tokens.css  design tokens (docs/03)  src/lib/coupons.ts   coupon rules + checks (unit-tested)
+src/content/        catalog, services, about, portfolio (facts only; TODO(content) for unknowns)
+src/lib/schemas.ts  shared Zod form schemas     src/components/ui/   primitives    src/components/neon/  Hero, CouponTicket, ComingSoon
 src/lib/storage.ts  S3-compatible file storage  db/                  Drizzle schema + SQL migrations
 tests/e2e/          Playwright specs             public/brand/        logo for the web
 render.yaml         Render blueprint (the only host-specific file)
@@ -62,6 +64,7 @@ A task isn't done until `lint`, `typecheck`, and `test` pass (and `e2e` for buil
 - **Accessibility:** WCAG 2.2 AA, visible cyan focus rings, keyboard-operable builder, `prefers-reduced-motion` respected, color never the only signal.
 - **Mobile first:** test at 360px wide.
 - **Images:** `next/image`; garment templates live in `public/garments/{garment}/{view}/{base|shading|mask-<zone>}.png` and must be same-origin (canvas export).
+- **Content:** page copy and facts come from `src/content/*` and `src/lib/site.ts`. Never invent prices, hours, phone, turnaround, minimums, or testimonials; add a `TODO(content)` and leave it out of the rendered page instead.
 - **Copy voice:** fun, local, confident, a little punny (Charly is a dog: "Have a Ruffin awesome day"). No lorem ipsum in merged code; use clearly marked `TODO(content)` placeholders.
 - **Commits:** conventional commits; one logical change per commit; branch per task, created from an up-to-date `main`.
 - **Git hygiene:** never change git config (no `user.name`/`user.email`, local or global), never add or change remotes, never create GitHub repos, never force-push, never commit or push directly to `main`.

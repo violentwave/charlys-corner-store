@@ -30,13 +30,14 @@
 
 ## Phase 2: Parity pages (static content first)
 
-- [ ] Home: hero, services grid, featured products, builder CTA, how-it-works, use cases, testimonials placeholder, referral survey
-- [ ] About: Charly story, photos, contact form
-- [ ] Business & Promo: copy, gallery (past-work photos), quote form; cards, flyers, stickers, lanyards, pillows, koozies, banners
-- [ ] Services: screen print / DTF / embroidery / sublimation explainer
-- [ ] FAQ
-- [ ] Contact: NAP, map, hours, form
-- [ ] 404 page with Charly
+- [x] Foundation (Claude): content layer `src/content/` (catalog with legacy prices, services, about, portfolio), shared Zod schemas `src/lib/schemas.ts`, portfolio images in `public/portfolio/`, legacy `.html` 308 redirects, honest coming-soon pages for `/shop` `/design` `/upload`
+- [ ] Home: hero, services grid, featured products, builder CTA, how-it-works, use cases, past work, referral survey (prompt P2-1)
+- [ ] About + Contact: Charly story, contact form UI (prompt P2-2)
+- [ ] Business & Promo + Services: product/promo grid, portfolio gallery, quote form UI; screen print / DTF / embroidery / print & promo explainer (prompt P2-3)
+- [ ] FAQ + 404 page with Charly (prompt P2-4)
+
+Forms in Phase 2 validate client-side with the shared schemas but do **not** send yet: submit shows an honest "online forms launch soon, email us" notice. Phase 3 wires them to the server.
+Each page prompt is shipped by the agent (Ship section); Claude reviews every merged PR and fixes issues in a follow-up PR.
 
 ## Phase 3: Forms and backend
 
