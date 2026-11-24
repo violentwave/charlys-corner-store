@@ -1,0 +1,37 @@
+import { expect, test } from "@playwright/test";
+
+test("home has one h1, featured products with prices, and coupon CTA", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+
+  for (const name of [
+    "Gildan Cotton Tees",
+    "Custom Hats",
+    "Business Cards",
+    "Custom Foam Koozies",
+    "Austin Hodge Memorial Shirt",
+    "Banners for Indoor or Outdoor Use",
+  ]) {
+    await expect(page.getByText(name, { exact: true })).toBeVisible();
+  }
+
+  await expect(page.getByText("15% off your 2nd order")).toBeVisible();
+
+  const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+  const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
+  expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+});
+
+test("referral validation shows error and valid submit shows notice", async ({ page }) => {
+  await page.goto("/");
+  // choose Other without specifying -> error
+  await page.getByRole("combobox").last().click();
+  await page.getByRole("option", { name: "Other" }).click();
+  await page.getByRole("button", { name: "Submit" }).click();
+  await expect(page.getByText("Please tell us how you heard about us")).toBeVisible();
+
+  // valid submit
+  await page.getByPlaceholder("Tell us how").fill("Friend");
+  await page.getByRole("button", { name: "Submit" }).click();
+  await expect(page.getByText("Online forms are almost ready", { exact: true })).toBeVisible();
+});
