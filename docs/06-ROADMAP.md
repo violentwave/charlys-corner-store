@@ -24,9 +24,9 @@
 - [x] `src/styles/tokens.css` from `03-DESIGN-SYSTEM.md`; Tailwind theme mapped to tokens (Phase 0)
 - [x] Fonts self-hosted via `@fontsource` (Phase 0)
 - [x] Layout: sticky neon nav (mobile drawer below 1024px), footer (NAP, socials, nav, "Have a Ruffin awesome day") (PR #2)
-- [ ] Primitives: Button ✅, Card ✅, Badge ✅, Field ✅, Input ✅, Textarea ✅, Select ✅, Checkbox ✅, Tabs ✅, Dialog ✅, Toast ✅ done; CouponTicket pending (prompt 4)
-- [ ] `/styleguide` dev-only page showing every component
-- [ ] Hero component: horizon gradient, perspective grid, sun, palms (reduced-motion safe)
+- [x] Primitives: Button, Card, Badge, Field, Input, Textarea, Select, Checkbox, Tabs, Dialog, Toast, CouponTicket — all done
+- [x] `/styleguide` page showing every component
+- [x] Hero component: horizon gradient, perspective grid, sun, palms (reduced-motion safe)
 
 ## Phase 2: Parity pages (static content first)
 
