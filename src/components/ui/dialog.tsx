@@ -16,10 +16,7 @@ export const DialogOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Overlay
     ref={ref}
-    className={cn(
-      "bg-bg-0/70 fixed inset-0 z-50 backdrop-blur-sm data-[state=closed]:animate-[fade-out_150ms_ease-in] data-[state=open]:animate-[fade-in_200ms_ease-out] motion-reduce:animate-none",
-      className,
-    )}
+    className={cn("bg-bg-0/70 fixed inset-0 z-50 backdrop-blur-sm", className)}
     {...props}
   />
 ));
@@ -39,8 +36,6 @@ export const DialogContent = React.forwardRef<
         "inset-x-0 bottom-0 rounded-t-2xl",
         // desktop: centered with margin auto (no translate, so state animations can't break centering)
         "sm:inset-0 sm:m-auto sm:h-fit sm:w-[calc(100%-2rem)] sm:max-w-lg sm:rounded-2xl",
-        // enter/exit: keyframes (Radix waits for animationend before unmounting); off for reduced motion
-        "data-[state=closed]:animate-[dialog-out_150ms_ease-in] data-[state=open]:animate-[dialog-in_200ms_ease-out] motion-reduce:animate-none",
         className,
       )}
       {...props}
