@@ -1,25 +1,38 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTransition } from "react";
 import { useForm } from "react-hook-form";
+import type { Control, FieldErrors } from "react-hook-form";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
+import { FormStatus } from "./form-status";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Turnstile } from "./turnstile";
 import { ReferralFields } from "./referral-fields";
-import { notifyFormsComingSoon } from "./form-notice";
-import { contactSchema, type ContactInput } from "@/lib/schemas";
-import type { Control, FieldErrors } from "react-hook-form";
-import type { ReferralInput } from "@/lib/schemas";
+import { submitContact } from "@/app/actions/contact";
+import { contactSchema, type ContactInput, type ReferralInput } from "@/lib/schemas";
+import type { ActionResult } from "@/lib/action-result";
 
-export function ContactForm() {
+export interface ContactFormProps {
+  sourcePage: "about" | "contact";
+}
+
+export function ContactForm({ sourcePage }: ContactFormProps) {
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileKey, setTurnstileKey] = useState(0);
+  const [result, setResult] = useState<ActionResult | null>(null);
+  const [isPending, startTransition] = useTransition();
+
   const {
     register,
     control,
     handleSubmit,
-    setFocus,
+    setError,
+    reset,
     formState: { errors },
   } = useForm<ContactInput>({
     resolver: zodResolver(contactSchema),
@@ -33,22 +46,55 @@ export function ContactForm() {
     },
   });
 
-  const [submitting, setSubmitting] = useState(false);
-
-  const onSubmit = async () => {
-    setSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    setSubmitting(false);
-    notifyFormsComingSoon();
-  };
-
   const onError = (errs: typeof errors) => {
     const first = Object.keys(errs)[0] as keyof ContactInput | undefined;
-    if (first) setFocus(first);
+    if (first) {
+      const el = document.querySelector<HTMLElement>(`[name="${first}"]`);
+      el?.focus();
+    }
   };
+
+  const onSubmit = (data: ContactInput) => {
+    startTransition(async () => {
+      const website = (document.getElementById("website") as HTMLInputElement | null)?.value ?? "";
+      const actionResult = await submitContact({ ...data, website }, sourcePage, turnstileToken);
+      if (!actionResult.ok && actionResult.fieldErrors) {
+        for (const [field, message] of Object.entries(actionResult.fieldErrors)) {
+          setError(field as keyof ContactInput, { message });
+        }
+      }
+      setResult(actionResult);
+      if (actionResult.ok) {
+        reset();
+        setTurnstileToken(null);
+        setTurnstileKey((k) => k + 1);
+      }
+    });
+  };
+
+  if (result?.ok) {
+    return (
+      <div className="border-border bg-bg-2/60 flex flex-col gap-4 rounded-2xl border p-6">
+        <p className="font-heading text-neon-green text-lg uppercase">Thanks!</p>
+        <p className="text-text-2">{result.message}</p>
+        <button
+          type="button"
+          className="text-neon-cyan self-start text-sm underline-offset-4 hover:underline"
+          onClick={() => setResult(null)}
+        >
+          Send another
+        </button>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit(onSubmit, onError)} className="flex flex-col gap-4" noValidate>
+      <div className="hidden" aria-hidden="true">
+        <label htmlFor="website">Website</label>
+        <input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" defaultValue="" />
+      </div>
+
       <Field label="Name" required error={errors.name?.message}>
         <Input {...register("name")} invalid={!!errors.name} />
       </Field>
@@ -65,8 +111,13 @@ export function ContactForm() {
         control={control as unknown as Control<ReferralInput>}
         errors={errors as FieldErrors<ReferralInput>}
       />
+
+      <Turnstile onToken={setTurnstileToken} resetKey={turnstileKey} />
+
+      <FormStatus status={result && !result.ok ? "error" : null} message={result && !result.ok ? result.error : null} />
+
       <div>
-        <Button type="submit" loading={submitting}>
+        <Button type="submit" loading={isPending}>
           Send message
         </Button>
       </div>

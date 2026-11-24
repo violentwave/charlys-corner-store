@@ -33,7 +33,7 @@ test("referral validation shows error and valid submit shows notice", async ({ p
   // valid submit
   await page.getByPlaceholder("Tell us how").fill("Friend");
   await page.getByRole("button", { name: "Submit" }).click();
-  await expect(page.getByText("Online forms are almost ready", { exact: true })).toBeVisible();
+  await expect(page.getByText("Thanks!", { exact: true })).toBeVisible();
 });
 
 test("referral dropdown is labelled for assistive tech", async ({ page }) => {

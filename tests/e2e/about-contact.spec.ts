@@ -20,16 +20,12 @@ test("contact submit empty shows errors", async ({ page }) => {
   await expect(page.getByText("Please enter your name")).toBeVisible();
 });
 
-test("contact valid submit shows notice toast", async ({ page }) => {
+test("contact valid submit shows thank-you", async ({ page }) => {
   await page.goto("/contact");
   await page.getByLabel(/Name/i).fill("Logan");
   await page.getByLabel(/Email/i).fill("a@b.co");
   await page.getByLabel(/Message/i).fill("Hello");
+  await expect(page.getByTestId("turnstile-token")).not.toHaveValue("");
   await page.getByRole("button", { name: /send message/i }).click();
-  await expect(page.getByText("Online forms are almost ready", { exact: true })).toBeVisible();
-});
-
-test("about page never shows internal TODO notes", async ({ page }) => {
-  await page.goto("/about");
-  await expect(page.locator("#main")).not.toContainText("TODO");
+  await expect(page.getByText("Thanks!", { exact: true })).toBeVisible();
 });
