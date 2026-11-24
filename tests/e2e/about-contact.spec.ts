@@ -21,6 +21,7 @@ test("contact submit empty shows errors", async ({ page }) => {
 });
 
 test("contact valid submit shows thank-you", async ({ page }) => {
+  await page.setExtraHTTPHeaders({ "x-forwarded-for": `192.0.2.${test.info().workerIndex + 1}` });
   await page.goto("/contact");
   await page.getByLabel(/Name/i).fill("Logan");
   await page.getByLabel(/Email/i).fill("a@b.co");

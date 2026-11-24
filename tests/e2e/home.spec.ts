@@ -23,6 +23,7 @@ test("home has one h1, featured products with prices, and coupon CTA", async ({ 
 });
 
 test("referral validation shows error and valid submit shows notice", async ({ page }) => {
+  await page.setExtraHTTPHeaders({ "x-forwarded-for": `198.51.100.${test.info().workerIndex + 100}` });
   await page.goto("/");
   // choose Other without specifying -> error
   await page.getByRole("combobox").last().click();
@@ -32,6 +33,7 @@ test("referral validation shows error and valid submit shows notice", async ({ p
 
   // valid submit
   await page.getByPlaceholder("Tell us how").fill("Friend");
+  await expect(page.getByTestId("turnstile-token")).not.toHaveValue("");
   await page.getByRole("button", { name: "Submit" }).click();
   await expect(page.getByText("Thanks!", { exact: true })).toBeVisible();
 });
