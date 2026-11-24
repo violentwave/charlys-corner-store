@@ -1,15 +1,25 @@
 import type { Metadata } from "next";
 
-import { ComingSoon } from "@/components/neon/coming-soon";
+import { PageHeader } from "@/components/sections/page-header";
+import { Section } from "@/components/sections/section";
+import { UploadForm } from "@/components/forms/upload-form";
 
-export const metadata: Metadata = { title: "Upload Artwork" };
+export const metadata: Metadata = {
+  title: "Upload Artwork",
+  description: "Already placed an order? Attach your artwork with your order number.",
+};
 
 export default function UploadPage() {
   return (
-    <ComingSoon
-      title="Upload Artwork"
-      phase="Phase 3"
-      description="Already placed an order? Upload your artwork with your order number and we'll attach it."
-    />
+    <Section>
+      <PageHeader
+        eyebrow="Existing orders"
+        title="Upload artwork for your order"
+        description="Already placed an order? Send us your artwork and your order number and we'll attach it to your job."
+      />
+      <div className="mt-8 max-w-xl">
+        <UploadForm />
+      </div>
+    </Section>
   );
 }

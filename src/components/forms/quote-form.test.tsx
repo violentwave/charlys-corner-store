@@ -4,10 +4,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { QuoteForm } from "./quote-form";
 
-const notify = vi.fn();
-vi.mock("./form-notice", () => ({
-  notifyFormsComingSoon: () => notify(),
-}));
+const fetchMock = vi.fn();
+vi.stubGlobal("fetch", fetchMock);
 
 afterEach(() => cleanup());
 
@@ -32,13 +30,16 @@ describe("QuoteForm", () => {
     expect(await screen.findByText("Quantity must be at least 1")).toBeInTheDocument();
   });
 
-  it("calls notify on valid input", async () => {
+  it("shows success on valid input", async () => {
+    fetchMock.mockResolvedValue({
+      json: async () => ({ ok: true, message: "Thanks, A! We'll reply to a@b.co." }),
+    });
     const user = userEvent.setup();
     render(<QuoteForm />);
     await user.type(screen.getByLabelText(/Name/i), "A");
     await user.type(screen.getByLabelText(/Email/i), "a@b.co");
     await user.type(screen.getByLabelText(/What do you need/i), "tees");
     await user.click(screen.getByRole("button", { name: /request quote/i }));
-    await waitFor(() => expect(notify).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByText(/Thanks!/i)).toBeInTheDocument());
   });
 });

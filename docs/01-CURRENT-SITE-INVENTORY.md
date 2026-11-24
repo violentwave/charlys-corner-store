@@ -36,12 +36,12 @@ Each item has a "Shop" link to its own product page.
 
 ### Custom Image Uploader: `/custom-image-uploader.html`
 Used by customers who **already placed an order** to attach artwork.
-- [ ] Name (First and Last, required)
-- [ ] Email (required)
-- [ ] Order number (required)
-- [ ] File upload (required), PNG or JPEG, max 20 MB
-- [ ] Fix: the current heading says "attach order number and file in the comment section", but there's no comment field. Add an optional Notes field.
-- New site: allow PDF, SVG, and AI/EPS too (better for print), show a preview, and email the owner a link to the file.
+- [x] Name (First and Last, required)
+- [x] Email (required)
+- [x] Order number (required)
+- [x] File upload (required), PNG or JPEG, max 20 MB
+- [x] Fix: the current heading says "attach order number and file in the comment section", but there's no comment field. Add an optional Notes field.
+- [x] New site: allow PDF, SVG, and AI/EPS too (better for print), show a preview, and email the owner a link to the file.
 
 ### About: `/about.html`
 - [ ] Origin story (Charly the dog, bold-message shirts), "Have a Ruffin awesome day"
