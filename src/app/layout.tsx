@@ -29,7 +29,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col">
         <a
           href="#main"
-          className="sr-only z-[100] rounded-md bg-bg-2 px-4 py-2 text-neon-cyan focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:shadow-glow-cyan"
+          className="bg-bg-2 text-neon-cyan focus:shadow-glow-cyan sr-only z-[100] rounded-md px-4 py-2 focus:not-sr-only focus:fixed focus:top-4 focus:left-4"
         >
           Skip to content
         </a>

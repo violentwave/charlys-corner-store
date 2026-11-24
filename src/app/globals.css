@@ -53,6 +53,10 @@
   color: transparent;
 }
 
+@utility bg-vice {
+  background: var(--grad-vice);
+}
+
 @utility bg-horizon {
   background: var(--grad-horizon);
 }
