@@ -4,7 +4,7 @@ You are my lead developer, designer, and product partner on the **Charly's Corne
 - Theme: Miami Vice / neon synthwave / light cyberpunk. Dark indigo surfaces, hot-pink and cyan neon accents, sunset gradients, chrome headlines, palms, perspective grid. Fun, local, and readable, never cluttered. Mascot: Charly the dog ("Have a Ruffin awesome day").
 - Must keep **every** feature of the current site (see 01-CURRENT-SITE-INVENTORY) and add more.
 - Flagship: a **Build-Your-Own Mockup** tool. Garments T-shirt, baseball tee, hoodie, hat; custom multi-zone colors; upload and place your own design. Users must give their email to receive the mockup plus a unique **15% off 2nd order** coupon (see 04-MOCKUP-BUILDER-SPEC).
-- Stack: Next.js App Router + TypeScript + Tailwind, react-konva, Supabase, Resend, Turnstile, Vercel. Square or Stripe for checkout is still undecided.
+- Stack: Next.js 16 App Router + TypeScript + Tailwind v4, react-konva, plain Postgres via Drizzle, S3-compatible storage (R2 vs Render disk undecided), Resend, Turnstile, hosted on Render (owner-owned account; portability rules in 02). Square or Stripe for checkout is still undecided.
 
 **How we work**
 - I (Logan) drive. Code is written by me in **opencode** in `/home/lch/Projects/Charly` and pushed to a private GitHub repo. The repo's `AGENTS.md` holds the coding rules; `docs/` mirrors this project's knowledge.

@@ -65,11 +65,19 @@ Used by customers who **already placed an order** to attach artwork.
 - [ ] Garments: **T-shirt, Baseball tee, Hoodie, Hat, Polo, Tank** (Polo and Tank confirmed 2026-11-23)
 
 ## Past-work photos (`Assets/Clothes/`, received 2026-11-23)
-These are 12 photos of real jobs, not blank garment templates (so they can't be used as mockup-builder templates). Use them for the **portfolio/gallery**. They show services the old site never listed:
+These are 12 photos of real jobs, not blank garment templates (so they can't be used as mockup-builder templates). Use them for the **portfolio/gallery**. Logan will supply better photos later; treat these as placeholders.
 - Trucker/mesh hats (several business logos), printed tees (business and character art), dark tees with full-color prints
-- **Business cards** (with appointment-card backs), **flyers**, **stickers/decals**, **lanyards**, **sublimated pillows** (the bulldog pillows, a strong "fun gift" item)
-- Most are low-res phone photos (some ~100–280px wide). Ask the owner for originals or reshoot hero pieces.
-- They show client logos (TCS Cleaning, Green & Clean, Harley & Family, A1 Pressure Cleaning, Gold Star Water, etc.). **Confirm the owner is OK showing client work** before publishing.
+- Most are low-res phone photos (some ~100–280px wide).
+- They show client logos (TCS Cleaning, Green & Clean, Harley & Family, A1 Pressure Cleaning, Gold Star Water, etc.). **Confirm the owner is OK showing client work** before publishing (Brief Q11).
+
+### Products confirmed offered (2026-11-23), missing from the old site
+The owner offers all of these. They need product/service listings on **Shop** and **Business & Promo**, not just gallery photos:
+- [ ] **Business cards** (incl. appointment-card backs; current catalog already lists 250/500/1,000, matte/glossy)
+- [ ] **Flyers**
+- [ ] **Stickers / decals**
+- [ ] **Lanyards**
+- [ ] **Sublimated pillows** (strong "fun gift" item)
+- Pricing for these is TBD (Brief Q3); use `TODO(content)` until then.
 
 ## Not on the current site (all gaps we fill)
 Contact info · address/map · hours · social links · testimonials/reviews · FAQ · portfolio of past work · services explainer (screen print vs DTF vs embroidery) · quote form for bulk · SEO schema · analytics.
