@@ -25,13 +25,16 @@ Custom website for **Charly's Corner Store Tees & Apparel**, a custom apparel an
 
 ```
 src/app/            routes (App Router)          src/lib/site.ts      confirmed business facts (no invented values)
+src/components/layout/  header, footer          src/lib/nav.ts       nav items
 src/styles/tokens.css  design tokens (docs/03)  src/lib/coupons.ts   coupon rules + checks (unit-tested)
+src/lib/storage.ts  S3-compatible file storage  db/                  Drizzle schema + SQL migrations
 tests/e2e/          Playwright specs             public/brand/        logo for the web
+render.yaml         Render blueprint (the only host-specific file)
 ```
 
 ## Stack
 
-**Next.js 16.4** (App Router; read the docs in `node_modules/next/dist/docs/` before using an API, see the block at the bottom) + TypeScript (strict) · Tailwind (tokens in `src/styles/tokens.css`) · shadcn/ui primitives · react-konva for the builder · React Hook Form + Zod · Supabase (Postgres + Storage) · Resend + React Email · Cloudflare Turnstile · Vitest + Playwright · pnpm · Vercel. Fonts are self-hosted via `@fontsource` packages (Poppins body, Orbitron headings, JetBrains Mono); don't switch to `next/font/google`.
+**Next.js 16.4** (App Router; read the docs in `node_modules/next/dist/docs/` before using an API, see the block at the bottom) + TypeScript (strict) · Tailwind (tokens in `src/styles/tokens.css`) · shadcn/ui primitives · react-konva for the builder · React Hook Form + Zod · **plain Postgres via Drizzle ORM** · **S3-compatible file storage** (provider per Decision Log) · Resend + React Email · Cloudflare Turnstile · Vitest + Playwright · pnpm · **hosted on Render as a Node web service** (`pnpm build && pnpm start`). Fonts are self-hosted via `@fontsource` packages (Poppins body, Orbitron headings, JetBrains Mono); don't switch to `next/font/google`.
 If `docs/02` marks something **DECIDE** and it isn't in the Decision Log yet, stop and ask instead of choosing.
 
 ## Commands
@@ -54,12 +57,14 @@ A task isn't done until `lint`, `typecheck`, and `test` pass (and `e2e` for buil
 - **Scope:** do only the task asked. No drive-by refactors, no new dependencies without saying why.
 - **Server is the source of truth:** validate every form server-side with the same Zod schema; verify Turnstile; rate-limit public endpoints; coupons are issued and validated only on the server.
 - **Secrets:** env vars only (`.env.local`, documented in `.env.example`). Never commit secrets or customer uploads.
+- **Portability (hosting can change):** the database is reached only through Drizzle/`pg` with one `DATABASE_URL`; never import a vendor SDK (`supabase-js`, etc.). All file reads and writes go through `src/lib/storage.ts` (S3 API, config from env). No host-specific features (no Vercel Blob/KV/Edge Config, no edge-only runtime code, no host-only cron). Migrations are plain SQL in `db/migrations`. `render.yaml` is the only host-specific file. The app must run with `pnpm build && pnpm start` on any Node 22 host.
 - **Design tokens:** never hard-code neon hex values in components; use tokens or Tailwind theme classes.
 - **Accessibility:** WCAG 2.2 AA, visible cyan focus rings, keyboard-operable builder, `prefers-reduced-motion` respected, color never the only signal.
 - **Mobile first:** test at 360px wide.
 - **Images:** `next/image`; garment templates live in `public/garments/{garment}/{view}/{base|shading|mask-<zone>}.png` and must be same-origin (canvas export).
 - **Copy voice:** fun, local, confident, a little punny (Charly is a dog: "Have a Ruffin awesome day"). No lorem ipsum in merged code; use clearly marked `TODO(content)` placeholders.
-- **Commits:** conventional commits; one logical change per commit; branch per task.
+- **Commits:** conventional commits; one logical change per commit; branch per task, created from an up-to-date `main`.
+- **Git hygiene:** never change git config (no `user.name`/`user.email`, local or global), never add or change remotes, never push, never create GitHub repos or PRs. Commit on the task branch and stop; Logan pushes.
 - When done, report: files changed, how to test, open questions or follow-ups, and which roadmap checkbox this closes.
 
 <!-- BEGIN:nextjs-agent-rules -->
