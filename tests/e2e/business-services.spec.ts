@@ -55,3 +55,8 @@ test("one h1 per page", async ({ page }) => {
     await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
   }
 });
+
+test("only memorial shirts with a confirmed donation claim to give back", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByText("Memorial · gives back")).toHaveCount(1);
+});

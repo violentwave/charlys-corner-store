@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { Field } from "@/components/ui/field";
+import { Field, fieldControlProps } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -18,9 +18,15 @@ export function ReferralSurveyDemo() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Field label="How did you hear about this site?" hint="Optional in forms; required on the legacy home page.">
+      <Field
+        label="How did you hear about this site?"
+        hint="Optional in forms; required on the legacy home page."
+        controlId="sg-referral"
+      >
         <Select value={value} onValueChange={setValue}>
-          <SelectTrigger>
+          <SelectTrigger
+            {...fieldControlProps("sg-referral", { hint: "Optional in forms; required on the legacy home page." })}
+          >
             <SelectValue placeholder="Choose one" />
           </SelectTrigger>
           <SelectContent>

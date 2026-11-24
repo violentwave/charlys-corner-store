@@ -28,3 +28,8 @@ test("contact valid submit shows notice toast", async ({ page }) => {
   await page.getByRole("button", { name: /send message/i }).click();
   await expect(page.getByText("Online forms are almost ready", { exact: true })).toBeVisible();
 });
+
+test("about page never shows internal TODO notes", async ({ page }) => {
+  await page.goto("/about");
+  await expect(page.locator("#main")).not.toContainText("TODO");
+});

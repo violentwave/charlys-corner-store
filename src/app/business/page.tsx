@@ -43,7 +43,7 @@ export default function BusinessPage() {
             </li>
           ))}
         </ul>
-        <p className="text-text-2 mt-4">Need something not listed? Email us and we&apos;ll source it.</p>
+        <p className="text-text-2 mt-4">Need something not listed? Email us and we&apos;ll see what we can do.</p>
         <a
           href={`mailto:${site.email}`}
           className="text-neon-cyan mt-3 inline-block font-mono underline-offset-4 hover:underline"
@@ -56,7 +56,7 @@ export default function BusinessPage() {
         <ProductGrid items={businessProducts} />
       </Section>
 
-      <Section id="gallery" eyebrow="Past work" title="Recent jobs">
+      <Section id="gallery" eyebrow="Past work" title="Past jobs">
         <PortfolioGallery />
       </Section>
 

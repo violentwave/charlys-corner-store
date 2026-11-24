@@ -10,6 +10,8 @@ import { site } from "@/lib/site";
 export type FaqItem = {
   question: string;
   answer: string;
+  /** Rendered as links after the answer (never put raw paths in answer text). */
+  links?: readonly { label: string; href: string }[];
 };
 
 export const faq: readonly FaqItem[] = [
@@ -27,7 +29,8 @@ export const faq: readonly FaqItem[] = [
   {
     // Source: COUPON_RULES (src/lib/coupons.ts) and docs/00-PROJECT-BRIEF.md §6 (coupon confirmed 2026-11-23).
     question: "How does the discount coupon work?",
-    answer: `Use the mockup builder at /design to email yourself a mockup and you'll get a code for ${COUPON_RULES.percentOff}% off your 2nd order. It expires after ${COUPON_RULES.expiryDays} days, one per email, with a $${COUPON_RULES.minOrderCents / 100} minimum order.`,
+    answer: `Use the mockup builder to email yourself a mockup and you'll get a code for ${COUPON_RULES.percentOff}% off your 2nd order. It expires after ${COUPON_RULES.expiryDays} days, one per email, with a $${COUPON_RULES.minOrderCents / 100} minimum order.`,
+    links: [{ label: "Open the mockup builder", href: "/design" }],
   },
   {
     // Source: docs/00-PROJECT-BRIEF.md §1 and src/lib/site.ts.
@@ -37,12 +40,18 @@ export const faq: readonly FaqItem[] = [
   {
     // Source: src/content/services.ts (screen printing, DTF, embroidery, print & promo).
     question: "What printing methods do you offer?",
-    answer: `Screen printing, DTF (direct-to-film), embroidery, and print & promo products. See /services for details.`,
+    answer: "Screen printing, DTF (direct-to-film), embroidery, and print & promo products.",
+    links: [{ label: "Compare the methods", href: "/services" }],
   },
   {
     // Source: docs/01-CURRENT-SITE-INVENTORY.md (Design Your Own, Business & Promo) and site.ts email.
     question: "How do I order or get a quote?",
-    answer: `Use the mockup builder at /design, the quote form on /business, or email us at ${site.email.toLowerCase()}.`,
+    answer: "Use the mockup builder, send us the quote form, or just email us.",
+    links: [
+      { label: "Mockup builder", href: "/design" },
+      { label: "Quote form", href: "/business#quote" },
+      { label: site.email.toLowerCase(), href: `mailto:${site.email}` },
+    ],
   },
 ] as const;
 
@@ -56,4 +65,3 @@ export const faq: readonly FaqItem[] = [
 // - "What are your hours?" (Brief Q1)
 // - "What is your address / phone number?" (Brief Q1)
 // - "What Gildan styles and colors are stocked?" (Brief Q4)
-export {};

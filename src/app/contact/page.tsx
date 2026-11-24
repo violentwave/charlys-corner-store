@@ -38,7 +38,7 @@ export default function ContactPage() {
         </div>
       </Section>
 
-      <Section id="message" eyebrow="Send a message" title="Get in touch">
+      <Section id="message" eyebrow="Send a message" title="Drop us a line">
         <div className="max-w-xl">
           <ContactForm />
         </div>

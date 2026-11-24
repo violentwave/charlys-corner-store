@@ -8,23 +8,62 @@ export interface FieldProps extends React.HTMLAttributes<HTMLDivElement> {
   hint?: string;
   error?: string;
   required?: boolean;
+  /**
+   * Set this when the child doesn't render the focusable element itself (e.g. Radix `Select`,
+   * whose focusable element is `SelectTrigger`). Field then leaves the child untouched and the
+   * caller wires the inner control with `fieldControlProps(controlId, { hint, error, required })`.
+   */
+  controlId?: string;
   children: React.ReactElement;
 }
 
-export function Field({ label, hint, error, required, children, className, ...props }: FieldProps) {
+/** ids Field uses for a control's hint and error text. */
+export function fieldIds(controlId: string) {
+  return { hintId: `${controlId}-hint`, errorId: `${controlId}-error` };
+}
+
+/** ARIA props for a control wired manually inside `<Field controlId=…>`. */
+export function fieldControlProps(
+  controlId: string,
+  { hint, error, required }: { hint?: string; error?: string; required?: boolean },
+) {
+  const { hintId, errorId } = fieldIds(controlId);
+  const describedBy = [hint ? hintId : null, error ? errorId : null].filter(Boolean).join(" ");
+  return {
+    id: controlId,
+    "aria-describedby": describedBy || undefined,
+    "aria-invalid": error ? true : undefined,
+    "aria-required": required ? true : undefined,
+  };
+}
+
+export function Field({
+  label,
+  hint,
+  error,
+  required,
+  controlId: explicitId,
+  children,
+  className,
+  ...props
+}: FieldProps) {
   const reactId = React.useId();
   const childProps = children.props as { id?: string; "aria-describedby"?: string; "aria-invalid"?: boolean | string };
-  const controlId = childProps.id ?? `field-${reactId}`;
-  const hintId = hint ? `${controlId}-hint` : undefined;
-  const errorId = error ? `${controlId}-error` : undefined;
+  const controlId = explicitId ?? childProps.id ?? `field-${reactId}`;
+  const { hintId: hintIdBase, errorId: errorIdBase } = fieldIds(controlId);
+  const hintId = hint ? hintIdBase : undefined;
+  const errorId = error ? errorIdBase : undefined;
 
   const describedBy = [childProps["aria-describedby"], hintId, errorId].filter(Boolean).join(" ");
 
-  const child = React.cloneElement(children as React.ReactElement<Record<string, unknown>>, {
-    id: controlId,
-    "aria-describedby": describedBy || undefined,
-    "aria-invalid": error ? true : childProps["aria-invalid"],
-  });
+  const child = explicitId
+    ? children
+    : React.cloneElement(children as React.ReactElement<Record<string, unknown>>, {
+        id: controlId,
+        "aria-describedby": describedBy || undefined,
+        "aria-invalid": error ? true : childProps["aria-invalid"],
+        "aria-required": required ? true : undefined,
+      });
 
   return (
     <div className={cn("flex flex-col gap-1.5", className)} {...props}>

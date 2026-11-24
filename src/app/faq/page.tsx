@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { PageHeader } from "@/components/sections/page-header";
 import { Section } from "@/components/sections/section";
@@ -28,6 +29,17 @@ export default function FaqPage() {
               </span>
             </summary>
             <p className="text-text-2 mt-3">{item.answer}</p>
+            {item.links ? (
+              <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
+                {item.links.map((link) => (
+                  <li key={link.href}>
+                    <Link href={link.href} className="text-neon-cyan text-sm underline underline-offset-4">
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </details>
         ))}
       </div>

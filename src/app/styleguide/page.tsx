@@ -7,7 +7,7 @@ import { CouponTicket } from "@/components/neon/coupon-ticket";
 import { Hero } from "@/components/neon/hero";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Field } from "@/components/ui/field";
+import { Field, fieldControlProps } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -149,9 +149,9 @@ export default function StyleguidePage() {
           <Textarea defaultValue="Hi" invalid />
         </Field>
 
-        <Field label="Garment" hint="Choose a product.">
+        <Field label="Garment" hint="Choose a product." controlId="sg-garment">
           <Select>
-            <SelectTrigger>
+            <SelectTrigger {...fieldControlProps("sg-garment", { hint: "Choose a product." })}>
               <SelectValue placeholder="Select a garment" />
             </SelectTrigger>
             <SelectContent>

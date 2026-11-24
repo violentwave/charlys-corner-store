@@ -13,3 +13,9 @@ describe("faq coupon answer", () => {
     expect(answer).toContain(`$${COUPON_RULES.minOrderCents / 100}`);
   });
 });
+
+describe("faq answers", () => {
+  it("never put raw site paths in answer text (use links)", () => {
+    for (const item of faq) expect(item.answer).not.toMatch(/(^|\s)\/[a-z]/);
+  });
+});
