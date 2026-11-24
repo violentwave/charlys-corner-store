@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import { site } from "@/lib/site";
+
 declare global {
   interface Window {
     turnstile?: {
@@ -26,6 +28,7 @@ export const Turnstile = React.forwardRef<{ reset: () => void }, TurnstileProps>
     const widgetIdRef = React.useRef<string | null>(null);
     const [ready, setReady] = React.useState(false);
     const [token, setToken] = React.useState<string | null>(null);
+    const [loadError, setLoadError] = React.useState(false);
 
     React.useEffect(() => {
       if (typeof window === "undefined") return;
@@ -48,6 +51,7 @@ export const Turnstile = React.forwardRef<{ reset: () => void }, TurnstileProps>
       script.async = true;
       script.defer = true;
       script.onload = () => setReady(true);
+      script.onerror = () => setLoadError(true);
       document.head.appendChild(script);
     }, []);
 
@@ -74,6 +78,7 @@ export const Turnstile = React.forwardRef<{ reset: () => void }, TurnstileProps>
         "error-callback": () => {
           setToken(null);
           onToken(null);
+          setLoadError(true);
         },
       });
       return () => {
@@ -115,6 +120,12 @@ export const Turnstile = React.forwardRef<{ reset: () => void }, TurnstileProps>
           aria-label="Anti-spam verification"
           className={className ?? "min-h-[65px]"}
         />
+        {loadError ? (
+          <p role="alert" className="text-danger text-sm">
+            The anti-spam check couldn&apos;t load. Try turning off ad blockers and reloading, or email us at{" "}
+            {site.email.toLowerCase()}.
+          </p>
+        ) : null}
       </>
     );
   },

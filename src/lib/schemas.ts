@@ -59,7 +59,8 @@ export const quoteSchema = z.object({
     (v) => (v === "" || v === null || v === undefined ? undefined : v),
     z.coerce.number().int().positive("Quantity must be at least 1").max(100000).optional(),
   ),
-  neededBy: z.string().trim().max(40).optional(),
+  /** HTML date input value (YYYY-MM-DD) or empty. Stored in a Postgres date column. */
+  neededBy: z.iso.date("Please pick a valid date").optional().or(z.literal("")),
   notes: z.string().trim().max(5000).optional(),
 });
 
