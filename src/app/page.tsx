@@ -96,7 +96,9 @@ export default function Home() {
               <CardHeader>
                 <div className="flex items-start justify-between gap-2">
                   <CardTitle>{product.name}</CardTitle>
-                  {product.category === "memorial" ? <Badge variant="yellow">Memorial · gives back</Badge> : null}
+                  {product.category === "memorial" ? (
+                    <Badge variant="yellow">{product.donation ? "Memorial · gives back" : "Memorial"}</Badge>
+                  ) : null}
                 </div>
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
@@ -149,9 +151,7 @@ export default function Home() {
           <li className="border-border bg-bg-2/60 rounded-2xl border p-6">
             <span className="font-heading text-neon-cyan text-sm tracking-widest">03</span>
             <h3 className="font-heading text-text-1 mt-2 text-lg">We reach out to finalize and deliver</h3>
-            <p className="text-text-2 mt-2 text-sm">
-              We confirm details, pricing, and pickup or shipping before anything ships.
-            </p>
+            <p className="text-text-2 mt-2 text-sm">We confirm the details and pricing with you before we print.</p>
           </li>
         </ol>
       </Section>
@@ -181,7 +181,12 @@ export default function Home() {
         </div>
       </Section>
 
-      <Section id="past-work" eyebrow="Past work" title="Real jobs from the shop" description="A few recent pieces.">
+      <Section
+        id="past-work"
+        eyebrow="Past work"
+        title="Real jobs from the shop"
+        description="A few pieces we've made."
+      >
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {pastWork.map((item) => (
             <figure key={item.src} className="flex flex-col gap-2">

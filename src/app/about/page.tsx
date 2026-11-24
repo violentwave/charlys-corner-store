@@ -29,10 +29,8 @@ export default function AboutPage() {
         <Card className="mt-10 max-w-2xl">
           <CardContent className="flex flex-col gap-2">
             <p className="font-heading text-text-1 text-sm tracking-widest uppercase">Photos of Charly coming soon</p>
-            <p className="text-text-2 text-sm">
-              We&apos;re gathering photos of Charly and the shop.{" "}
-              <span className="text-text-3">TODO(content): owner to provide (Brief Q8).</span>
-            </p>
+            {/* TODO(content): photos of Charly and the shop, owner to provide (Brief Q8). */}
+            <p className="text-text-2 text-sm">We&apos;re gathering photos of Charly and the shop.</p>
           </CardContent>
         </Card>
 

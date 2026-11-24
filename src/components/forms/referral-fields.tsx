@@ -1,8 +1,9 @@
 "use client";
 
+import { useId } from "react";
 import { Controller, type Control, type FieldErrors, useWatch } from "react-hook-form";
 
-import { Field } from "@/components/ui/field";
+import { Field, fieldControlProps } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { REFERRAL_SOURCES, referralLabels, type ReferralInput } from "@/lib/schemas";
@@ -15,6 +16,7 @@ export interface ReferralFieldsProps {
 
 export function ReferralFields({ control, errors, disabled }: ReferralFieldsProps) {
   const source = useWatch({ control, name: "referralSource" });
+  const selectId = `referral-source-${useId().replace(/:/g, "")}`;
 
   return (
     <>
@@ -22,9 +24,13 @@ export function ReferralFields({ control, errors, disabled }: ReferralFieldsProp
         control={control}
         name="referralSource"
         render={({ field }) => (
-          <Field label="How did you hear about us?" error={errors?.referralSource?.message}>
+          <Field label="How did you hear about us?" error={errors?.referralSource?.message} controlId={selectId}>
             <Select value={field.value ?? ""} onValueChange={field.onChange} disabled={disabled}>
-              <SelectTrigger>
+              <SelectTrigger
+                ref={field.ref}
+                onBlur={field.onBlur}
+                {...fieldControlProps(selectId, { error: errors?.referralSource?.message })}
+              >
                 <SelectValue placeholder="Choose one" />
               </SelectTrigger>
               <SelectContent>

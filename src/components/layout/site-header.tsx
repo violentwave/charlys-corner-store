@@ -6,9 +6,9 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { navItems } from "@/lib/nav";
+import { site } from "@/lib/site";
 
 const primaryNavItems = navItems.filter((item) => !item.footerOnly);
-import { site } from "@/lib/site";
 
 const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
 
