@@ -41,12 +41,11 @@ Each page prompt is shipped by the agent (Ship section); Claude reviews every me
 
 ## Phase 3: Forms and backend
 
-- [ ] Postgres on Render; Drizzle schema and SQL migrations in `db/` for the tables in `02-TECH…`
-- [ ] **DECIDE file storage** (Cloudflare R2 vs Render disk), then `src/lib/storage.ts` (S3-compatible interface)
-- [ ] Zod schemas shared client/server; Turnstile; rate limiting
-- [ ] `/upload` (existing-order artwork), `/api/uploads`
-- [ ] `/api/contact`, `/api/quotes`
-- [ ] Resend + React Email: owner notification template, customer confirmation template
+- [x] Foundation (Claude): Drizzle schema + SQL migrations in `db/` (leads, contact_messages, quotes, uploads, survey_responses, rate_limits); `src/lib/` db, storage (R2/MinIO/memory), email (Resend/console), Turnstile verify, Postgres rate limiting, artwork byte-sniffing, lead upsert; docker compose (Postgres + MinIO); CI Postgres service + real-DB tests
+- [x] **File storage decided: Cloudflare R2** (Decision Log 2026-11-24)
+- [ ] Contact, About custom-order, and Home survey forms submit for real: server actions, Turnstile, rate limits, DB rows, owner notification + customer confirmation emails (prompt P3-1)
+- [ ] `/upload` (existing-order artwork) and quote form with artwork upload (prompt P3-2)
+- [ ] Owner can open uploaded files from the notification email (7-day signed links); longer-term admin view is v2
 
 ## Phase 4: Mockup builder (flagship)
 

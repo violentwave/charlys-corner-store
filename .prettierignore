@@ -5,3 +5,4 @@ docs/
 .next/
 playwright-report/
 test-results/
+db/migrations/
