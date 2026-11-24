@@ -6,7 +6,7 @@
 | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | **claude.ai project** ("Charly's CornerStore") | Planning, specs, design decisions, copywriting, reviewing diffs you paste in, generating opencode task prompts, keeping `docs/` current |
 | **opencode** (in `/home/lch/Projects/Charly`)  | Writing code, running the dev server, tests, migrations, git commits. Reads `AGENTS.md` automatically.                              |
-| **GitHub** (`violentwave/charlys-corner-store`, private) | Source of truth for code + docs. PR per task; CI on every PR; Render deploys `main` (and PR previews if the plan includes them). |
+| **GitHub** (`violentwave/charlys-corner-store`, public for now) | Source of truth for code + docs. PR per task; CI on every PR; Render deploys `main` (and PR previews if the plan includes them). |
 
 ## Local setup (one time, already mostly done)
 
@@ -17,8 +17,8 @@ The folder `~/Projects/Charly` is already a clone of the GitHub repo. Remaining 
 git config --global user.name "violentwave"
 git config --global user.email "92730846+violentwave@users.noreply.github.com"
 
-# pnpm (no sudo: installs the shim into ~/.local/bin; make sure that's on PATH)
-corepack enable --install-directory ~/.local/bin
+# pnpm (no sudo). Logan's Node has no corepack, so install pnpm with npm into ~/.local
+npm i -g pnpm --prefix ~/.local     # ~/.local/bin must be on PATH
 pnpm -v
 
 cd ~/Projects/Charly
@@ -67,4 +67,5 @@ Done when: lint, typecheck, and tests pass; commit on branch <name>; summarize c
 - Conventional commits: `feat:`, `fix:`, `chore:`, `docs:`, `style:`, `refactor:`, `test:`
 - Never commit `.env*` (except `.env.example`), customer uploads, or large binaries outside `public/garments/`
 - Squash-merge PRs into `main` (this also sets the commit author to you)
-- Agents never change git config, create remotes, or push; Logan pushes
+- opencode never changes git config, creates remotes, or pushes; Logan pushes its branches
+- Claude (claude.ai/Claude Code session, via the Claude GitHub App) may push its own branches and open PRs; Logan merges

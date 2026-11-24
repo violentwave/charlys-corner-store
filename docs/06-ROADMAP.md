@@ -4,12 +4,14 @@
 
 ## Phase 0: Setup (day 1)
 
-- [x] Create **private** GitHub repo `violentwave/charlys-corner-store`; push starter files, `ScrapedData/`, `Assets/`
+- [x] Create GitHub repo `violentwave/charlys-corner-store` (public for now, see `02` Decision Log); push starter files, `ScrapedData/`, `Assets/`
 - [x] Scaffold Next.js 16.4 (App Router, TS strict, Tailwind v4, ESLint, pnpm), Prettier, Vitest, Playwright, design tokens, self-hosted fonts, placeholder home with logo
 - [x] GitHub Actions CI: lint, typecheck, unit tests, build, then e2e
 - [x] `opencode.json` + `AGENTS.md` so opencode loads the project rules
 - [x] Local folder linked to the repo; opencode running
-- [ ] Global git identity + pnpm on Logan's machine (see `07-WORKFLOW.md` → Local setup)
+- [x] Global git identity on Logan's machine
+- [ ] pnpm on Logan's machine (see `07-WORKFLOW.md` → Local setup; corepack isn't bundled with his Node, use `npm i -g pnpm --prefix ~/.local`)
+- [x] Claude GitHub App installed; CI green on `main`
 - [ ] Hosting decided: **Render** (see `02` → Hosting and portability). Re-check Render pricing and Hobby workspace terms, then open the account **in the owner's name** (his email and card)
 - [ ] `render.yaml` blueprint (Node web service + Postgres) and a Render service linked to the repo, auto-deploy from `main`; PR preview deploys if the plan includes them
 - [ ] Branch protection on `main` (require CI to pass)
@@ -21,7 +23,7 @@
 
 - [x] `src/styles/tokens.css` from `03-DESIGN-SYSTEM.md`; Tailwind theme mapped to tokens (Phase 0)
 - [x] Fonts self-hosted via `@fontsource` (Phase 0)
-- [ ] Layout: sticky neon nav (mobile drawer), footer (NAP, socials, nav, "Have a Ruffin awesome day"). **Built on `feat/layout-shell`; PR open, merge after review**
+- [x] Layout: sticky neon nav (mobile drawer below 1024px), footer (NAP, socials, nav, "Have a Ruffin awesome day") (PR #2)
 - [ ] Primitives: Button (primary/secondary/ghost), Card, Input, Select, Tabs, Dialog, Toast, Badge, CouponTicket
 - [ ] `/styleguide` dev-only page showing every component
 - [ ] Hero component: horizon gradient, perspective grid, sun, palms (reduced-motion safe)
