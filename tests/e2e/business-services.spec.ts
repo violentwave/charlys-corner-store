@@ -25,8 +25,9 @@ test("quote submit shows errors then notice", async ({ page }) => {
   await page.getByLabel(/Name/i).fill("Logan");
   await page.getByLabel(/Email/i).fill("a@b.co");
   await page.getByLabel(/What do you need/i).fill("50 tees");
+  await expect(page.getByTestId("turnstile-token")).not.toHaveValue("");
   await page.getByRole("button", { name: /request quote/i }).click();
-  await expect(page.getByText("Online forms are almost ready", { exact: true })).toBeVisible();
+  await expect(page.getByText("Thanks!", { exact: true })).toBeVisible();
 });
 
 test("services embroidery anchor scrolls into view", async ({ page }) => {

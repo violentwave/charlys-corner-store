@@ -63,6 +63,16 @@ export const quoteSchema = z.object({
   notes: z.string().trim().max(5000).optional(),
 });
 
+/** Existing-order artwork uploader (old /custom-image-uploader.html parity). */
+export const uploadSchema = z.object({
+  firstName: z.string().trim().min(1, "Please enter your first name").max(100),
+  lastName: z.string().trim().min(1, "Please enter your last name").max(100),
+  email,
+  orderNumber: z.string().trim().min(1, "Please enter your order number").max(40),
+  notes: z.string().trim().max(2000).optional(),
+});
+
 export type ContactInput = z.infer<typeof contactSchema>;
 export type QuoteInput = z.infer<typeof quoteSchema>;
 export type ReferralInput = z.infer<typeof referralSchema>;
+export type UploadInput = z.infer<typeof uploadSchema>;

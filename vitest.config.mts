@@ -11,6 +11,8 @@ export default defineConfig({
     },
   },
   test: {
+    // DB tests drop/recreate the shared test schema, so run files sequentially.
+    fileParallelism: false,
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
