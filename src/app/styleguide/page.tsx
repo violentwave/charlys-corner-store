@@ -4,6 +4,12 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { ReferralSurveyDemo } from "./referral-survey";
 
 export const metadata: Metadata = {
   title: "Styleguide",
@@ -89,6 +95,60 @@ export default function StyleguidePage() {
           <Badge variant="cyan">Cyan</Badge>
           <Badge variant="yellow">Yellow (money)</Badge>
           <Badge variant="green">Green (success)</Badge>
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-4">
+        <h2 className="font-heading text-text-1 text-xl tracking-widest uppercase">Forms</h2>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          <Field label="Email" hint="We'll never share it." required>
+            <Input type="email" placeholder="you@example.com" />
+          </Field>
+          <Field label="Email (filled)" required>
+            <Input type="email" defaultValue="charly@example.com" />
+          </Field>
+          <Field label="Email (disabled)">
+            <Input type="email" disabled defaultValue="disabled@example.com" />
+          </Field>
+          <Field label="Email (error)" error="Please enter a valid email.">
+            <Input type="email" defaultValue="not-an-email" invalid />
+          </Field>
+        </div>
+
+        <Field label="Message" hint="Tell us about your order.">
+          <Textarea placeholder="Type your message…" rows={4} />
+        </Field>
+        <Field label="Message (error)" error="Message is required.">
+          <Textarea defaultValue="Hi" invalid />
+        </Field>
+
+        <Field label="Garment" hint="Choose a product.">
+          <Select>
+            <SelectTrigger>
+              <SelectValue placeholder="Select a garment" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="tee">T-shirt</SelectItem>
+              <SelectItem value="raglan">Baseball tee</SelectItem>
+              <SelectItem value="hoodie">Hoodie</SelectItem>
+              <SelectItem value="hat">Hat</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
+
+        <div className="flex items-center gap-3">
+          <Checkbox id="styleguide-checkbox" />
+          <label htmlFor="styleguide-checkbox" className="text-text-2 text-sm">
+            I agree to the terms
+          </label>
+        </div>
+
+        <div className="border-border bg-bg-2/60 rounded-2xl border p-4">
+          <h3 className="font-heading text-text-1 mb-3 text-sm tracking-widest uppercase">
+            Referral survey (legacy parity demo)
+          </h3>
+          <ReferralSurveyDemo />
         </div>
       </section>
     </div>
