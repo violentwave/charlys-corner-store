@@ -6,6 +6,8 @@ import "@fontsource/poppins/600.css";
 import "@fontsource-variable/orbitron";
 import "@fontsource-variable/jetbrains-mono";
 import "./globals.css";
+import { SiteFooter } from "@/components/layout/site-footer";
+import { SiteHeader } from "@/components/layout/site-header";
 import { site } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -24,7 +26,19 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className="h-full antialiased">
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        <a
+          href="#main"
+          className="bg-bg-2 text-neon-cyan focus:shadow-glow-cyan sr-only z-[100] rounded-md px-4 py-2 focus:not-sr-only focus:fixed focus:top-4 focus:left-4"
+        >
+          Skip to content
+        </a>
+        <SiteHeader />
+        <main id="main" className="flex flex-1 flex-col">
+          {children}
+        </main>
+        <SiteFooter />
+      </body>
     </html>
   );
 }

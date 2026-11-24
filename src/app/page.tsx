@@ -7,7 +7,7 @@ import { site } from "@/lib/site";
  */
 export default function Home() {
   return (
-    <main className="bg-horizon relative flex flex-1 flex-col items-center justify-center gap-8 overflow-hidden px-6 py-20 text-center">
+    <div className="bg-horizon relative flex flex-1 flex-col items-center justify-center gap-8 overflow-hidden px-6 py-20 text-center">
       <Image
         src="/brand/logo.png"
         alt={`${site.name} logo`}
@@ -27,6 +27,6 @@ export default function Home() {
         .
       </p>
       <p className="font-heading text-neon-yellow text-sm tracking-widest uppercase">{site.tagline} 🐾</p>
-    </main>
+    </div>
   );
 }
