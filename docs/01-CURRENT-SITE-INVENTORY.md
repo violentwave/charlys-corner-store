@@ -85,4 +85,4 @@ Contact info · address/map · hours · social links · testimonials/reviews · 
 ## Migration tasks
 - [ ] Scrape and download all product and gallery images at full resolution (Weebly CDN)
 - [ ] Export any existing customer/order data from Weebly/Square
-- [ ] 301 redirects: `/product.html` → `/shop`, `/about.html` → `/about`, `/custom-image-uploader.html` → `/upload`, `/business--promotional-products.html` → `/business`, `/design-your-own-shirt.html` → `/design`
+- [x] Permanent (308) redirects in `next.config.ts`: `/product.html` → `/shop`, `/about.html` → `/about`, `/custom-image-uploader.html` → `/upload`, `/business--promotional-products.html` → `/business`, `/design-your-own-shirt.html` → `/design`
