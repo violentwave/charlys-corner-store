@@ -16,10 +16,16 @@ for (const [from, to] of legacy) {
   });
 }
 
-for (const path of ["/shop", "/design", "/upload"]) {
+for (const path of ["/shop", "/design"]) {
   test(`${path} shows an honest coming-soon page`, async ({ page }) => {
     await page.goto(path);
     await expect(page.getByText(/coming soon/i)).toBeVisible();
     await expect(page.locator("#main").getByRole("link", { name: /charlyscornerstore@gmail\.com/i })).toBeVisible();
   });
 }
+
+test("/upload shows the artwork upload form", async ({ page }) => {
+  await page.goto("/upload");
+  await expect(page.getByRole("heading", { level: 1, name: /upload artwork for your order/i })).toBeVisible();
+  await expect(page.getByLabel(/Order number/i)).toBeVisible();
+});

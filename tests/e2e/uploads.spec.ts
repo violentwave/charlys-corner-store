@@ -23,7 +23,7 @@ test("upload page rejects fake PNG", async ({ page }) => {
   await page.locator('input[type="file"]').setInputFiles("tests/fixtures/not-an-image.png");
   await expect(page.getByTestId("turnstile-token")).not.toHaveValue("");
   await page.getByRole("button", { name: /upload artwork/i }).click();
-  await expect(page.getByRole("alert")).toContainText(/Unsupported file|20 MB/i);
+  await expect(page.getByRole("alert").filter({ hasText: /Unsupported file|20 MB/i })).toBeVisible();
 });
 
 test("quote form with one file succeeds", async ({ page }) => {
