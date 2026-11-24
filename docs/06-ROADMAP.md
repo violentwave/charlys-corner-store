@@ -32,7 +32,7 @@
 
 - [x] Foundation (Claude): content layer `src/content/` (catalog with legacy prices, services, about, portfolio), shared Zod schemas `src/lib/schemas.ts`, portfolio images in `public/portfolio/`, legacy `.html` 308 redirects, honest coming-soon pages for `/shop` `/design` `/upload`
 - [x] Home: hero, services grid, featured products, builder CTA, how-it-works, use cases, past work, referral survey (prompt P2-1)
-- [ ] About + Contact: Charly story, contact form UI (prompt P2-2)
+- [x] About + Contact: Charly story, contact form UI (prompt P2-2)
 - [ ] Business & Promo + Services: product/promo grid, portfolio gallery, quote form UI; screen print / DTF / embroidery / print & promo explainer (prompt P2-3)
 - [ ] FAQ + 404 page with Charly (prompt P2-4)
 
