@@ -9,6 +9,14 @@ vi.mock("@/app/actions/contact", () => ({
   submitContact: (...args: unknown[]) => submitContact(...args),
 }));
 
+const turnstileResetKeys: (number | undefined)[] = [];
+vi.mock("./turnstile", () => ({
+  Turnstile: ({ resetKey }: { resetKey?: number }) => {
+    turnstileResetKeys.push(resetKey);
+    return null;
+  },
+}));
+
 afterEach(() => cleanup());
 
 describe("ContactForm", () => {
@@ -31,5 +39,29 @@ describe("ContactForm", () => {
     await user.click(screen.getByRole("button", { name: /send message/i }));
     await waitFor(() => expect(screen.getByText(/Thanks!/i)).toBeInTheDocument());
     expect(screen.getByText(/We'll reply to a@b.co/)).toBeInTheDocument();
+  });
+
+  it("gets a fresh Turnstile token after a FAILED submit (tokens are single-use)", async () => {
+    submitContact.mockResolvedValue({ ok: false, error: "Too many messages" });
+    const user = userEvent.setup();
+    render(<ContactForm sourcePage="contact" />);
+    await user.type(screen.getByLabelText(/Name/i), "Logan");
+    await user.type(screen.getByLabelText(/Email/i), "a@b.co");
+    await user.type(screen.getByLabelText(/Message/i), "Hello");
+    const before = Math.max(...turnstileResetKeys.map((k) => k ?? 0));
+    await user.click(screen.getByRole("button", { name: /send message/i }));
+    expect(await screen.findByText(/Too many messages/)).toBeInTheDocument();
+    expect(Math.max(...turnstileResetKeys.map((k) => k ?? 0))).toBeGreaterThan(before);
+  });
+
+  it("shows an error instead of hanging when the server action throws", async () => {
+    submitContact.mockRejectedValue(new Error("db down"));
+    const user = userEvent.setup();
+    render(<ContactForm sourcePage="contact" />);
+    await user.type(screen.getByLabelText(/Name/i), "Logan");
+    await user.type(screen.getByLabelText(/Email/i), "a@b.co");
+    await user.type(screen.getByLabelText(/Message/i), "Hello");
+    await user.click(screen.getByRole("button", { name: /send message/i }));
+    expect(await screen.findByText(/Something went wrong/)).toBeInTheDocument();
   });
 });

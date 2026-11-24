@@ -57,18 +57,22 @@ export function ContactForm({ sourcePage }: ContactFormProps) {
   const onSubmit = (data: ContactInput) => {
     startTransition(async () => {
       const website = (document.getElementById("website") as HTMLInputElement | null)?.value ?? "";
-      const actionResult = await submitContact({ ...data, website }, sourcePage, turnstileToken);
+      let actionResult: ActionResult;
+      try {
+        actionResult = await submitContact({ ...data, website }, sourcePage, turnstileToken);
+      } catch {
+        actionResult = { ok: false, error: "Something went wrong. Please try again or email us." };
+      }
       if (!actionResult.ok && actionResult.fieldErrors) {
         for (const [field, message] of Object.entries(actionResult.fieldErrors)) {
           setError(field as keyof ContactInput, { message });
         }
       }
       setResult(actionResult);
-      if (actionResult.ok) {
-        reset();
-        setTurnstileToken(null);
-        setTurnstileKey((k) => k + 1);
-      }
+      if (actionResult.ok) reset();
+      // Turnstile tokens are single-use: get a fresh one after EVERY attempt, or retries always fail.
+      setTurnstileToken(null);
+      setTurnstileKey((k) => k + 1);
     });
   };
 

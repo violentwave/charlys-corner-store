@@ -86,8 +86,12 @@ describe("turnstile", () => {
 });
 
 describe("helpers", () => {
-  it("clientIp takes the first forwarded hop", () => {
-    expect(clientIp(new Headers({ "x-forwarded-for": "9.9.9.9, 10.0.0.1" }))).toBe("9.9.9.9");
+  it("clientIp trusts only the hop our proxy appended (spoofed left entries are ignored)", () => {
+    // Visitor sends "X-Forwarded-For: 6.6.6.6"; Render appends the real address.
+    expect(clientIp(new Headers({ "x-forwarded-for": "6.6.6.6, 9.9.9.9" }), 1)).toBe("9.9.9.9");
+    expect(clientIp(new Headers({ "x-forwarded-for": "9.9.9.9" }), 1)).toBe("9.9.9.9");
+    // Two trusted proxies (e.g. Cloudflare in front of Render)
+    expect(clientIp(new Headers({ "x-forwarded-for": "6.6.6.6, 9.9.9.9, 172.64.0.1" }), 2)).toBe("9.9.9.9");
     expect(clientIp(new Headers())).toBe("unknown");
   });
   it("zodFieldErrors maps the first message per field", () => {

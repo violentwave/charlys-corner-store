@@ -65,13 +65,14 @@ export function QuoteForm() {
       if (parsed.ok) {
         reset();
         setFiles([]);
-        setToken(null);
-        setTokenKey((k) => k + 1);
       }
     } catch {
       setResult({ ok: false, error: "Something went wrong. Please try again." });
     } finally {
       setPending(false);
+      // Turnstile tokens are single-use: refresh after every attempt.
+      setToken(null);
+      setTokenKey((k) => k + 1);
     }
   };
 

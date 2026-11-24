@@ -49,6 +49,12 @@ export function UploadForm() {
     setResult(null);
     setProgress(0);
 
+    // Turnstile tokens are single-use: refresh after every attempt, success or not.
+    const refreshTurnstile = () => {
+      setToken(null);
+      setTokenKey((k) => k + 1);
+    };
+
     const xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/uploads");
     xhr.upload.onprogress = (event) => {
@@ -71,13 +77,13 @@ export function UploadForm() {
       if (parsed.ok) {
         reset();
         setFiles([]);
-        setToken(null);
-        setTokenKey((k) => k + 1);
       }
+      refreshTurnstile();
     };
     xhr.onerror = () => {
       setProgress(null);
       setResult({ ok: false, error: "Upload failed. Please try again." });
+      refreshTurnstile();
     };
     xhr.send(form);
   };
@@ -122,7 +128,7 @@ export function UploadForm() {
       <Turnstile onToken={setToken} resetKey={tokenKey} />
 
       {progress !== null ? (
-        <div role="status" aria-live="polite" className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1">
           <span className="text-text-2 text-xs">Uploading… {progress}%</span>
           <div
             role="progressbar"

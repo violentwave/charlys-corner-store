@@ -47,11 +47,16 @@ export async function submitSurvey(input: unknown, turnstileToken?: string | nul
     return { ok: false, error: "Too many submissions — please try again in a bit." };
   }
 
-  await db.insert(schema.surveyResponses).values({
-    referralSource: data.referralSource,
-    referralOther: data.referralOther ?? null,
-    page: "home",
-  });
+  try {
+    await db.insert(schema.surveyResponses).values({
+      referralSource: data.referralSource,
+      referralOther: data.referralOther ?? null,
+      page: "home",
+    });
+  } catch {
+    console.error("survey insert failed");
+    return { ok: false, error: "Something went wrong on our end. Please try again later." };
+  }
 
   return { ok: true, message: "Thanks for letting us know!" };
 }

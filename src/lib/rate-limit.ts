@@ -32,10 +32,22 @@ export async function rateLimit(
   return { ok: count <= limit, remaining: Math.max(0, limit - count), resetAt };
 }
 
-/** Best-effort client IP behind Render's proxy (first X-Forwarded-For hop). */
-export function clientIp(headers: Headers): string {
-  const fwd = headers.get("x-forwarded-for");
-  if (fwd) return fwd.split(",")[0]!.trim();
+/**
+ * Client IP for rate limiting. X-Forwarded-For is "client, proxy1, proxy2…" and each proxy
+ * APPENDS the address it saw, so only the rightmost entries are trustworthy; the leftmost
+ * can be anything the visitor typed. We take the entry added by our outermost trusted proxy:
+ * TRUSTED_PROXY_COUNT (default 1 = Render's load balancer). Add 1 if Cloudflare proxying is
+ * ever put in front of Render.
+ */
+export function clientIp(headers: Headers, trustedProxies = Number(process.env.TRUSTED_PROXY_COUNT ?? 1)): string {
+  const hops = (headers.get("x-forwarded-for") ?? "")
+    .split(",")
+    .map((h) => h.trim())
+    .filter(Boolean);
+  if (hops.length > 0) {
+    const index = Math.max(0, hops.length - Math.max(1, trustedProxies));
+    return hops[index]!;
+  }
   return headers.get("x-real-ip") ?? "unknown";
 }
 
@@ -45,4 +57,6 @@ export const LIMITS = {
   quote: { limit: 5, windowSeconds: 60 * 60 },
   upload: { limit: 10, windowSeconds: 60 * 60 },
   survey: { limit: 10, windowSeconds: 60 * 60 },
+  /** Customer confirmation emails per recipient address: stops the forms being used to mail strangers. */
+  confirmation: { limit: 3, windowSeconds: 24 * 60 * 60 },
 } as const;

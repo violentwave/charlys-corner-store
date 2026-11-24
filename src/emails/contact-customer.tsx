@@ -1,14 +1,15 @@
-import { Body, Container, Head, Heading, Html, Preview, Section, Text } from "@react-email/components";
+import { Body, Container, Head, Heading, Html, Preview, Text } from "@react-email/components";
 import * as React from "react";
 
 import { site } from "@/lib/site";
 
 export interface ContactCustomerEmailProps {
   name: string;
-  message: string;
 }
 
-export function ContactCustomerEmail({ name, message }: ContactCustomerEmailProps) {
+/** Deliberately does NOT echo the visitor's message: confirmations must not carry free text
+ * (otherwise the form could be used to send arbitrary content to any address). */
+export function ContactCustomerEmail({ name }: ContactCustomerEmailProps) {
   return (
     <Html>
       <Head />
@@ -18,10 +19,6 @@ export function ContactCustomerEmail({ name, message }: ContactCustomerEmailProp
           <Heading>We got your message 🐾</Heading>
           <Text>Hi {name},</Text>
           <Text>Thanks for reaching out to {site.name}. We&apos;ll reply to your message soon.</Text>
-          <Text>Here&apos;s a copy of what you sent:</Text>
-          <Section>
-            <Text>{message}</Text>
-          </Section>
           <Text>Questions? Email us at {site.email.toLowerCase()}.</Text>
           <Text>{site.tagline}!</Text>
         </Container>

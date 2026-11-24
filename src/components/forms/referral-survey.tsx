@@ -33,18 +33,22 @@ export function ReferralSurvey() {
   const onSubmit = (data: ReferralInput) => {
     startTransition(async () => {
       const website = (document.getElementById("survey-website") as HTMLInputElement | null)?.value ?? "";
-      const actionResult = await submitSurvey({ ...data, website }, turnstileToken);
+      let actionResult: ActionResult;
+      try {
+        actionResult = await submitSurvey({ ...data, website }, turnstileToken);
+      } catch {
+        actionResult = { ok: false, error: "Something went wrong. Please try again." };
+      }
       if (!actionResult.ok && actionResult.fieldErrors) {
         for (const [field, message] of Object.entries(actionResult.fieldErrors)) {
           setError(field as keyof ReferralInput, { message });
         }
       }
       setResult(actionResult);
-      if (actionResult.ok) {
-        reset();
-        setTurnstileToken(null);
-        setTurnstileKey((k) => k + 1);
-      }
+      if (actionResult.ok) reset();
+      // Turnstile tokens are single-use: refresh after every attempt.
+      setTurnstileToken(null);
+      setTurnstileKey((k) => k + 1);
     });
   };
 
