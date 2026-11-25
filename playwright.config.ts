@@ -18,5 +18,7 @@ export default defineConfig({
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    // Lets the e2e-only /api/test/last-email helper answer (it 404s without both flags).
+    env: { ...process.env, ENABLE_TEST_HOOKS: "1" },
   },
 });
