@@ -36,13 +36,15 @@ src/lib/email.ts    sendEmail(), ownerInbox()   src/lib/turnstile.ts verifyTurns
 src/lib/rate-limit.ts rateLimit(), clientIp(), LIMITS   src/lib/artwork.ts checkArtwork() (byte sniffing)
 src/lib/action-result.ts ActionResult, zodFieldErrors()  src/test/db.ts real-Postgres test helper
 src/lib/notify.ts   notifyOwner(), confirmCustomer() (per-recipient cap)   src/lib/http.ts readFormDataLimited(), fileParts(), clip()
+src/lib/garments.ts garment config (zones, palettes, print areas, layers)   src/lib/mockup-schema.ts mockupPayloadSchema (/api/mockups wire format)
+src/lib/coupon-store.ts issueCoupon() (idempotent, server-only)   scripts/garments/ garment template generator (writes public/garments)
 tests/e2e/          Playwright specs             public/brand/        logo for the web
 render.yaml         Render blueprint (the only host-specific file)
 ```
 
 ## Stack
 
-**Next.js 16.4** (App Router; read the docs in `node_modules/next/dist/docs/` before using an API, see the block at the bottom) + TypeScript (strict) · Tailwind (tokens in `src/styles/tokens.css`) · shadcn/ui primitives · react-konva for the builder · React Hook Form + Zod · **plain Postgres via Drizzle ORM** · **S3-compatible file storage** (provider per Decision Log) · Resend + React Email · Cloudflare Turnstile · Vitest + Playwright · pnpm · **hosted on Render as a Node web service** (`pnpm build && pnpm start`). Fonts are self-hosted via `@fontsource` packages (Poppins body, Orbitron headings, JetBrains Mono); don't switch to `next/font/google`.
+**Next.js 16.4** (App Router; read the docs in `node_modules/next/dist/docs/` before using an API, see the block at the bottom) + TypeScript (strict) · Tailwind (tokens in `src/styles/tokens.css`) · shadcn/ui primitives · Konva + react-konva for the builder (client-only via `next/dynamic` with `ssr: false`) · React Hook Form + Zod · **plain Postgres via Drizzle ORM** · **S3-compatible file storage** (provider per Decision Log) · Resend + React Email · Cloudflare Turnstile · Vitest + Playwright · pnpm · **hosted on Render as a Node web service** (`pnpm build && pnpm start`). Fonts are self-hosted via `@fontsource` packages (Poppins body, Orbitron headings, JetBrains Mono); don't switch to `next/font/google`.
 If `docs/02` marks something **DECIDE** and it isn't in the Decision Log yet, stop and ask instead of choosing.
 
 ## Commands

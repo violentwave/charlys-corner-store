@@ -1,6 +1,6 @@
 /**
- * Database schema (Drizzle, plain Postgres). Phase 3 tables only; mockups/coupons/orders
- * arrive with Phases 4–5 as their own migrations. See docs/02 → Data model.
+ * Database schema (Drizzle, plain Postgres). Phase 3 forms + Phase 4 mockups/coupons;
+ * orders arrive with Phase 5 as its own migration. See docs/02 → Data model.
  *
  * Change this file, then `pnpm db:generate` to write a SQL migration into db/migrations.
  */
@@ -10,6 +10,7 @@ import {
   date,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -18,9 +19,11 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
+import type { MockupColors, MockupSizes, MockupViewRecord } from "../src/lib/mockup-schema";
 import { REFERRAL_SOURCES } from "../src/lib/schemas";
 
 export const referralSource = pgEnum("referral_source", REFERRAL_SOURCES);
+export const couponStatus = pgEnum("coupon_status", ["issued", "eligible", "redeemed", "expired"]);
 export const requestStatus = pgEnum("request_status", ["new", "contacted", "quoted", "ordered", "closed", "spam"]);
 
 const id = () => uuid("id").primaryKey().defaultRandom();
@@ -129,3 +132,54 @@ export const rateLimits = pgTable("rate_limits", {
   windowStart: timestamp("window_start", { withTimezone: true }).notNull().defaultNow(),
   count: integer("count").notNull().default(0),
 });
+
+/**
+ * "15% off your 2nd order" coupons (src/lib/coupons.ts rules). One per lead (= one per email),
+ * enforced by the unique lead_id index; issueCoupon() in src/lib/coupon-store.ts is idempotent.
+ */
+export const coupons = pgTable(
+  "coupons",
+  {
+    id: id(),
+    leadId: uuid("lead_id")
+      .notNull()
+      .references(() => leads.id),
+    code: text("code").notNull(),
+    percentOff: integer("percent_off").notNull(),
+    minOrderCents: integer("min_order_cents").notNull(),
+    status: couponStatus("status").notNull().default("issued"),
+    issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    /** Payment provider's order id once redeemed (Phase 5). */
+    redeemedOrderRef: text("redeemed_order_ref"),
+  },
+  (t) => [uniqueIndex("coupons_code_unique").on(t.code), uniqueIndex("coupons_lead_unique").on(t.leadId)],
+);
+
+/** Build-Your-Own Mockup submissions (email gate on /design). */
+export const mockups = pgTable(
+  "mockups",
+  {
+    id: id(),
+    leadId: uuid("lead_id")
+      .notNull()
+      .references(() => leads.id),
+    couponId: uuid("coupon_id").references(() => coupons.id),
+    garment: text("garment").notNull(),
+    /** zone id → #rrggbb */
+    colors: jsonb("colors").$type<MockupColors>().notNull(),
+    /** One entry per view that has artwork: print area, artwork transform, rendered mockup key. */
+    views: jsonb("views").$type<MockupViewRecord[]>().notNull(),
+    sizes: jsonb("sizes").$type<MockupSizes>().notNull().default({}),
+    notes: text("notes"),
+    wantsQuote: boolean("wants_quote").notNull().default(false),
+    /** Original artwork, untouched, for production. */
+    artworkKey: text("artwork_key").notNull(),
+    artworkName: text("artwork_name").notNull(),
+    artworkContentType: text("artwork_content_type").notNull(),
+    artworkSizeBytes: integer("artwork_size_bytes").notNull(),
+    status: requestStatus("status").notNull().default("new"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("mockups_created_idx").on(t.createdAt), index("mockups_lead_idx").on(t.leadId)],
+);

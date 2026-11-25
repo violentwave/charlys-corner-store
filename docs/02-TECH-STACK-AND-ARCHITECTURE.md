@@ -10,7 +10,7 @@
 | Styling              | **Tailwind CSS v4** with design tokens from `03-DESIGN-SYSTEM.md` as CSS variables (`src/styles/tokens.css`)                                                                                   | Fast iteration; tokens keep the neon theme consistent                                                                 |
 | Fonts                | Self-hosted via `@fontsource` (Poppins, Orbitron, JetBrains Mono)                                                                                                                              | No build-time network calls; no Google Fonts dependency                                                               |
 | UI primitives        | shadcn/ui (Radix) restyled neon                                                                                                                                                                | Accessible dialogs, selects, and tabs out of the box                                                                  |
-| Mockup canvas        | **Konva (react-konva)** or **Fabric.js**. **DECIDE** (default: Konva)                                                                                                                          | Drag, scale, and rotate transforms, layer compositing, `toDataURL()` export                                           |
+| Mockup canvas        | **Konva + react-konva** (both MIT, free). Decided 2026-11-25. Client-only: load the builder with `next/dynamic` and `ssr: false` | Drag, scale, and rotate transforms, layer compositing, `toDataURL()` export                                           |
 | Garment recolor      | Original vector templates (zone masks + multiply shading + screen highlight), built by `scripts/garments/build.mjs`                                                                                                              | Realistic color changes from a single photo template per view                                                         |
 | Forms and validation | React Hook Form + Zod (shared schemas client and server)                                                                                                                                       | One schema, both sides                                                                                                |
 | Database             | **Plain Postgres on the host (Render Postgres)**, accessed with **Drizzle ORM** (SQL migrations in `db/`)                                                                                      | Leads, coupons, uploads, quote requests. No vendor SDK, so any Postgres host works.                                   |
@@ -71,11 +71,11 @@ Browser ──► Next.js pages (SSG: home, about, business, services, city page
 
 ```
 leads        id, email (unique, citext), name, phone, referral_source, marketing_opt_in, created_at
-mockups      id, lead_id, garment, colors jsonb, print_locations text[], views jsonb
-             (per view: artwork_url, transform{x,y,scale,rotation}, mockup_url), sizes_qty jsonb, notes,
-             status (new|contacted|quoted|ordered|closed), created_at
-coupons      id, lead_id, code (unique), percent_off=15, type='second_order',
-             status (issued|eligible|redeemed|expired), issued_at, expires_at, redeemed_order_id
+mockups      id, lead_id, coupon_id, garment, colors jsonb, views jsonb
+             (per view: view, printArea, transform{x,y,width,height,rotation,flipX}, mockupKey), sizes jsonb, notes,
+             wants_quote, artwork_key/name/content_type/size_bytes, status (request_status), created_at
+coupons      id, lead_id (unique: one per email), code (unique), percent_off, min_order_cents,
+             status (issued|eligible|redeemed|expired), issued_at, expires_at, redeemed_order_ref
 orders       id, lead_id, provider (square|stripe), provider_order_id, total_cents, coupon_id, created_at
 uploads      id, name, email, order_number, file_url, notes, created_at
 quotes       id, company, name, email, phone, items jsonb, quantity, deadline, artwork_url, notes, status, created_at
@@ -136,6 +136,7 @@ See `.env.example`. Never commit `.env*` (except the example). Secrets live in t
 | 2026-11-23 | Builder ships 6 garments (adds Polo + Tank)                                                                                                                                  | Owner answer                                                                              |
 | 2026-11-23 | Owner notifications go to one inbox: CHARLYSCORNERSTORE@GMAIL.COM                                                                                                            | Owner answer                                                                              |
 | 2026-11-25 | **Garment templates: original vector drawings (Option A)**, neutral/realistic, no site theme on garments or canvas backdrop. Layer contract in docs/04 | Logan |
-|            | Canvas lib                                                                                                                                                                   | DECIDE (default Konva)                                                                    |
+| 2026-11-25 | **Canvas lib: Konva + react-konva** (MIT licensed, free for commercial use) | Logan |
+| 2026-11-25 | Phase 4 backend: `coupons` (one per lead, unique index) + `mockups` tables (migration 0001); `issueCoupon()` idempotent and race-safe; shared `mockupPayloadSchema` | Claude |
 |            | Payments provider                                                                                                                                                            | DECIDE, waiting on owner (Brief Q2)                                                       |
 |            | Coupon enforcement approach                                                                                                                                                  | DECIDE (default (b))                                                                      |

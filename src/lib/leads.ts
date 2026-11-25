@@ -11,6 +11,8 @@ export type LeadInput = {
   phone?: string | null;
   referralSource?: (typeof REFERRAL_SOURCES)[number] | null;
   referralOther?: string | null;
+  /** Only ever turns opt-in on; an unchecked box never revokes an earlier yes. */
+  marketingOptIn?: boolean;
 };
 
 /**
@@ -22,13 +24,14 @@ export async function upsertLead(db: Db, input: LeadInput): Promise<string> {
   const clean = (v?: string | null) => (v && v.trim() ? v.trim() : null);
   const email = input.email.trim().toLowerCase();
   const { rows } = await db.execute<{ id: string }>(sql`
-    insert into leads (email, name, phone, referral_source, referral_other)
-    values (${email}, ${clean(input.name)}, ${clean(input.phone)}, ${input.referralSource ?? null}, ${clean(input.referralOther)})
+    insert into leads (email, name, phone, referral_source, referral_other, marketing_opt_in)
+    values (${email}, ${clean(input.name)}, ${clean(input.phone)}, ${input.referralSource ?? null}, ${clean(input.referralOther)}, ${input.marketingOptIn === true})
     on conflict ((lower(email))) do update set
       name = coalesce(excluded.name, leads.name),
       phone = coalesce(excluded.phone, leads.phone),
       referral_source = coalesce(excluded.referral_source, leads.referral_source),
       referral_other = coalesce(excluded.referral_other, leads.referral_other),
+      marketing_opt_in = leads.marketing_opt_in or excluded.marketing_opt_in,
       updated_at = now()
     returning id
   `);
