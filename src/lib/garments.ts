@@ -314,6 +314,12 @@ export function getGarment(id: GarmentId): GarmentConfig {
 
 const HEX = /^#[0-9a-f]{6}$/i;
 
+/** Palette name for a hex ("Navy"), or "Custom #rrggbb" when it isn't a listed blank color. */
+export function colorName(garment: GarmentConfig, hex: string): string {
+  const match = garment.palette.find((c) => c.hex.toLowerCase() === hex.toLowerCase());
+  return match ? match.name : `Custom ${hex.toLowerCase()}`;
+}
+
 export function isHexColor(value: string): boolean {
   return HEX.test(value);
 }

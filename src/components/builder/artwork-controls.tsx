@@ -59,6 +59,7 @@ export function ArtworkControls({
 }: ArtworkControlsProps) {
   const artwork = placement?.artwork ?? null;
   const inputId = useId();
+  const activeArea = view.printAreas.find((a) => a.id === placement?.printArea) ?? view.printAreas[0]!;
 
   return (
     <div className="flex flex-col gap-6" data-testid="artwork-controls">
@@ -168,7 +169,9 @@ export function ArtworkControls({
               className="text-text-1 mb-1 flex items-center justify-between text-sm font-medium"
             >
               Size
-              <span className="text-text-3 font-mono text-xs">{Math.round(artwork.transform.width)} px</span>
+              <span className="text-text-3 font-mono text-xs">
+                {printedInches(activeArea, { w: artwork.transform.width, h: 0 }).w.toFixed(1)}″ wide
+              </span>
             </label>
             <input
               id="builder-size"

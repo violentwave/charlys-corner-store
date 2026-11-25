@@ -247,6 +247,7 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
       const stage = stageRef.current;
       if (!stage) return null;
       // Guides and transformer handles never appear in the export.
+      const selectedNodes = transformerRef.current?.nodes() ?? [];
       guideRef.current?.visible(false);
       transformerRef.current?.visible(false);
       transformerRef.current?.nodes([]);
@@ -259,6 +260,7 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
       );
       guideRef.current?.visible(true);
       transformerRef.current?.visible(true);
+      transformerRef.current?.nodes(selectedNodes);
       layerRef.current?.batchDraw();
       return blob;
     },

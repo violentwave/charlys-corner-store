@@ -7,7 +7,7 @@ export interface MockupOwnerEmailProps {
   phone?: string;
   garmentName: string;
   /** Zone label + hex for every color zone. */
-  colors: { label: string; hex: string }[];
+  colors: { label: string; hex: string; name: string }[];
   /** View label + print-location label for every view with artwork. */
   views: { view: string; area: string }[];
   /** "2 × M" entries for sizes the visitor entered (empty when none). */
@@ -41,7 +41,7 @@ export function MockupOwnerEmail(p: MockupOwnerEmailProps) {
             {p.colors.map((c, i) => (
               <React.Fragment key={c.label}>
                 {i > 0 ? ", " : ""}
-                {c.label} {c.hex}
+                {c.label}: {c.name} ({c.hex})
               </React.Fragment>
             ))}
           </Text>
