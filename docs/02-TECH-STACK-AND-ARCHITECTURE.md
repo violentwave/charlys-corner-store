@@ -136,6 +136,7 @@ See `.env.example`. Never commit `.env*` (except the example). Secrets live in t
 | 2026-11-23 | Builder ships 6 garments (adds Polo + Tank)                                                                                                                                  | Owner answer                                                                              |
 | 2026-11-23 | Owner notifications go to one inbox: CHARLYSCORNERSTORE@GMAIL.COM                                                                                                            | Owner answer                                                                              |
 | 2026-11-25 | **Garment templates: original vector drawings (Option A)**, neutral/realistic, no site theme on garments or canvas backdrop. Layer contract in docs/04 | Logan |
+| 2026-11-25 | **The mockup builder is the top of the home page** (first thing visitors see); `/design` stays as its own page for links, email CTAs and restore links | Logan |
 | 2026-11-25 | **Canvas lib: Konva + react-konva** (MIT licensed, free for commercial use) | Logan |
 | 2026-11-25 | Phase 4 backend: `coupons` (one per lead, unique index) + `mockups` tables (migration 0001); `issueCoupon()` idempotent and race-safe; shared `mockupPayloadSchema` | Claude |
 |            | Payments provider                                                                                                                                                            | DECIDE, waiting on owner (Brief Q2)                                                       |

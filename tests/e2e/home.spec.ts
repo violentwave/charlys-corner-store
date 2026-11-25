@@ -1,5 +1,17 @@
 import { expect, test } from "@playwright/test";
 
+test("the mockup builder is the first thing on the home page", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(/design your own custom gear/i);
+  const canvas = page.getByTestId("builder-canvas");
+  await expect(canvas).toBeVisible({ timeout: 30_000 });
+  // It sits above the services section, near the top of the page.
+  const canvasTop = (await canvas.boundingBox())!.y;
+  const servicesTop = (await page.locator("#services").boundingBox())!.y;
+  expect(canvasTop).toBeLessThan(servicesTop);
+  expect(canvasTop).toBeLessThan(700);
+});
+
 test("home has one h1, featured products with prices, and coupon CTA", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);

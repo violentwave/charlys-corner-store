@@ -58,6 +58,7 @@ Each page prompt is shipped by the agent (Ship section); Claude reviews every me
 - [x] Email gate + `/api/mockups` + coupon issuance + customer and owner emails
 - [x] Success screen, download, "request quote," restore-design deep link
 - [x] Playwright e2e for the full flow; mobile QA
+- [x] Builder embedded at the top of the home page (Logan, 2026-11-25)
 
 ## Phase 5: Shop and checkout
 
