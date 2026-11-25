@@ -15,6 +15,13 @@
       "when": 1795632487207,
       "tag": "0001_mockups_coupons",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795644257443,
+      "tag": "0002_accounts_orders",
+      "breakpoints": true
     }
   ]
 }

@@ -46,3 +46,18 @@ export async function confirmCustomer(
 function oneLine(s: string) {
   return s.replace(/[\r\n\t]+/g, " ").slice(0, 200);
 }
+
+/**
+ * Account emails (verification codes, reset links). Rate-limited by the auth routes
+ * (LIMITS.resendCode / forgotPassword), not by the confirmation cap. Returns whether it sent.
+ */
+export async function sendAccountEmail(to: string, subject: string, email: ReactElement): Promise<boolean> {
+  try {
+    const res = await sendEmail({ to, subject: oneLine(subject), ...(await renderBoth(email)) });
+    if (!res.ok) console.error("account email failed");
+    return res.ok;
+  } catch {
+    console.error("account email failed");
+    return false;
+  }
+}
