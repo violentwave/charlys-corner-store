@@ -12,6 +12,7 @@ import { _clearOutbox, _outbox } from "@/lib/email";
 import { _memoryClear, _memoryKeys } from "@/lib/storage";
 import { upsertLead } from "@/lib/leads";
 import { hasTestDb, setupTestDb } from "@/test/db";
+import { POST as postQuote } from "./mockups/[id]/quote/route";
 import { POST as postMockup } from "./mockups/route";
 
 let forwardedFor = "198.51.100.1";
@@ -220,5 +221,59 @@ describe.skipIf(!hasTestDb)("POST /api/mockups (real Postgres)", () => {
     expect(owner.subject).toContain("QUOTE REQUESTED");
     expect(owner.html + owner.text).toContain("SECRETNOTES-please-ignore");
     expect(owner.html + owner.text).toMatch(/CHARLY-[A-Z2-9]{4}-[A-Z2-9]{4}/);
+  });
+
+  it("emails name the colors and attach the rendered PNGs", async () => {
+    await postMockup(buildRequest({ payload: { name: "", colors: { body: "#1F2A44" } } }));
+    const customer = _outbox().find((m) => m.to === "charly@example.com")!;
+    expect(customer.text).toContain("T-Shirt in Navy");
+    expect(customer.text).toContain("Hi there,");
+    expect(customer.attachments?.map((a) => a.filename)).toEqual([
+      "charlys-mockup-tshirt-front.png",
+      "charlys-mockup-tshirt-back.png",
+    ]);
+    const owner = _outbox().find((m) => m.to !== "charly@example.com")!;
+    expect(owner.text).toContain("Shirt: Navy (#1F2A44)");
+  });
+
+  it("rejects renders with absurd pixel dimensions", async () => {
+    const huge = new Uint8Array(png);
+    new DataView(huge.buffer).setUint32(16, 50_000);
+    const res = await postMockup(buildRequest({ renderBytes: huge }));
+    expect(res.status).toBe(400);
+    expect(_memoryKeys()).toEqual([]);
+  });
+
+  describe("POST /api/mockups/[id]/quote", () => {
+    const quote = (id: string) =>
+      postQuote(
+        new Request(`http://test/api/mockups/${id}/quote`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ turnstileToken: "tok" }),
+        }),
+        { params: Promise.resolve({ id }) },
+      );
+
+    it("flags the mockup once, notifies only the owner, and is idempotent", async () => {
+      const sent = (await (await postMockup(buildRequest())).json()) as { mockupId: string };
+      _clearOutbox();
+
+      expect((await quote(sent.mockupId)).status).toBe(200);
+      const [row] = await db.select().from(schema.mockups);
+      expect(row!.wantsQuote).toBe(true);
+      expect(_outbox()).toHaveLength(1);
+      expect(_outbox()[0]!.subject).toContain("Quote requested: T-Shirt · charly@example.com");
+      expect(_outbox()[0]!.to).not.toBe("charly@example.com");
+
+      expect((await quote(sent.mockupId)).status).toBe(200);
+      expect(_outbox()).toHaveLength(1);
+      expect(await db.select().from(schema.mockups)).toHaveLength(1);
+    });
+
+    it("404s for malformed and unknown ids", async () => {
+      expect((await quote("not-a-uuid")).status).toBe(404);
+      expect((await quote("00000000-0000-4000-8000-000000000000")).status).toBe(404);
+    });
   });
 });
