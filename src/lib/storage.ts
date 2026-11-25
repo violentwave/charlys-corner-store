@@ -48,7 +48,13 @@ function memoryDriver(): StorageDriver {
       memoryStore.set(key, { body, contentType });
     },
     async signedUrl(key) {
-      return `memory://${key}`;
+      // Tests/CI only: the "signed URL" is a data: URL of the stored bytes, so
+      // flows that fetch it in a browser (restore deep link, downloads) work
+      // end-to-end without an S3 server. Expiry is a no-op for in-memory data.
+      const stored = memoryStore.get(key);
+      if (!stored) throw new Error(`No object stored under ${key}`);
+      const base64 = Buffer.from(stored.body).toString("base64");
+      return `data:${stored.contentType};base64,${base64}`;
     },
     async delete(key) {
       memoryStore.delete(key);

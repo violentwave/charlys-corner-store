@@ -8,7 +8,6 @@ import { readFileSync } from "node:fs";
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { schema, type Db } from "@/lib/db";
 import { _memoryClear } from "@/lib/storage";
 import { hasTestDb, setupTestDb } from "@/test/db";
 import { GET as getRestore } from "@/app/api/mockups/[id]/route";
@@ -51,17 +50,15 @@ const postMockup = async (payloadOverride: Record<string, unknown> = {}) => {
 };
 
 describe.skipIf(!hasTestDb)("GET /api/mockups/[id] (real Postgres)", () => {
-  let db: Db;
   let reset: () => Promise<void>;
   let close: () => Promise<void>;
   let mockupId: string;
-  let artworkKey: string;
 
   beforeAll(async () => {
     process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
     process.env.EMAIL_DRIVER = "console";
     process.env.STORAGE_DRIVER = "memory";
-    ({ db, reset, close } = await setupTestDb());
+    ({ reset, close } = await setupTestDb());
   });
   beforeEach(async () => {
     await reset();
@@ -70,8 +67,6 @@ describe.skipIf(!hasTestDb)("GET /api/mockups/[id] (real Postgres)", () => {
     const res = await postMockup();
     const json = (await res.json()) as { ok: true; mockupId: string };
     mockupId = json.mockupId;
-    const [row] = await db.select().from(schema.mockups);
-    artworkKey = row!.artworkKey;
   });
   afterAll(async () => close());
 
@@ -82,7 +77,12 @@ describe.skipIf(!hasTestDb)("GET /api/mockups/[id] (real Postgres)", () => {
     expect(res.status).toBe(200);
     const json = (await res.json()) as {
       ok: boolean;
-      design: { garment: string; colors: Record<string, string>; views: Record<string, unknown>[]; sizes: Record<string, number> };
+      design: {
+        garment: string;
+        colors: Record<string, string>;
+        views: Record<string, unknown>[];
+        sizes: Record<string, number>;
+      };
       artwork: { url: string };
     };
 
@@ -106,8 +106,8 @@ describe.skipIf(!hasTestDb)("GET /api/mockups/[id] (real Postgres)", () => {
       ],
     });
 
-    // Artwork URL points at the stored original (memory driver: memory://<key>).
-    expect(json.artwork.url).toBe(`memory://${artworkKey}`);
+    // Artwork URL is a fetchable data: URL of the stored original (memory driver).
+    expect(json.artwork.url).toMatch(/^data:image\/png;base64,/);
 
     // Nothing personally identifying anywhere in the body.
     const body = JSON.stringify(json);
@@ -139,10 +139,9 @@ describe.skipIf(!hasTestDb)("GET /api/mockups/[id] (real Postgres)", () => {
   });
 
   it("404 for an unknown but well-formed UUID", async () => {
-    const res = await getRestore(
-      new Request("http://test/api/mockups/123e4567-e89b-42d3-a456-426614174999"),
-      { params: Promise.resolve({ id: "123e4567-e89b-42d3-a456-426614174999" }) },
-    );
+    const res = await getRestore(new Request("http://test/api/mockups/123e4567-e89b-42d3-a456-426614174999"), {
+      params: Promise.resolve({ id: "123e4567-e89b-42d3-a456-426614174999" }),
+    });
     expect(res.status).toBe(404);
   });
 
