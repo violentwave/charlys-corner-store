@@ -166,3 +166,27 @@ test("details step has sizes, notes and referral; gate shows the real email form
   await expect(gate.getByTestId("gate-email")).toBeVisible();
   await expect(gate.getByTestId("gate-blocked")).toBeVisible();
 });
+
+test.describe("mobile QA at 360px (docs/04)", () => {
+  test("canvas fits without horizontal scroll and controls meet the 44px target", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "mobile-360", "runs on the mobile-360 project only");
+    await openBuilder(page);
+    await goToDesignStep(page);
+    await uploadArtwork(page, "tests/e2e/fixtures/art.png");
+
+    // No horizontal scrolling anywhere on the page.
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth))
+      .toBeLessThanOrEqual(0);
+
+    // Step controls and print-location chips are reachable and ≥ 44px tall.
+    for (const button of [
+      page.getByRole("button", { name: "Step 3: Design" }),
+      page.getByRole("button", { name: "Step 5: Get mockup" }),
+      page.getByTestId("print-area-front-chest"),
+    ]) {
+      await expect(button).toBeVisible();
+      expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    }
+  });
+});

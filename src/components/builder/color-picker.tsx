@@ -83,7 +83,7 @@ function ColorZoneRow({
               title={color.name}
               onClick={() => onZoneColor(zoneId, color.hex)}
               className={cn(
-                "focus-visible:ring-neon-cyan relative h-9 w-9 rounded-full border border-white/25 transition-transform focus-visible:ring-2 focus-visible:outline-none",
+                "focus-visible:ring-neon-cyan relative h-11 w-11 rounded-full border border-white/25 transition-transform focus-visible:ring-2 focus-visible:outline-none",
                 selected ? "ring-neon-cyan ring-offset-bg-0 ring-2 ring-offset-2" : "hover:-translate-y-0.5",
               )}
               style={{ backgroundColor: color.hex }}
@@ -122,7 +122,7 @@ function ColorZoneRow({
               setDraft(e.target.value);
               onZoneColor(zoneId, e.target.value);
             }}
-            className="border-border h-9 w-9 cursor-pointer rounded-md border p-0.5"
+            className="border-border h-11 w-11 cursor-pointer rounded-md border p-0.5"
           />
           <input
             id={`${id}-hex`}
@@ -139,7 +139,7 @@ function ColorZoneRow({
               setDraft(next);
               if (isHexColor(normalizeHex(next))) onZoneColor(zoneId, normalizeHex(next));
             }}
-            className="border-border bg-bg-3 text-text-1 focus-visible:ring-neon-cyan aria-invalid:border-danger h-9 w-24 rounded-md border px-2 font-mono text-xs focus-visible:ring-2 focus-visible:outline-none"
+            className="border-border bg-bg-3 text-text-1 focus-visible:ring-neon-cyan aria-invalid:border-danger h-11 w-24 rounded-md border px-2 font-mono text-xs focus-visible:ring-2 focus-visible:outline-none"
           />
           {isCustom && draftValid ? (
             <p className="text-text-2 text-xs">We&apos;ll match the closest available blank.</p>
