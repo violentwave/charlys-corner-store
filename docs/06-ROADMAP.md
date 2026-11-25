@@ -49,8 +49,9 @@ Each page prompt is shipped by the agent (Ship section); Claude reviews every me
 
 ## Phase 4: Mockup builder (flagship)
 
-- [ ] Garment templates (asset decision) for T-shirt, Raglan, Hoodie, Hat, Polo, Tank
-- [ ] Garment config data + recolor compositor (mask + multiply shading), unit-tested
+- [x] Garment templates (asset decision) for T-shirt, Raglan, Hoodie, Hat, Polo, Tank
+- [x] Garment config data (`src/lib/garments.ts`), unit-tested
+- [ ] Recolor compositor in the builder (mask + multiply shading + screen highlight), unit-tested
 - [ ] Canvas: upload, transform, print areas, front/back, presets, undo/redo, keyboard
 - [ ] DPI warning; sizes/qty; notes
 - [ ] Email gate + `/api/mockups` + coupon issuance + customer and owner emails

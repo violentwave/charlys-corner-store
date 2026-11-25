@@ -29,18 +29,20 @@ Garment config lives in data (`src/lib/garments.ts` or the DB), not hard-coded i
 type GarmentConfig = {
   id: 'tshirt' | 'raglan' | 'hoodie' | 'hat' | 'polo' | 'tank';
   name: string;
-  colorZones: ColorZone[];          // e.g. tshirt: ['body']; raglan: ['body','sleeves']; hoodie: ['body','hood-lining','drawstrings']; hat: ['front','mesh','brim']
+  colorZones: ColorZone[];          // tshirt/polo/tank: ['body']; raglan: ['body','sleeves']; hoodie: ['body','lining','drawstrings']; hat: ['front','mesh','brim']
   palette: GarmentColor[];          // stocked colors (name + hex); owner to confirm
   allowCustomHex: boolean;          // "custom color(s)" requirement; flag "subject to blank availability"
-  views: { id: 'front'|'back'|'side'; layers: { base: string; shading: string; mask: Record<zone,string> }; printAreas: PrintArea[] }[];
+  views: { id: 'front'|'back'; width: number; height: number; zones: string[]; layers: { base: string; shading: string; highlight: string; mask: Record<zone,string> }; printAreas: PrintArea[] }[];
 };
 type PrintArea = { id: string; label: string; rect: { x:number; y:number; w:number; h:number }; maxInches: { w:number; h:number } };
 ```
+Implemented in `src/lib/garments.ts` (with `highlightOpacity()`, `printedInches()`); print-area rects are in template px.
 
 ### 2. Choose color(s)
 - **Multi-zone color** is what makes "custom color(s)" real: raglan body plus sleeves, hat front/mesh/brim, hoodie body plus hood lining.
 - Curated swatch palette per garment (named, aria-labelled) plus a "Custom" picker (hex). Show a note when a custom hex isn't a stocked blank: "We'll match the closest available blank."
-- Recolor technique: per zone, fill the mask with the chosen color → composite the **shading layer with `multiply`** (and an optional `screen` highlight layer) so folds and texture survive. Templates: white/light-gray photo or render per view, plus a mask per zone.
+- Recolor technique: per zone, fill the mask with the chosen color → composite the **shading layer with `multiply`** (and an optional `screen` highlight layer) so folds and texture survive. Templates: see **Garment templates** below.
+- **Garments stay neutral and realistic.** The site's neon theme never touches the garment, the canvas backdrop (plain light studio gray), or the exported mockup: the customer's colors and artwork are the only thing on show. Theme lives in the surrounding UI only.
 
 ### 3. Upload and place design
 - Accept **PNG, JPG, SVG, WEBP** (≤ 20 MB, matching the current uploader; PDF/AI accepted later via `/upload`). Tip: "Transparent PNG works best."
@@ -86,5 +88,15 @@ Mockup images + **Download** buttons + coupon ticket (code, copy button, rules: 
 - [ ] Owner email arrives with original artwork link
 - [ ] Playwright e2e covers the happy path plus invalid email plus oversized file
 
-## Asset needs
-Garment template sets (base/shading/masks per view) for all garments. Options: (1) photograph blanks in a lightbox, (2) buy licensed flat-lay mockup PSDs and export layers, (3) clean vector renders. **DECIDE.** Templates must be licensed for commercial web use.
+## Garment templates
+**Decided 2026-11-25: original vector drawings (Option A)**, drawn in code, so we own them outright (no licensing). Source: `scripts/garments/shapes.mjs` (paths) + `render.mjs` (SVG layers) → `node scripts/garments/build.mjs` writes PNGs; `--preview` also writes test composites to `tmp/garment-previews/`; `--only=<garment>` rebuilds one. Commit the PNGs; `sharp` is a dev dependency used only by this script.
+
+Per view, in `public/garments/{garment}/{view}/`:
+| File | Use |
+|---|---|
+| `mask-<zone>.png` | Alpha mask per color zone; fill with the zone color |
+| `shading.png` | Folds, seams, stitching, texture; `multiply` over the fills. Its alpha is the garment silhouette (clip everything to it) |
+| `highlight.png` | Sheen; `screen` at `highlightOpacity(hex)` = 0.15 + 0.85 × (1 − luma), so dark fabric doesn't go flat |
+| `base.png` | White composite for thumbnails / loading |
+
+Size: 1000×1200 for tops, 1000×800 for the hat. Views: front + back (hat: front only). Swap in owner photos later by keeping the same layer contract.
