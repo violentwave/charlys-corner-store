@@ -8,8 +8,11 @@ import { Pool } from "pg";
  */
 
 async function openAndSubmit(page: Page, email: string) {
+  // The builder requires a verified account (docs/04 Flow v2): the test-only /api/test/session
+  // helper creates one and signs this browser in.
   // A unique per-test IP keeps the /api/mockups rate limits from tripping across runs.
   await page.setExtraHTTPHeaders({ "x-forwarded-for": `203.0.113.${1 + Math.floor(Math.random() * 254)}` });
+  await page.request.post("/api/test/session", { data: { email, name: "Charly Dog" } });
   await page.goto("/design");
   await expect(page.getByTestId("garment-picker")).toBeVisible({ timeout: 30_000 });
   // Hoodie: a distinctive garment (3 color zones, own print areas) so the restore
@@ -18,14 +21,11 @@ async function openAndSubmit(page: Page, email: string) {
   await page.getByRole("group", { name: "Body color" }).getByRole("button", { name: "Black", exact: true }).click();
   await page.getByRole("button", { name: "Step 3: Design" }).click();
   await expect(page.getByTestId("artwork-controls")).toBeVisible();
-  await page.locator("input[type=file]").setInputFiles("tests/e2e/fixtures/art.png");
+  await page.locator("[data-testid='builder-file-input']").setInputFiles("tests/e2e/fixtures/art.png");
   await expect(page.getByTestId("artwork-name")).toContainText("art.png", { timeout: 15_000 });
   await page.getByTestId("print-area-full-front").click();
-  await page.getByRole("button", { name: "Step 5: Get mockup" }).click();
-  await expect(page.getByTestId("email-gate")).toBeVisible();
-  await expect(page.getByTestId("turnstile-token")).not.toHaveValue("", { timeout: 20_000 });
-  await page.getByTestId("gate-email").fill(email);
-  await page.getByTestId("gate-submit").click();
+  await page.getByRole("button", { name: "Step 4: Send" }).click();
+  await page.getByTestId("send-email").click();
   await expect(page.getByTestId("builder-success")).toBeVisible({ timeout: 30_000 });
 }
 

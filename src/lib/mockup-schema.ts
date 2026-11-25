@@ -1,18 +1,20 @@
 /**
- * Shared schema for the mockup email gate (`POST /api/mockups`), used by the /design builder
+ * Shared schema for the builder's send step (`POST /api/mockups`), used by the /design builder
  * and re-checked on the server. Client-safe: no server imports.
  *
  * Wire format (multipart/form-data):
  *   payload         JSON string, validated with `mockupPayloadSchema`
  *   artwork         the customer's original file (PNG/JPG/WEBP/SVG, ≤ 20 MB), stored untouched
  *   mockup-<view>   one rendered PNG per view listed in payload.views (≤ 8 MB each)
- *   turnstileToken  Cloudflare Turnstile token
  *   website         honeypot (must be empty)
+ *
+ * Who is sending comes from the verified account (v2): the session's email/name/lead are
+ * used and no contact fields travel from the client.
  */
 import { z } from "zod";
 
 import { GARMENT_IDS, getGarment, isHexColor, isPaletteColor, type GarmentId } from "./garments";
-import { emailField, nameField, phoneField, REFERRAL_SOURCES } from "./schemas";
+import { REFERRAL_SOURCES } from "./schemas";
 
 /** Formats the builder can draw on a canvas (a subset of src/lib/artwork.ts kinds). */
 export const MOCKUP_ARTWORK_KINDS = ["png", "jpeg", "webp", "svg"] as const;
@@ -45,9 +47,6 @@ export const mockupViewSchema = z.object({
 
 export const mockupPayloadSchema = z
   .object({
-    email: emailField,
-    name: nameField.optional().or(z.literal("")),
-    phone: phoneField,
     marketingOptIn: z.boolean().default(false),
     referralSource: z.enum(REFERRAL_SOURCES).optional(),
     referralOther: z.string().trim().max(200).optional(),
@@ -56,7 +55,6 @@ export const mockupPayloadSchema = z
     views: z.array(mockupViewSchema).min(1, "Add your design to at least one side").max(2),
     sizes: z.record(z.string().max(8), z.number().int().min(0).max(10000)).default({}),
     notes: z.string().trim().max(2000).optional(),
-    wantsQuote: z.boolean().default(false),
     /**
      * "email" = send me this mockup; "order" = order request (needs at least one size/qty;
      * the owner confirms the price and invoices). Decided 2026-11-25.

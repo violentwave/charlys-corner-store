@@ -188,7 +188,7 @@ describe("sessionStorage round-trip (jsdom)", () => {
       PERSIST_KEY,
       JSON.stringify({
         version: 1,
-        step: 5,
+        step: 4,
         design: {
           ...restored!.design,
           garment: "hat",

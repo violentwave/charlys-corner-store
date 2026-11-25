@@ -1,8 +1,8 @@
 "use client";
-import { useId } from "react";
+import { useState } from "react";
 
 import { printedInches, type GarmentConfig, type GarmentView, type ViewId } from "@/lib/garments";
-import { effectiveDpi, MOCKUP_ARTWORK_ACCEPT, MOCKUP_ARTWORK_HELP } from "@/lib/mockup-schema";
+import { effectiveDpi, MOCKUP_ARTWORK_HELP } from "@/lib/mockup-schema";
 import { Button } from "@/components/ui/button";
 
 import { centerInRect, rotateAroundCenter, centerToTopLeft, topLeftToCenter } from "./geometry";
@@ -17,7 +17,12 @@ export interface ArtworkControlsProps {
   /** The decoded File lives in the builder; false after a refresh until re-selected. */
   hasFile: boolean;
   fileError: string | null;
-  onFileSelected: (file: File) => void;
+  /** The builder gates this on a verified account before opening the file picker (v2). */
+  onUploadClick: () => void;
+  /** Called with a dropped file; the builder runs the same account gate first. */
+  onDropFile: (file: File) => void;
+  /** The verified account's email, shown as "Signed in as …" (v2). */
+  accountEmail: string | null;
   onViewChange: (view: ViewId) => void;
   onSetPrintArea: (viewId: ViewId, areaId: string) => void;
   onTransformCommit: (transform: BuilderTransform) => void;
@@ -36,9 +41,15 @@ function setWidth(t: BuilderTransform, width: number): BuilderTransform {
   return { ...t, x, y, width, height };
 }
 
+/** Rotate by a delta around the artwork's center. */
+function rotateBy(t: BuilderTransform, delta: number): BuilderTransform {
+  return rotateAroundCenter(t, delta);
+}
+
 /**
- * Step 3: front/back toggle, print-location presets, upload/drop zone, transform
- * controls, printed size + low-DPI warning, and the keyboard shortcut help.
+ * Step 3: "Add your design". Front and center: Upload/Replace, a size slider in inches,
+ * Center, Rotate 15° and Remove. Flip, Reset, Undo/Redo and the keyboard help live in
+ * the "More" disclosure — every shortcut still works (docs/04 §3 v2).
  */
 export function ArtworkControls({
   garment,
@@ -47,7 +58,9 @@ export function ArtworkControls({
   placement,
   hasFile,
   fileError,
-  onFileSelected,
+  onUploadClick,
+  onDropFile,
+  accountEmail,
   onViewChange,
   onSetPrintArea,
   onTransformCommit,
@@ -58,14 +71,30 @@ export function ArtworkControls({
   onRedo,
 }: ArtworkControlsProps) {
   const artwork = placement?.artwork ?? null;
-  const inputId = useId();
+  const [moreOpen, setMoreOpen] = useState(false);
   const activeArea = view.printAreas.find((a) => a.id === placement?.printArea) ?? view.printAreas[0]!;
+  const inches = artwork ? printedInches(activeArea, { w: artwork.transform.width, h: 0 }) : null;
 
   return (
-    <div className="flex flex-col gap-6" data-testid="artwork-controls">
+    <div
+      className="flex flex-col gap-6"
+      data-testid="artwork-controls"
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => {
+        e.preventDefault();
+        const file = e.dataTransfer.files[0];
+        if (file) onDropFile(file);
+      }}
+    >
+      {accountEmail ? (
+        <p className="text-text-3 text-xs" data-testid="signed-in-as">
+          Signed in as <span className="text-text-2">{accountEmail}</span>
+        </p>
+      ) : null}
+
       {views.length > 1 ? (
         <div role="group" aria-label="View">
-          <p className="text-text-1 mb-2 text-sm font-medium">View</p>
+          <p className="text-text-1 mb-2 text-sm font-medium">Side</p>
           <div className="flex gap-2">
             {views.map((v) => (
               <button
@@ -102,7 +131,6 @@ export function ArtworkControls({
       </div>
 
       <div>
-        <p className="text-text-1 mb-2 text-sm font-medium">Your design</p>
         {fileError ? (
           <p role="alert" aria-live="polite" className="text-danger mb-2 flex items-center gap-1.5 text-xs">
             <span aria-hidden="true">⚠</span>
@@ -114,33 +142,9 @@ export function ArtworkControls({
             Your saved design is still here — pick your artwork file again to put it back on the mockup.
           </p>
         ) : null}
-        <label
-          htmlFor={inputId}
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => {
-            e.preventDefault();
-            const file = e.dataTransfer.files[0];
-            if (file) onFileSelected(file);
-          }}
-          className="border-border text-text-2 hover:border-neon-cyan focus-visible:ring-neon-cyan flex cursor-pointer flex-col items-center gap-1 rounded-xl border border-dashed p-4 text-center text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
-        >
-          <span aria-hidden="true" className="text-lg">
-            🎨
-          </span>
-          <span className="text-text-1">{artwork ? "Replace artwork" : "Upload artwork"}</span>
-          <span className="text-text-3 text-xs">Drop a file here or click to browse</span>
-          <input
-            id={inputId}
-            type="file"
-            accept={MOCKUP_ARTWORK_ACCEPT}
-            className="sr-only"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) onFileSelected(file);
-              e.target.value = "";
-            }}
-          />
-        </label>
+        <Button type="button" onClick={onUploadClick} data-testid="upload-artwork" className="w-full sm:w-auto">
+          {artwork ? "Replace" : "Upload"}
+        </Button>{" "}
         <p className="text-text-3 mt-1.5 text-xs">{MOCKUP_ARTWORK_HELP}</p>
         {artwork ? (
           <p className="text-text-2 mt-2 truncate text-xs" data-testid="artwork-name">
@@ -148,16 +152,6 @@ export function ArtworkControls({
             {artwork.name}
             {!hasFile ? " (needs re-selecting)" : ""}
           </p>
-        ) : null}
-        {artwork && hasFile ? (
-          <button
-            type="button"
-            onClick={onRemove}
-            data-testid="remove-artwork"
-            className="text-neon-cyan focus-visible:ring-neon-cyan mt-1 inline-flex min-h-11 items-center rounded-md px-1 text-xs focus-visible:ring-2 focus-visible:outline-none"
-          >
-            Remove from {view.label.toLowerCase()}
-          </button>
         ) : null}
       </div>
 
@@ -169,42 +163,22 @@ export function ArtworkControls({
               className="text-text-1 mb-1 flex items-center justify-between text-sm font-medium"
             >
               Size
-              <span className="text-text-3 font-mono text-xs">
-                {printedInches(activeArea, { w: artwork.transform.width, h: 0 }).w.toFixed(1)}″ wide
-              </span>
+              <span className="text-text-3 font-mono text-xs">{inches ? `${inches.w.toFixed(1)}″ wide` : ""}</span>
             </label>
             <input
               id="builder-size"
               type="range"
-              min={8}
-              max={Math.max(view.width, Math.round(artwork.transform.width))}
-              step={1}
-              value={Math.round(artwork.transform.width)}
-              onChange={(e) => onTransformCommit(setWidth(artwork.transform, Number(e.target.value)))}
+              // In inches, matching the print area's max width (docs/04 §3 v2).
+              min={1}
+              max={activeArea.maxInches.w}
+              step={0.25}
+              value={Math.min(inches?.w ?? 1, activeArea.maxInches.w)}
+              onChange={(e) => {
+                const px = (Number(e.target.value) * activeArea.rect.w) / activeArea.maxInches.w;
+                onTransformCommit(setWidth(artwork.transform, px));
+              }}
               className="w-full accent-[var(--neon-cyan)]"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="builder-rotate"
-              className="text-text-1 mb-1 flex items-center justify-between text-sm font-medium"
-            >
-              Rotate
-              <span className="text-text-3 font-mono text-xs">{Math.round(artwork.transform.rotation)}°</span>
-            </label>
-            <input
-              id="builder-rotate"
-              type="range"
-              min={-180}
-              max={180}
-              step={15}
-              value={Math.round(artwork.transform.rotation)}
-              onChange={(e) =>
-                onTransformCommit(
-                  rotateAroundCenter(artwork.transform, Number(e.target.value) - artwork.transform.rotation),
-                )
-              }
-              className="w-full accent-[var(--neon-cyan)]"
+              data-testid="size-slider"
             />
           </div>
 
@@ -221,46 +195,95 @@ export function ArtworkControls({
               type="button"
               variant="secondary"
               size="sm"
-              aria-pressed={artwork.transform.flipX}
-              onClick={() => onTransformCommit({ ...artwork.transform, flipX: !artwork.transform.flipX })}
+              onClick={() => onTransformCommit(rotateBy(artwork.transform, 15))}
             >
-              Flip
+              Rotate 15°
             </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() =>
-                onTransformCommit({
-                  ...fitTransform(activeRect(view, placement?.printArea), artwork.naturalWidth, artwork.naturalHeight),
-                  flipX: artwork.transform.flipX,
-                })
-              }
-            >
-              Reset
-            </Button>
-            <Button type="button" variant="ghost" size="sm" onClick={onUndo} disabled={!canUndo} data-testid="undo">
-              Undo
-            </Button>
-            <Button type="button" variant="ghost" size="sm" onClick={onRedo} disabled={!canRedo} data-testid="redo">
-              Redo
+            <Button type="button" variant="secondary" size="sm" onClick={onRemove} data-testid="remove-artwork">
+              Remove
             </Button>
           </div>
+
+          <details
+            open={moreOpen}
+            onToggle={(e) => setMoreOpen((e.target as HTMLDetailsElement).open)}
+            className="text-text-2 text-xs"
+            data-testid="more-controls"
+          >
+            <summary className="text-text-1 focus-visible:ring-neon-cyan cursor-pointer rounded text-sm font-medium focus-visible:ring-2 focus-visible:outline-none">
+              More
+            </summary>
+            <div className="mt-3 flex flex-col gap-3">
+              <div>
+                <label
+                  htmlFor="builder-rotate"
+                  className="text-text-1 mb-1 flex items-center justify-between text-sm font-medium"
+                >
+                  Rotate
+                  <span className="text-text-3 font-mono text-xs">{Math.round(artwork.transform.rotation)}°</span>
+                </label>
+                <input
+                  id="builder-rotate"
+                  type="range"
+                  min={-180}
+                  max={180}
+                  step={15}
+                  value={Math.round(artwork.transform.rotation)}
+                  onChange={(e) =>
+                    onTransformCommit(
+                      rotateAroundCenter(artwork.transform, Number(e.target.value) - artwork.transform.rotation),
+                    )
+                  }
+                  className="w-full accent-[var(--neon-cyan)]"
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  aria-pressed={artwork.transform.flipX}
+                  onClick={() => onTransformCommit({ ...artwork.transform, flipX: !artwork.transform.flipX })}
+                >
+                  Flip
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() =>
+                    onTransformCommit({
+                      ...fitTransform(
+                        activeRect(view, placement?.printArea),
+                        artwork.naturalWidth,
+                        artwork.naturalHeight,
+                      ),
+                      flipX: artwork.transform.flipX,
+                    })
+                  }
+                >
+                  Reset
+                </Button>
+                <Button type="button" variant="ghost" size="sm" onClick={onUndo} disabled={!canUndo} data-testid="undo">
+                  Undo
+                </Button>
+                <Button type="button" variant="ghost" size="sm" onClick={onRedo} disabled={!canRedo} data-testid="redo">
+                  Redo
+                </Button>
+              </div>
+              <ul className="flex flex-col gap-1">
+                <li>Arrow keys — nudge (hold Shift for 10 px)</li>
+                <li>+ / − — scale</li>
+                <li>R — rotate 15°</li>
+                <li>Delete or Backspace — remove artwork</li>
+                <li>Ctrl/Cmd + Z — undo · Ctrl/Cmd + Shift + Z — redo</li>
+              </ul>
+            </div>
+          </details>
 
           <PrintedSize garment={garment} view={view} placement={placement} />
         </div>
       ) : null}
-
-      <details className="text-text-2 text-xs">
-        <summary className="text-text-1 cursor-pointer text-sm font-medium">Keyboard shortcuts</summary>
-        <ul className="mt-2 flex flex-col gap-1">
-          <li>Arrow keys — nudge (hold Shift for 10 px)</li>
-          <li>+ / − — scale</li>
-          <li>R — rotate 15°</li>
-          <li>Delete or Backspace — remove artwork</li>
-          <li>Ctrl/Cmd + Z — undo · Ctrl/Cmd + Shift + Z — redo</li>
-        </ul>
-      </details>
     </div>
   );
 }

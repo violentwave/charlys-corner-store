@@ -3,7 +3,9 @@ import { NextResponse } from "next/server";
 
 import { MockupCustomerEmail } from "@/emails/mockup-customer";
 import { MockupOwnerEmail } from "@/emails/mockup-owner";
+import { OrderRequestCustomerEmail } from "@/emails/order-request-customer";
 import { zodFieldErrors } from "@/lib/action-result";
+import { verifiedUser } from "@/lib/auth/session";
 import { ARTWORK_MAX_BYTES, checkArtwork } from "@/lib/artwork";
 import { getDb, schema } from "@/lib/db";
 import { clip, BodyTooLargeError, readFormDataLimited } from "@/lib/http";
@@ -14,7 +16,6 @@ import { MOCKUP_ARTWORK_KINDS, MOCKUP_RENDER_MAX_BYTES, mockupPayloadSchema } fr
 import { confirmCustomer, notifyOwner } from "@/lib/notify";
 import { clientIp, LIMITS, rateLimit } from "@/lib/rate-limit";
 import { buildObjectKey, getStorage } from "@/lib/storage";
-import { verifyTurnstile } from "@/lib/turnstile";
 
 /** Original artwork (≤ 20 MB) + up to 2 rendered mockups (≤ 8 MB each) + form overhead. */
 const MAX_REQUEST_BYTES = ARTWORK_MAX_BYTES + 2 * MOCKUP_RENDER_MAX_BYTES + 1024 * 1024;
@@ -33,6 +34,12 @@ const fail = (error: string, status: number, fieldErrors?: Record<string, string
   NextResponse.json({ ok: false, error, ...(fieldErrors ? { fieldErrors } : {}) }, { status });
 
 export async function POST(request: Request) {
+  // v2: an account with a verified email is required before anything is sent (docs/04 Flow).
+  const db = getDb();
+  const auth = await verifiedUser(db);
+  if (!auth.ok) return fail(auth.error, auth.status);
+  const user = auth.user;
+
   let form: FormData;
   try {
     form = await readFormDataLimited(request, MAX_REQUEST_BYTES);
@@ -114,16 +121,9 @@ export async function POST(request: Request) {
   }
 
   const ip = clientIp(await headers());
-  const token = await verifyTurnstile(typeof raw.turnstileToken === "string" ? raw.turnstileToken : null, ip);
-  if (!token.ok) return fail(token.error, 400);
-
-  const db = getDb();
   const ipLimit = await rateLimit(db, { key: `mockup:${ip}`, ...LIMITS.mockup });
-  const emailLimit = await rateLimit(db, {
-    key: `mockup-email:${data.email.trim().toLowerCase()}`,
-    ...LIMITS.mockupEmail,
-  });
-  if (!ipLimit.ok || !emailLimit.ok) {
+  const userLimit = await rateLimit(db, { key: `mockup-user:${user.id}`, ...LIMITS.mockupEmail });
+  if (!ipLimit.ok || !userLimit.ok) {
     return fail("Too many mockup requests — please try again in a bit or email us.", 429);
   }
 
@@ -158,10 +158,11 @@ export async function POST(request: Request) {
   let leadId: string;
   let coupon: Awaited<ReturnType<typeof issueCoupon>>;
   try {
+    // Identity comes from the account; the builder's referral answer + opt-in update the lead
+    // (upsertLead never erases existing values with empty ones).
     leadId = await upsertLead(db, {
-      email: data.email,
-      name: data.name || null,
-      phone: data.phone || null,
+      email: user.email,
+      name: user.name,
       referralSource: data.referralSource ?? null,
       referralOther: data.referralOther || null,
       marketingOptIn: data.marketingOptIn,
@@ -170,6 +171,7 @@ export async function POST(request: Request) {
     const [row] = await db
       .insert(schema.mockups)
       .values({
+        userId: user.id,
         leadId,
         couponId: coupon.id,
         garment: data.garment,
@@ -177,7 +179,6 @@ export async function POST(request: Request) {
         views: data.views.map((entry) => ({ ...entry, mockupKey: keysByView.get(entry.view)! })),
         sizes: data.sizes,
         notes: data.notes || null,
-        wantsQuote: data.wantsQuote,
         kind: data.intent === "order" ? "order" : "mockup",
         artworkKey,
         artworkName: clip(artworkFile.name, 120),
@@ -204,21 +205,20 @@ export async function POST(request: Request) {
   );
   const subject =
     data.intent === "order"
-      ? `ORDER REQUEST: ${garment.name} · ${data.email}`
-      : `New mockup lead: ${garment.name} · ${data.email}${data.wantsQuote ? " · QUOTE REQUESTED" : ""}`;
+      ? `ORDER REQUEST: ${garment.name} · ${user.email}`
+      : `New mockup lead: ${garment.name} · ${user.email}`;
   await notifyOwner(
     subject,
     MockupOwnerEmail({
-      email: data.email,
-      name: data.name ? clip(data.name, 100) : undefined,
-      phone: data.phone || undefined,
+      email: user.email,
+      name: user.name ? clip(user.name, 100) : undefined,
       garmentName: garment.name,
       colors: colorRows,
       views: viewRows,
       sizes: sizeRows,
       notes: data.notes ? clip(data.notes, 2000) : undefined,
       couponCode: coupon.code,
-      wantsQuote: data.wantsQuote,
+      kind: data.intent === "order" ? "order" : "mockup",
       artwork: {
         name: clip(artworkFile.name, 120),
         contentType: artworkCheck.contentType,
@@ -227,30 +227,50 @@ export async function POST(request: Request) {
       },
       mockups: mockupUrls,
     }),
-    data.email,
+    user.email,
     { mockupId, leadId },
   );
-  await confirmCustomer(
-    db,
-    data.email,
-    "Your Charly's mockup is ready 🐾 + 15% off inside",
-    MockupCustomerEmail({
-      name: data.name ? clip(data.name, 40) : "there",
-      garmentName: garment.name,
-      colors: colorRows,
-      views: viewRows,
-      coupon: { code: coupon.code, expiresAt: coupon.expiresAt, isNew: coupon.isNew },
-      mockups: mockupUrls,
-      mockupId,
-    }),
-    { mockupId, leadId },
-    // Attach the PNGs too: inline images use signed URLs that expire after 7 days.
-    renders.map((r) => ({
-      filename: `charlys-mockup-${data.garment}-${r.view}.png`,
-      content: r.bytes,
-      contentType: "image/png",
-    })),
-  );
+
+  if (data.intent === "order") {
+    // Order request: the price comes later, so the confirmation says so — plus the coupon.
+    await confirmCustomer(
+      db,
+      user.email,
+      "We got your order request 🐾",
+      OrderRequestCustomerEmail({
+        name: user.name ? clip(user.name, 40) : "there",
+        garmentName: garment.name,
+        colors: colorRows,
+        views: viewRows,
+        sizes: sizeRows,
+        coupon: { code: coupon.code, expiresAt: coupon.expiresAt, isNew: coupon.isNew },
+        mockupId,
+      }),
+      { mockupId, leadId },
+    );
+  } else {
+    await confirmCustomer(
+      db,
+      user.email,
+      "Your Charly's mockup is ready 🐾 + 15% off inside",
+      MockupCustomerEmail({
+        name: user.name ? clip(user.name, 40) : "there",
+        garmentName: garment.name,
+        colors: colorRows,
+        views: viewRows,
+        coupon: { code: coupon.code, expiresAt: coupon.expiresAt, isNew: coupon.isNew },
+        mockups: mockupUrls,
+        mockupId,
+      }),
+      { mockupId, leadId },
+      // Attach the PNGs too: inline images use signed URLs that expire after 7 days.
+      renders.map((r) => ({
+        filename: `charlys-mockup-${data.garment}-${r.view}.png`,
+        content: r.bytes,
+        contentType: "image/png",
+      })),
+    );
+  }
 
   // Fresh short-lived links for the success screen.
   const mockups = await Promise.all(
