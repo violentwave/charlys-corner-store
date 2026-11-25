@@ -18,7 +18,9 @@ export default defineConfig({
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
-    // Lets the e2e-only /api/test/last-email helper answer (it 404s without both flags).
-    env: { ...process.env, ENABLE_TEST_HOOKS: "1" },
+    // The test-only /api/test/* helpers (they 404 without both flags) and the memory
+    // storage driver, matching CI: e2e must never write to the real dev bucket, and
+    // restore-link artwork must be same-origin (R2 CORS is a Phase 6 item).
+    env: { ...process.env, ENABLE_TEST_HOOKS: "1", STORAGE_DRIVER: "memory" },
   },
 });

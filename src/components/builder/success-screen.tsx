@@ -1,59 +1,45 @@
 "use client";
 /**
- * Builder success screen (docs/04 §6): mockup images + per-view downloads, the
- * coupon ticket, quote CTA and "Design another". Charly celebrates (reduced-motion safe).
+ * Builder success screens (docs/04 §6 v2) — one per path:
+ * - email: mockup images + per-view downloads + coupon ticket + "Order this design" CTA
+ *   (returns to the order card with the design intact).
+ * - order: confirmation + summary + coupon ticket + "View in My designs".
+ * Charly celebrates (reduced-motion safe).
  *
  * `urls` are object URLs the builder created for the client-rendered PNGs at submit
  * time (event handlers may create them; effects shouldn't). They power both the
  * preview images and the Download buttons, so no signed-URL expiry can break them.
  */
+import Link from "next/link";
+
 import { CouponTicket } from "@/components/neon/coupon-ticket";
-import { Turnstile } from "@/components/forms/turnstile";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import { track } from "@/lib/analytics";
-import { getGarment, type GarmentId, type ViewId } from "@/lib/garments";
+import type { GarmentId, ViewId } from "@/lib/garments";
 
 export type MockupResult = {
   mockupId: string;
+  intent: "email" | "order";
   coupon: { code: string; expiresAt: string; isNew: boolean };
   mockups: { view: ViewId; url: string }[];
 };
 
 export interface SuccessScreenProps {
   garmentId: GarmentId;
+  /** Human summary lines: garment, colors, sizes. */
+  summary: { garmentName: string; colorNames: string[]; sizeEntries: string[] };
   result: MockupResult;
   /** Object URLs for the client-rendered PNG blobs (blob: URLs), keyed by view. */
   urls: Partial<Record<ViewId, string>>;
-  quoteRequested: boolean;
-  quoteSending: boolean;
-  /** Shown when the quote re-send fails (the gate form with its error area is gone). */
-  quoteError: string | null;
-  /** The quote re-send is a fresh /api/mockups POST, so it needs its own Turnstile token. */
-  turnstileToken: string | null;
-  onTurnstileToken: (token: string | null) => void;
-  turnstileResetKey: number;
-  onRequestQuote: () => void;
   onDesignAnother: () => void;
+  /** Email path CTA: back to step 4 with the design intact, focused on the order card. */
+  onGoToOrder: () => void;
 }
 
 const VIEW_LABEL: Record<ViewId, string> = { front: "Front", back: "Back" };
 
-export function SuccessScreen({
-  garmentId,
-  result,
-  urls,
-  quoteRequested,
-  quoteSending,
-  quoteError,
-  turnstileToken,
-  onTurnstileToken,
-  turnstileResetKey,
-  onRequestQuote,
-  onDesignAnother,
-}: SuccessScreenProps) {
-  const garment = getGarment(garmentId);
-
+export function SuccessScreen({ garmentId, summary, result, urls, onDesignAnother, onGoToOrder }: SuccessScreenProps) {
   const download = (view: ViewId) => {
     const url = urls[view];
     if (!url) return;
@@ -63,6 +49,49 @@ export function SuccessScreen({
     a.click();
     track("mockup_downloaded", { garment: garmentId, view });
   };
+
+  if (result.intent === "order") {
+    return (
+      <div className="flex flex-col gap-4" data-testid="builder-success">
+        <div className="flex items-center gap-3">
+          <Charly />
+          <div>
+            <h2 className="font-heading text-neon-green text-lg tracking-wide uppercase">
+              Order request sent! We&apos;ll email you the price.
+            </h2>
+            <p className="text-text-2 text-sm">
+              Charly&apos;s will confirm the price and send you an invoice — nothing is charged now.
+            </p>
+          </div>
+        </div>
+
+        <div
+          className="border-border bg-bg-2/60 flex flex-col gap-1 rounded-lg p-3 text-sm"
+          data-testid="order-summary"
+        >
+          <p className="text-text-1 font-medium">{summary.garmentName}</p>
+          <p className="text-text-2">{summary.colorNames.join(" · ")}</p>
+          {summary.sizeEntries.length > 0 ? (
+            <p className="text-text-2">Sizes: {summary.sizeEntries.join(", ")}</p>
+          ) : null}
+        </div>
+
+        {result.coupon.isNew ? null : <p className="text-text-2 text-sm">Here&apos;s your code again.</p>}
+        <CouponTicket
+          code={result.coupon.code}
+          expiresAt={new Date(result.coupon.expiresAt)}
+          onCopied={() => toast({ title: "Code copied", description: `${result.coupon.code} is on your clipboard.` })}
+        />
+
+        <Button asChild data-testid="view-my-designs">
+          <Link href="/account">View in My designs</Link>
+        </Button>
+        <Button variant="ghost" onClick={onDesignAnother} data-testid="design-another">
+          Design another
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4" data-testid="builder-success">
@@ -83,7 +112,7 @@ export function SuccessScreen({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={urls[view] ?? result.mockups.find((m) => m.view === view)?.url}
-            alt={`${garment.name} mockup, ${VIEW_LABEL[view].toLowerCase()}`}
+            alt={`${summary.garmentName} mockup, ${VIEW_LABEL[view].toLowerCase()}`}
             className="border-border max-w-xs self-start rounded-lg border"
             data-testid={`mockup-image-${view}`}
           />
@@ -108,31 +137,9 @@ export function SuccessScreen({
         onCopied={() => toast({ title: "Code copied", description: `${result.coupon.code} is on your clipboard.` })}
       />
 
-      {quoteRequested ? (
-        <p className="text-neon-cyan text-sm" role="status" data-testid="quote-requested">
-          We&apos;ve got your quote request — Charly&apos;s will email you with pricing and next steps.
-        </p>
-      ) : (
-        <>
-          {turnstileToken ? null : (
-            <p className="text-text-3 text-xs">Complete the anti-spam check below to request a quote.</p>
-          )}
-          {quoteError ? (
-            <p className="text-danger text-sm" role="alert" data-testid="quote-error">
-              {quoteError}
-            </p>
-          ) : null}
-          <Button
-            onClick={onRequestQuote}
-            loading={quoteSending}
-            disabled={quoteSending || !turnstileToken}
-            data-testid="request-quote"
-          >
-            Request a quote / order this
-          </Button>
-          <Turnstile onToken={onTurnstileToken} resetKey={turnstileResetKey} />
-        </>
-      )}
+      <Button onClick={onGoToOrder} data-testid="goto-order">
+        Order this design
+      </Button>
       <Button variant="ghost" onClick={onDesignAnother} data-testid="design-another">
         Design another
       </Button>

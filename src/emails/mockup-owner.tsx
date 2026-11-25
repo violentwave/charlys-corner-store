@@ -10,27 +10,29 @@ export interface MockupOwnerEmailProps {
   colors: { label: string; hex: string; name: string }[];
   /** View label + print-location label for every view with artwork. */
   views: { view: string; area: string }[];
-  /** "2 × M" entries for sizes the visitor entered (empty when none). */
+  /** "2 × M" entries for sizes the customer entered (empty when none). */
   sizes: string[];
   notes?: string;
   couponCode: string;
-  wantsQuote: boolean;
+  /** "order" = an order request (owner confirms price + invoices); "mockup" = a mockup lead. */
+  kind?: "mockup" | "order";
   artwork: { name: string; contentType: string; size: number; signedUrl: string };
   mockups: { view: string; signedUrl: string }[];
 }
 
-/** Owner notification for a mockup lead. Free text (name, notes) is clipped by the route before render. */
+/** Owner notification for a mockup lead or order request. Free text (name, notes) is clipped by the route before render. */
 export function MockupOwnerEmail(p: MockupOwnerEmailProps) {
+  const order = p.kind === "order";
   return (
     <Html>
       <Head />
       <Preview>
-        {p.wantsQuote ? "QUOTE REQUESTED — " : ""}New mockup lead: {p.garmentName}
+        {order ? "ORDER REQUEST — " : ""}New {order ? "order request" : "mockup lead"}: {p.garmentName}
       </Preview>
       <Body>
         <Container>
           <Heading>
-            {p.wantsQuote ? "QUOTE REQUESTED — " : ""}New mockup lead: {p.garmentName}
+            {order ? "ORDER REQUEST — " : ""}New {order ? "order request" : "mockup lead"}: {p.garmentName}
           </Heading>
           <Text>Email: {p.email}</Text>
           {p.name ? <Text>Name: {p.name}</Text> : null}

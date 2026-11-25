@@ -64,7 +64,7 @@ Each page prompt is shipped by the agent (Ship section); Claude reviews every me
 
 - [x] Foundation (Claude): `users`/`sessions`/`auth_tokens` tables; scrypt passwords; `/api/auth/*` (signup, verify, resend, login, logout, forgot, reset, me); `/api/account/mockups`; full Gildan color lists, server-enforced; `intent: "email" | "order"` on `/api/mockups`
 - [x] Account pages: sign up, verify code, log in, forgot/reset password, "My designs" + order history (prompt P45-1)
-- [ ] Builder v2: cleaner UI + clear instructions, color strip, sign-in before upload, two paths (email mockup / order request), `/api/mockups` requires a verified account (prompt P45-2)
+- [x] Builder v2: cleaner UI + clear instructions, color strip, sign-in before upload, two paths (email mockup / order request), `/api/mockups` requires a verified account (prompt P45-2)
 
 ## Phase 5: Shop and checkout
 

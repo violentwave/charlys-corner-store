@@ -1,25 +1,25 @@
 "use client";
 /**
- * The /design builder shell: stepper, layout (canvas + controls), file handling, and
- * the P4-2 email gate + success screen. Loaded client-only through next/dynamic
- * (ssr:false) because Konva must never run on the server.
+ * The /design builder shell (v2): stepper with one-line headlines and a slim progress
+ * bar, canvas + controls layout, the account gate before upload, and the two send
+ * paths ("Email me this mockup" / "Order this design"). Loaded client-only through
+ * next/dynamic (ssr:false) because Konva must never run on the server.
  */
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 
 import { detectArtworkKind, ARTWORK_MAX_BYTES } from "@/lib/artwork";
+import type { AccountUser } from "@/lib/auth-schema";
 import { getGarment, GARMENTS, isHexColor, type GarmentId, type ViewId } from "@/lib/garments";
 import { MOCKUP_ARTWORK_KINDS, mockupViewSchema } from "@/lib/mockup-schema";
 import { track } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 
 import { ArtworkControls } from "./artwork-controls";
 import { ColorPicker } from "./color-picker";
-import { DetailsStep } from "./details-step";
-import { GateStep, type GateContact } from "./gate-step";
 import { GarmentPicker } from "./garment-picker";
 import { GarmentStage, loadTemplate, type GarmentStageHandle } from "./garment-stage";
+import { SignInDialog, type SignInDialogMode } from "./sign-in-dialog";
 import {
   designFromRestore,
   initialDesign,
@@ -28,20 +28,22 @@ import {
   type BuilderStep,
   type RestoredDesign,
 } from "./use-builder-state";
+import { SendStep } from "./send-step";
 import { SuccessScreen, type MockupResult } from "./success-screen";
+import { uploadGateFor } from "./upload-gate";
 
-const STEPS: { id: BuilderStep; label: string }[] = [
-  { id: 1, label: "Garment" },
-  { id: 2, label: "Colors" },
-  { id: 3, label: "Design" },
-  { id: 4, label: "Details" },
-  { id: 5, label: "Get mockup" },
+const STEPS: { id: BuilderStep; label: string; headline: string; helper: string }[] = [
+  { id: 1, label: "Garment", headline: "Pick your shirt", helper: "Every blank is Gildan — always stocked." },
+  { id: 2, label: "Colors", headline: "Choose its color", helper: "Real blank colors — pick one per part." },
+  { id: 3, label: "Design", headline: "Add your design", helper: "Drag it, size it, done." },
+  { id: 4, label: "Send", headline: "Send it or order it", helper: "Pick one — you can always do the other after." },
 ];
 
 const raf = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
-/** File name for a restored artwork: the key's basename, or a friendly fallback. */
-function safeUrlFileName(url: string): string {
+/** File name for a restored artwork: the key's basename, or a friendly fallback. */ function safeUrlFileName(
+  url: string,
+): string {
   try {
     const name = new URL(url).pathname.split("/").pop();
     return name && name.length > 0 && name.length <= 255 ? name : "your-design.png";
@@ -49,6 +51,11 @@ function safeUrlFileName(url: string): string {
     return "your-design.png";
   }
 }
+
+/**
+ * The upload gate decision for the current account (docs/04 Flow v2) lives in
+ * ./upload-gate.ts (kept Konva-free so it's unit-testable).
+ */
 
 export function Builder() {
   const { state, dispatch, canUndo, canRedo, undo, redo } = useBuilderState();
@@ -64,17 +71,18 @@ export function Builder() {
   const [artworkImg, setArtworkImg] = useState<HTMLImageElement | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const stageRef = useRef<GarmentStageHandle>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Email gate + success screen (P4-2).
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
-  const [turnstileKey, setTurnstileKey] = useState(0);
+  // The verified account (GET /api/auth/me): gates uploads and personalizes step 4.
+  const [account, setAccount] = useState<AccountUser | null | undefined>(undefined);
+  const [signInDialog, setSignInDialog] = useState<SignInDialogMode>(null);
+
   const [sending, setSending] = useState(false);
-  const [progress, setProgress] = useState("");
-  const [gateError, setGateError] = useState<string | null>(null);
-  const [gateFieldErrors, setGateFieldErrors] = useState<Record<string, string> | null>(null);
+  const [progress, setProgress] = useState<string | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [honeypot, setHoneypot] = useState("");
   const [success, setSuccess] = useState<MockupResult | null>(null);
   const [exportedUrls, setExportedUrls] = useState<Partial<Record<ViewId, string>>>({});
-  const [quoteRequested, setQuoteRequested] = useState(false);
 
   // Only one object URL alive at a time; revoked on replace and on unmount.
   useEffect(
@@ -83,6 +91,17 @@ export function Builder() {
     },
     [fileUrl],
   );
+
+  const refreshAccount = () => {
+    fetch("/api/auth/me", { cache: "no-store" })
+      .then(async (res) => {
+        const json = (await res.json().catch(() => null)) as { user: AccountUser | null } | null;
+        setAccount(json?.user ?? null);
+      })
+      .catch(() => setAccount(null));
+  };
+
+  useEffect(refreshAccount, []);
 
   // Restore-design deep link (email CTA: /design?mockup=<id>). Runs once per mount.
   const restoredRef = useRef(false);
@@ -191,7 +210,7 @@ export function Builder() {
   }, []);
 
   useEffect(() => {
-    if (step === 5 && !success) track("gate_viewed", { garment: design.garment });
+    if (step === 4 && !success) track("gate_viewed", { garment: design.garment });
   }, [step, success, design.garment]);
 
   const hasFile = file !== null && artworkImg !== null;
@@ -243,6 +262,29 @@ export function Builder() {
   };
 
   /**
+   * The account gate (docs/04 Flow v2): a fresh GET /api/auth/me decides. Signed in
+   * and verified → proceed (open the picker, or take the dropped file). Otherwise the
+   * dialog explains why and links to the right account page with `next` back here.
+   */
+  const attemptUpload = async (file?: File) => {
+    let gate: "signedOut" | "unverified" | "allowed";
+    try {
+      const res = await fetch("/api/auth/me", { cache: "no-store" });
+      const json = (await res.json().catch(() => null)) as { user: AccountUser | null } | null;
+      setAccount(json?.user ?? null);
+      gate = uploadGateFor(json?.user ?? null);
+    } catch {
+      gate = "signedOut";
+    }
+    if (gate !== "allowed") {
+      setSignInDialog(gate);
+      return;
+    }
+    if (file) void handleFileSelected(file);
+    else fileInputRef.current?.click();
+  };
+
+  /**
    * Renders `viewId` at native template size and returns a PNG blob. For the inactive
    * view it flips the stage, then waits until the switched view is actually drawn
    * (re-renders can lag under load) before exporting.
@@ -265,24 +307,16 @@ export function Builder() {
     }
   };
 
-  const refreshTurnstile = () => {
-    // Turnstile tokens are single-use: get a fresh one after EVERY attempt, or retries always fail.
-    setTurnstileToken(null);
-    setTurnstileKey((k) => k + 1);
-  };
-
-  /** Builds the multipart body and POSTs it to /api/mockups (docs/04 §5). */
-  const send = async (contact: GateContact, wantsQuote: boolean) => {
+  /** Builds the multipart body and POSTs it to /api/mockups (docs/04 §5 v2). */
+  const send = async (intent: "email" | "order", marketingOptIn: boolean) => {
     if (sending) return;
     const payloadDesign = toPayloadDesign(design);
     if (!file || payloadDesign.views.length === 0) {
-      setGateError("Add your design first — go back to step 3 and place your artwork on at least one side.");
+      setSendError("Add your design first — go back to step 3 and place your artwork on at least one side.");
       return;
     }
-    if (wantsQuote) track("quote_requested", { garment: design.garment });
     setSending(true);
-    setGateError(null);
-    setGateFieldErrors(null);
+    setSendError(null);
     setProgress("Rendering your mockup…");
     try {
       const body = new FormData();
@@ -290,17 +324,13 @@ export function Builder() {
         "payload",
         JSON.stringify({
           ...payloadDesign,
-          email: contact.email,
-          name: contact.name || undefined,
-          phone: contact.phone || undefined,
-          marketingOptIn: contact.marketingOptIn,
+          marketingOptIn,
           referralSource: design.referral.referralSource,
           referralOther: design.referral.referralOther,
-          wantsQuote,
+          intent,
         }),
       );
-      body.append("turnstileToken", turnstileToken ?? "");
-      body.append("website", contact.website);
+      body.append("website", honeypot);
       body.append("artwork", file);
 
       setProgress("Uploading your mockup…");
@@ -315,52 +345,28 @@ export function Builder() {
       const res = await fetch("/api/mockups", { method: "POST", body });
       const json = (await res.json()) as
         | { ok: true; mockupId: string; coupon: MockupResult["coupon"]; mockups: MockupResult["mockups"] }
-        | { ok: false; error: string; fieldErrors?: Record<string, string> };
+        | { ok: false; error: string };
       if (!json.ok) {
-        if (json.fieldErrors) setGateFieldErrors(json.fieldErrors);
-        setGateError(json.error ?? "Something went wrong. Please try again or email us.");
+        setSendError(json.error ?? "Something went wrong. Please try again or email us.");
+        if (res.status === 401 || res.status === 403) {
+          // Session expired mid-design: the gate dialog explains the way back in.
+          refreshAccount();
+          setSignInDialog(res.status === 401 ? "signedOut" : "unverified");
+        }
         return;
       }
-      if (!wantsQuote) track("gate_submitted", { garment: design.garment, views: payloadDesign.views.length });
+      track("gate_submitted", { garment: design.garment, intent, views: payloadDesign.views.length });
       const urls: Partial<Record<ViewId, string>> = {};
       for (const [view, blob] of Object.entries(blobs)) {
         if (blob) urls[view as ViewId] = URL.createObjectURL(blob);
       }
       setExportedUrls(urls);
-      setQuoteRequested((prev) => prev || wantsQuote);
-      setSuccess({ mockupId: json.mockupId, coupon: json.coupon, mockups: json.mockups });
+      setSuccess({ mockupId: json.mockupId, intent, coupon: json.coupon, mockups: json.mockups });
     } catch {
-      setGateError("Something went wrong. Please try again or email us.");
+      setSendError("Something went wrong. Please try again or email us.");
     } finally {
       setSending(false);
-      setProgress("");
-      refreshTurnstile();
-    }
-  };
-
-  /**
-   * Success-screen CTA: flags the mockup that was just sent (POST /api/mockups/<id>/quote)
-   * rather than re-uploading it, so there's no duplicate row or second customer email.
-   */
-  const requestQuote = async () => {
-    if (!success || quoteRequested || sending) return;
-    track("quote_requested", { garment: design.garment });
-    setSending(true);
-    setGateError(null);
-    try {
-      const res = await fetch(`/api/mockups/${success.mockupId}/quote`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ turnstileToken }),
-      });
-      const json = (await res.json()) as { ok: true } | { ok: false; error: string };
-      if (json.ok) setQuoteRequested(true);
-      else setGateError(json.error ?? "Something went wrong. Please try again or email us.");
-    } catch {
-      setGateError("Something went wrong. Please try again or email us.");
-    } finally {
-      setSending(false);
-      refreshTurnstile();
+      setProgress(null);
     }
   };
 
@@ -368,9 +374,7 @@ export function Builder() {
     dispatch({ type: "hydrate", step: 1, design: initialDesign(GARMENTS[0]!.id) });
     setSuccess(null);
     setExportedUrls({});
-    setQuoteRequested(false);
-    setGateError(null);
-    setGateFieldErrors(null);
+    setSendError(null);
     if (fileUrl) URL.revokeObjectURL(fileUrl);
     setFile(null);
     setFileUrl(null);
@@ -386,9 +390,19 @@ export function Builder() {
     }
   };
 
+  const stepInfo = STEPS.find((s) => s.id === step)!;
+  const colorNames = garment.colorZones.map((zone) => {
+    const hex = design.colors[zone.id] ?? garment.defaultColors[zone.id] ?? "#f4f4f4";
+    const name = garment.palette.find((c) => c.hex === hex)?.name;
+    return name ? `${zone.label}: ${name}` : zone.label;
+  });
+  const sizeEntries = Object.entries(design.sizes)
+    .filter(([, qty]) => qty > 0)
+    .map(([size, qty]) => `${qty} × ${size}`);
+
   return (
     <div className="mt-8 grid items-start gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
-      <div className="flex flex-col gap-2 lg:sticky lg:top-24">
+      <div className="flex min-w-0 flex-col gap-2 lg:sticky lg:top-24">
         <GarmentStage
           ref={stageRef}
           garmentName={garment.name}
@@ -396,6 +410,7 @@ export function Builder() {
           colors={design.colors}
           placement={design.views[activeViewId]}
           artworkImg={artworkImg}
+          onAddDesign={step === 3 ? () => void attemptUpload() : undefined}
           onTransformCommit={(transform) => dispatch({ type: "setTransform", view: activeViewId, transform })}
           onRemove={() => dispatch({ type: "removeArtwork", view: activeViewId })}
           onUndo={undo}
@@ -404,25 +419,38 @@ export function Builder() {
         <p className="text-text-3 text-xs">
           Preview on a neutral studio background — the exported mockup is exactly what we print.
         </p>
+        {/* The gated file picker: opened by attemptUpload, never before the account check. */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".png,.jpg,.jpeg,.webp,.svg,image/png,image/jpeg,image/webp,image/svg+xml"
+          className="sr-only"
+          data-testid="builder-file-input"
+          aria-hidden="true"
+          tabIndex={-1}
+          onChange={(e) => {
+            const selected = e.target.files?.[0];
+            if (selected) void handleFileSelected(selected);
+            e.target.value = "";
+          }}
+        />
       </div>
 
-      <div id="builder-panel" className="flex flex-col gap-4">
+      <div id="builder-panel" className="flex min-w-0 flex-col gap-4">
         {success ? (
-          <Card className="p-4 sm:p-6">
+          <div className="bg-bg-2/60 rounded-2xl p-4 sm:p-6">
             <SuccessScreen
               garmentId={design.garment}
+              summary={{ garmentName: garment.name, colorNames, sizeEntries }}
               result={success}
               urls={exportedUrls}
-              quoteRequested={quoteRequested}
-              quoteSending={sending}
-              quoteError={gateError}
-              turnstileToken={turnstileToken}
-              onTurnstileToken={setTurnstileToken}
-              turnstileResetKey={turnstileKey}
-              onRequestQuote={() => void requestQuote()}
               onDesignAnother={designAnother}
+              onGoToOrder={() => {
+                setSuccess(null);
+                goStep(4);
+              }}
             />
-          </Card>
+          </div>
         ) : (
           <>
             {restoreStatus ? (
@@ -438,31 +466,54 @@ export function Builder() {
                     : "We couldn't load that saved design — starting fresh."}
               </p>
             ) : null}
-            <ol className="flex flex-wrap items-center gap-1.5" aria-label="Builder steps">
-              {STEPS.map(({ id, label }) => (
-                <li key={id} className="flex items-center gap-1.5" aria-current={step === id ? "step" : undefined}>
-                  <button
-                    type="button"
-                    onClick={() => goStep(id)}
-                    aria-label={`Step ${id}: ${label}`}
-                    className={
-                      step === id
-                        ? "bg-neon-pink text-bg-0 focus-visible:ring-neon-cyan flex min-h-11 items-center rounded-full px-3 text-xs font-semibold focus-visible:ring-2 focus-visible:outline-none"
-                        : "border-border bg-bg-2 text-text-2 focus-visible:ring-neon-cyan hover:border-border-strong flex min-h-11 items-center rounded-full border px-3 text-xs focus-visible:ring-2 focus-visible:outline-none"
-                    }
-                  >
-                    {id}. {label}
-                  </button>
-                  {id < STEPS.length ? (
-                    <span aria-hidden="true" className="text-text-3 text-xs">
-                      →
-                    </span>
-                  ) : null}
-                </li>
-              ))}
-            </ol>
 
-            <Card className="p-4 sm:p-6">
+            {/* Step pills (smaller) + "Step n of 4" + slim progress bar (docs/04 v2). */}
+            <div className="flex flex-col gap-2" data-testid="builder-progress">
+              <div className="flex items-center justify-between gap-3">
+                <ol className="flex flex-wrap items-center gap-1.5" aria-label="Builder steps">
+                  {STEPS.map(({ id, label }) => (
+                    <li key={id} className="flex items-center gap-1.5" aria-current={step === id ? "step" : undefined}>
+                      <button
+                        type="button"
+                        onClick={() => goStep(id)}
+                        aria-label={`Step ${id}: ${label}`}
+                        className={
+                          step === id
+                            ? "bg-neon-pink text-bg-0 focus-visible:ring-neon-cyan flex h-9 items-center rounded-full px-3 text-xs font-semibold focus-visible:ring-2 focus-visible:outline-none"
+                            : "bg-bg-2 text-text-2 focus-visible:ring-neon-cyan hover:text-text-1 flex h-9 items-center rounded-full px-3 text-xs focus-visible:ring-2 focus-visible:outline-none"
+                        }
+                      >
+                        {id}. {label}
+                      </button>
+                      {id < STEPS.length ? (
+                        <span aria-hidden="true" className="text-text-3 text-xs">
+                          →
+                        </span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ol>
+                <p aria-hidden="true" className="text-text-3 shrink-0 font-mono text-xs">
+                  Step {step} of {STEPS.length}
+                </p>
+              </div>
+              <div className="bg-bg-3 h-1 overflow-hidden rounded-full" role="presentation">
+                <div
+                  className="bg-neon-pink h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none"
+                  style={{ width: `${(step / STEPS.length) * 100}%` }}
+                />
+              </div>
+              <p className="sr-only" role="status">
+                Step {step} of {STEPS.length}: {stepInfo.headline}
+              </p>
+            </div>
+
+            <div className="bg-bg-2/60 rounded-2xl p-4 sm:p-6">
+              <header className="mb-5 flex flex-col gap-1">
+                <h2 className="font-heading text-text-1 text-xl tracking-wide uppercase">{stepInfo.headline}</h2>
+                <p className="text-text-2 text-sm">{stepInfo.helper}</p>
+              </header>
+
               {step === 1 ? (
                 <GarmentPicker
                   selectedId={design.garment}
@@ -488,7 +539,9 @@ export function Builder() {
                   placement={design.views[activeViewId]}
                   hasFile={hasFile}
                   fileError={fileError}
-                  onFileSelected={handleFileSelected}
+                  onUploadClick={() => void attemptUpload()}
+                  onDropFile={(file) => void attemptUpload(file)}
+                  accountEmail={account?.verified ? account.email : null}
                   onViewChange={setRequestedView}
                   onSetPrintArea={(viewId, areaId) =>
                     dispatch({ type: "setPrintArea", view: viewId, printAreaId: areaId })
@@ -502,27 +555,19 @@ export function Builder() {
                 />
               ) : null}
               {step === 4 ? (
-                <DetailsStep
+                <SendStep
                   garment={garment}
                   design={design}
-                  onSize={(size, qty) => dispatch({ type: "setSize", size, qty })}
-                  onNotes={(notes) => dispatch({ type: "setNotes", notes })}
-                  onReferral={(referral) => dispatch({ type: "setReferral", referral })}
-                />
-              ) : null}
-              {step === 5 ? (
-                <GateStep
-                  garmentName={garment.name}
+                  accountEmail={account?.verified ? account.email : null}
                   hasArtwork={hasArtwork}
                   sending={sending}
                   progress={progress}
-                  error={gateError}
-                  fieldErrors={gateFieldErrors}
-                  turnstileToken={turnstileToken}
-                  onTurnstileToken={setTurnstileToken}
-                  turnstileResetKey={turnstileKey}
-                  onSubmit={(contact) => send(contact, false)}
-                  onQuote={(contact) => send(contact, true)}
+                  error={sendError}
+                  onSize={(size, qty) => dispatch({ type: "setSize", size, qty })}
+                  onNotes={(notes) => dispatch({ type: "setNotes", notes })}
+                  onReferral={(referral) => dispatch({ type: "setReferral", referral })}
+                  onWebsite={setHoneypot}
+                  onSend={(intent, marketingOptIn) => void send(intent, marketingOptIn)}
                 />
               ) : null}
 
@@ -535,16 +580,18 @@ export function Builder() {
                 >
                   ← Back
                 </Button>
-                {step < 5 ? (
+                {step < 4 ? (
                   <Button size="sm" onClick={() => goStep((step + 1) as BuilderStep)}>
                     Continue →
                   </Button>
                 ) : null}
               </div>
-            </Card>
+            </div>
           </>
         )}
       </div>
+
+      <SignInDialog mode={signInDialog} onClose={() => setSignInDialog(null)} />
     </div>
   );
 }

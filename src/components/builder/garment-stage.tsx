@@ -15,6 +15,7 @@ import { Group, Image as KonvaImage, Layer, Rect, Stage, Transformer } from "rea
 
 import type { GarmentView, ViewId } from "@/lib/garments";
 import type { MockupColors } from "@/lib/mockup-schema";
+import { Button } from "@/components/ui/button";
 
 import { composeArtworkLayer, composeGarment, type TemplateImages } from "./compositor";
 import { centerToTopLeft, nudgeTransform, rotateAroundCenter, scaleAroundCenter } from "./geometry";
@@ -80,6 +81,8 @@ export interface GarmentStageProps {
   placement?: BuilderViewState;
   /** Decoded artwork image (the object URL of the in-memory File). */
   artworkImg: HTMLImageElement | null;
+  /** Shown over the empty canvas: "Your design goes here" + an upload button (v2). */
+  onAddDesign?: () => void;
   onTransformCommit: (transform: BuilderTransform) => void;
   onRemove?: () => void;
   onUndo?: () => void;
@@ -89,7 +92,7 @@ export interface GarmentStageProps {
 const raf = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
 export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(function GarmentStage(
-  { garmentName, view, colors, placement, artworkImg, onTransformCommit, onRemove, onUndo, onRedo },
+  { garmentName, view, colors, placement, artworkImg, onAddDesign, onTransformCommit, onRemove, onUndo, onRedo },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -374,6 +377,20 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
       ) : (
         <div className="bg-builder-backdrop min-h-64 w-full animate-pulse" aria-hidden="true" />
       )}
+      {/* Empty state over the canvas: dashed guide + one clear call to action (docs/04 v2). */}
+      {scale > 0 && garmentCanvas && !artwork && onAddDesign ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 text-center">
+          <p
+            className="rounded-full bg-white/75 px-3 py-1 text-sm font-medium text-[#3f3f50]"
+            data-testid="canvas-empty"
+          >
+            Your design goes here
+          </p>
+          <Button type="button" size="sm" onClick={onAddDesign} data-testid="add-design">
+            Add your design
+          </Button>
+        </div>
+      ) : null}
       <p className="sr-only" aria-live="polite" data-testid="builder-transform">
         {transformText}
       </p>

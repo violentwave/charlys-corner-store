@@ -1,15 +1,21 @@
 import { expect, test, type Page } from "@playwright/test";
 
 /**
- * The /design mockup builder. Runs on the desktop and mobile-360 projects
+ * The /design builder controls. Runs on the desktop and mobile-360 projects
  * (playwright.config.ts) — the builder is the money path, so both get the full pass.
+ * Uploads need an account (docs/04 Flow v2): the specs sign in through the test-only
+ * /api/test/session helper (console driver + ENABLE_TEST_HOOKS=1, see the CI e2e job).
  */
 
 const GARMENT_IDS = ["tshirt", "raglan", "hoodie", "hat", "polo", "tank"];
 
 const transformText = (page: Page) => page.getByTestId("builder-transform").textContent() ?? "";
 
-async function openBuilder(page: Page) {
+async function openBuilderSignedIn(page: Page) {
+  await page.setExtraHTTPHeaders({ "x-forwarded-for": `203.0.113.${1 + Math.floor(Math.random() * 254)}` });
+  await page.request.post("/api/test/session", {
+    data: { email: `builder-${Date.now()}-${test.info().workerIndex}@example.com` },
+  });
   await page.goto("/design");
   // The builder is client-only (Konva must not run on the server): wait for the picker.
   await expect(page.getByTestId("garment-picker")).toBeVisible({ timeout: 30_000 });
@@ -22,13 +28,14 @@ async function goToDesignStep(page: Page) {
 }
 
 async function uploadArtwork(page: Page, fixture: string) {
-  await page.locator("input[type=file]").setInputFiles(fixture);
+  // The visitor is signed in, so the builder's gated input accepts the file directly.
+  await page.locator("[data-testid='builder-file-input']").setInputFiles(fixture);
   // Upload decodes the file asynchronously; the artwork name shows once it is placed.
   await expect(page.getByTestId("artwork-name")).toContainText(fixture.split("/").pop()!, { timeout: 15_000 });
 }
 
 test("every garment renders the canvas", async ({ page }) => {
-  await openBuilder(page);
+  await openBuilderSignedIn(page);
   for (const id of GARMENT_IDS) {
     // Selecting a garment advances to Colors, so come back to step 1 each round.
     await page.getByRole("button", { name: "Step 1: Garment" }).click();
@@ -40,20 +47,23 @@ test("every garment renders the canvas", async ({ page }) => {
   await expect(page.getByTestId("garment-tank")).toHaveAttribute("aria-pressed", "true");
 });
 
-test("changing a zone color marks the swatch", async ({ page }) => {
-  await openBuilder(page);
+test("the color strip marks the selected chip and shows its name", async ({ page }) => {
+  await openBuilderSignedIn(page);
   await page.getByRole("button", { name: "Step 2: Colors" }).click();
   const shirtGroup = page.getByRole("group", { name: "Shirt color" });
   await shirtGroup.getByRole("button", { name: "Black", exact: true }).click();
   await expect(shirtGroup.getByRole("button", { name: "Black", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(shirtGroup.getByRole("button", { name: "Black", exact: true })).toHaveText("✓");
   await expect(shirtGroup.getByRole("button", { name: "White", exact: true })).toHaveAttribute("aria-pressed", "false");
+  // The selected color's name is always shown above the strip, with the palette count.
+  await expect(page.getByTestId("color-name-body")).toHaveText("Black");
+  await expect(page.getByText(/\d+ colors/)).toBeVisible();
   // Canvas still there with the new color (no theme on the garment, just the fill).
   await expect(page.getByTestId("builder-canvas")).toBeVisible();
 });
 
 test("upload places artwork with printed size, no DPI warning", async ({ page }) => {
-  await openBuilder(page);
+  await openBuilderSignedIn(page);
   await goToDesignStep(page);
   await uploadArtwork(page, "tests/e2e/fixtures/art.png");
   await expect(page.getByTestId("printed-size")).toContainText("Printed size");
@@ -63,7 +73,7 @@ test("upload places artwork with printed size, no DPI warning", async ({ page })
 });
 
 test("low-resolution artwork shows the DPI warning", async ({ page }) => {
-  await openBuilder(page);
+  await openBuilderSignedIn(page);
   await goToDesignStep(page);
   await uploadArtwork(page, "tests/e2e/fixtures/art-lowdpi.png");
   const warning = page.getByTestId("dpi-warning");
@@ -73,7 +83,7 @@ test("low-resolution artwork shows the DPI warning", async ({ page }) => {
 });
 
 test("switching the print location refits the artwork", async ({ page }) => {
-  await openBuilder(page);
+  await openBuilderSignedIn(page);
   await goToDesignStep(page);
   await uploadArtwork(page, "tests/e2e/fixtures/art.png");
   const before = await transformText(page);
@@ -83,8 +93,8 @@ test("switching the print location refits the artwork", async ({ page }) => {
   expect(after).not.toEqual(before);
 });
 
-test("keyboard nudge moves the artwork, undo reverts it", async ({ page }) => {
-  await openBuilder(page);
+test("keyboard nudge moves the artwork, Ctrl+Z undoes it (shortcut kept in v2)", async ({ page }) => {
+  await openBuilderSignedIn(page);
   await goToDesignStep(page);
   await uploadArtwork(page, "tests/e2e/fixtures/art.png");
   const before = await transformText(page);
@@ -94,12 +104,12 @@ test("keyboard nudge moves the artwork, undo reverts it", async ({ page }) => {
   const after = await transformText(page);
   expect(after).not.toEqual(before);
 
-  await page.getByTestId("undo").click();
+  await page.keyboard.press("Control+z");
   await expect(page.getByTestId("builder-transform")).toHaveText(before ?? "");
 });
 
 test("keyboard rotate, scale and remove work from the focused canvas", async ({ page }) => {
-  await openBuilder(page);
+  await openBuilderSignedIn(page);
   await goToDesignStep(page);
   await uploadArtwork(page, "tests/e2e/fixtures/art.png");
   await page.getByTestId("builder-canvas").focus();
@@ -114,8 +124,26 @@ test("keyboard rotate, scale and remove work from the focused canvas", async ({ 
   await expect(page.getByTestId("artwork-name")).toHaveCount(0);
 });
 
+test("the More disclosure holds Flip, Reset, Undo/Redo and the shortcut help", async ({ page }) => {
+  await openBuilderSignedIn(page);
+  await goToDesignStep(page);
+  await uploadArtwork(page, "tests/e2e/fixtures/art.png");
+
+  // Collapsed by default: the quick controls stay up front, the rest is one click away.
+  const more = page.getByTestId("more-controls");
+  await expect(more.locator("summary")).toBeVisible();
+  await more.locator("summary").click();
+
+  await page.getByRole("button", { name: "Flip" }).click();
+  await expect(page.getByTestId("builder-transform")).toContainText("flipped");
+  await page.getByTestId("undo").click();
+  await expect(page.getByTestId("builder-transform")).not.toContainText("flipped");
+  await page.getByTestId("redo").click();
+  await expect(page.getByTestId("builder-transform")).toContainText("flipped");
+});
+
 test("front/back toggle gives each side its own artwork", async ({ page }) => {
-  await openBuilder(page);
+  await openBuilderSignedIn(page);
   await goToDesignStep(page);
   await uploadArtwork(page, "tests/e2e/fixtures/art.png");
 
@@ -131,12 +159,11 @@ test("front/back toggle gives each side its own artwork", async ({ page }) => {
 });
 
 test("a refresh keeps the garment, colors and step", async ({ page }) => {
-  await openBuilder(page);
+  await openBuilderSignedIn(page);
   await page.getByTestId("garment-hoodie").click(); // advances to Colors
-  await page.getByRole("group", { name: "Body color" }).getByRole("button", { name: "Black", exact: true }).click();
-  await expect(
-    page.getByRole("group", { name: "Body color" }).getByRole("button", { name: "Black", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
+  const bodyGroup = page.getByRole("group", { name: "Body color" });
+  await bodyGroup.getByRole("button", { name: "Black", exact: true }).click();
+  await expect(bodyGroup.getByRole("button", { name: "Black", exact: true })).toHaveAttribute("aria-pressed", "true");
 
   await page.reload();
   // The step is persisted too: the builder reopens on Colors.
@@ -148,28 +175,39 @@ test("a refresh keeps the garment, colors and step", async ({ page }) => {
   await expect(page.getByTestId("garment-hoodie")).toHaveAttribute("aria-pressed", "true");
 });
 
-test("details step has sizes, notes and referral; gate shows the real email form", async ({ page }) => {
-  await openBuilder(page);
-  await page.getByRole("button", { name: "Step 4: Details" }).click();
-  await expect(page.getByTestId("details-step")).toBeVisible();
+test("step 4 shows both send paths; the order card holds sizes, notes and referral", async ({ page }) => {
+  await openBuilderSignedIn(page);
+  await page.getByRole("button", { name: "Step 4: Send" }).click();
+
+  // No artwork yet: both paths blocked with one clear alert.
+  await expect(page.getByTestId("send-blocked")).toBeVisible();
+  await expect(page.getByTestId("send-email")).toBeDisabled();
+  await expect(page.getByTestId("send-order")).toBeDisabled();
+
+  await page.getByRole("button", { name: "Step 3: Design" }).click();
+  await uploadArtwork(page, "tests/e2e/fixtures/art.png");
+  await page.getByRole("button", { name: "Step 4: Send" }).click();
+
+  // Two clearly separate paths (docs/04 §5 v2).
+  await expect(page.getByTestId("path-email")).toContainText(/15% off your 2nd order/i);
+  await expect(page.getByTestId("path-order")).toContainText(/Nothing is charged now/i);
   await expect(page.getByLabel("M", { exact: true })).toBeVisible();
   await page.getByTestId("builder-notes").fill("Gildan, front print only");
   await expect(page.getByLabel(/How did you hear about us\?/i)).toBeVisible();
-
-  await page.getByRole("button", { name: "Step 5: Get mockup" }).click();
-  // P4-2: the gate is a real form now (no artwork yet → blocked until step 3 is used).
-  const gate = page.getByTestId("email-gate");
-  await expect(gate).toBeVisible();
-  await expect(gate.getByText(/15% off your 2nd order/i)).toBeVisible();
-  await expect(gate.getByTestId("gate-email")).toBeVisible();
-  await expect(gate.getByTestId("gate-blocked")).toBeVisible();
+  // Headline instruction and progress.
+  await expect(page.getByRole("heading", { name: "Send it or order it" })).toBeVisible();
+  await expect(page.getByText("Step 4 of 4", { exact: true })).toBeVisible();
 });
 
 test.describe("mobile QA at 360px (docs/04)", () => {
-  test("canvas fits without horizontal scroll and controls meet the 44px target", async ({ page }, testInfo) => {
+  test("canvas fits without horizontal scroll and controls stay reachable", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "mobile-360", "runs on the mobile-360 project only");
-    await openBuilder(page);
+    await openBuilderSignedIn(page);
     await goToDesignStep(page);
+
+    // The canvas empty state's CTA is reachable before anything is uploaded.
+    await expect(page.getByTestId("add-design")).toBeVisible();
+
     await uploadArtwork(page, "tests/e2e/fixtures/art.png");
 
     // No horizontal scrolling anywhere on the page.
@@ -177,12 +215,12 @@ test.describe("mobile QA at 360px (docs/04)", () => {
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth))
       .toBeLessThanOrEqual(0);
 
-    // Step controls and print-location chips are reachable and ≥ 44px tall.
-    for (const button of [
-      page.getByRole("button", { name: "Step 3: Design" }),
-      page.getByRole("button", { name: "Step 5: Get mockup" }),
-      page.getByTestId("print-area-front-chest"),
-    ]) {
+    // Step pills are compact (v2) but still ≥ 24px (WCAG 2.5.8); print-location chips
+    // and the upload action keep the 44px target.
+    const stepPill = page.getByRole("button", { name: "Step 3: Design" });
+    await expect(stepPill).toBeVisible();
+    expect((await stepPill.boundingBox())!.height).toBeGreaterThanOrEqual(24);
+    for (const button of [page.getByTestId("print-area-front-chest"), page.getByTestId("upload-artwork")]) {
       await expect(button).toBeVisible();
       expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     }

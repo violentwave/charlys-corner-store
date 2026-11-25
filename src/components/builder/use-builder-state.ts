@@ -70,7 +70,7 @@ export type BuilderDesign = {
   referral: BuilderReferral;
 };
 
-export type BuilderStep = 1 | 2 | 3 | 4 | 5;
+export type BuilderStep = 1 | 2 | 3 | 4;
 
 export type BuilderState = {
   step: BuilderStep;
@@ -311,7 +311,7 @@ const persistedDesignSchema = z.object({
 
 const persistedStateSchema = z.object({
   version: z.literal(PERSIST_VERSION),
-  step: z.number().int().min(1).max(5),
+  step: z.number().int().min(1).max(4),
   design: persistedDesignSchema,
 });
 
@@ -435,7 +435,7 @@ export function designFromRestore(restored: RestoredDesign, meta: Omit<ArtworkMe
 }
 
 /* ------------------------------------------------------------------ */
-/* Mapping onto the /api/mockups payload (P4-2 adds email + Turnstile) */
+/* Mapping onto the /api/mockups payload (identity comes from the v2 account) */
 /* ------------------------------------------------------------------ */
 
 export type MockupPayloadDesign = Pick<

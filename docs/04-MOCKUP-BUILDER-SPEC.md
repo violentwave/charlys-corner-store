@@ -56,19 +56,21 @@ Implemented in `src/lib/garments.ts` (with `highlightOpacity()`, `printedInches(
 - Keyboard: arrows nudge (Shift = 10px), +/- scale, `R` rotate 15°, Delete removes.
 - Show approximate printed size in inches as the user scales.
 
-### 4. Order details (optional at this step, still parity)
-Sizes and quantities grid (XS–5XL / OSFA for hats) · extra notes · "How did you hear about us?" (from the old Home survey).
+### 4. Order details (order-request path only)
+Sizes and quantities grid (XS–5XL / OSFA for hats) · extra notes · "How did you hear about us?" (from the old Home survey). These live inside the **"Order this design"** card at step 4.
 
-### 5. Email gate: "Send me my mockup + 15% off"
-- Fields: **Email (required)**, Name (optional), Phone (optional), marketing opt-in checkbox (unchecked by default), Turnstile.
-- Copy: "Enter your email and we'll send your mockup **plus 15% off your 2nd order**."
-- **The download button stays locked until the email is submitted.** The preview stays visible (watermarked "PREVIEW" if we want extra incentive). DECIDE.
-- On submit, client renders **high-res PNGs per view** (`stage.toDataURL({ pixelRatio: 2 })`) and uploads them with the **original artwork file** to `POST /api/mockups` (see `02-TECH-STACK-AND-ARCHITECTURE.md`).
-- Server: validate → store files → upsert lead → create mockup → issue or reuse coupon → send emails.
-- A second "Send to Charly's for a quote" action uses the same payload plus `wantsQuote: true` (replaces the old "Send To Charly's" button, so no re-upload).
+### 5. Send step: two paths (v2 — replaces the email gate)
+- **Sign-in comes earlier**: an account (email + password, verified by a 6-digit code) is required **before uploading artwork**; the gate dialog appears when a signed-out or unverified visitor tries to upload (button or drop) and links to `/signup` / `/login` / `/verify` with `next` back to the builder. The design persists in sessionStorage across the detour.
+- **"Email me this mockup"** card: sends `intent: "email"`. Copy: "We'll email your mockup to {account email} plus 15% off your 2nd order." Marketing opt-in checkbox (unchecked by default). No email/name/phone/Turnstile on this route — the account is the identity; per-IP and per-user rate limits replace the anti-spam check.
+- **"Order this design"** card: shows the sizes/quantities grid and notes; requires ≥ 1 total (client check matching the server). Sends `intent: "order"`. Copy: "Tell us sizes and quantities. We'll confirm the price and send you an invoice. Nothing is charged now."
+- **The download buttons stay locked until a design is sent.** The preview stays visible. DECIDE on watermarks.
+- On submit, the client renders **high-res PNGs per view** and uploads them with the **original artwork file** to `POST /api/mockups` (see `02-TECH-STACK-AND-ARCHITECTURE.md`).
+- Server: `verifiedUser` first (401/403) → validate → rate-limit (per IP + per user) → store files → lead from the account → mockup row (`user_id`, `kind`) → coupon → emails.
+- The old "Send to Charly's for a quote" endpoint (`/api/mockups/[id]/quote`) is removed; the order path replaces it.
 
-### 6. Success screen
-Mockup images + **Download** buttons + coupon ticket (code, copy button, rules: "15% off your 2nd order · $30 minimum · expires {date, 1 year} · one per email") + CTAs: "Request a quote / order this," "Design another," share link. Charly the dog celebrates.
+### 6. Success screens (two, one per path)
+- **Email path:** mockup images + **Download** buttons + coupon ticket (code, copy button, rules: "15% off your 2nd order · $30 minimum · expires {date, 1 year} · one per email") + CTAs: "Order this design" (returns to the order card, design intact), "Design another." Charly the dog celebrates.
+- **Order path:** "Order request sent! We'll email you the price." + design summary + coupon ticket + "View in My designs" + "Design another".
 
 ## Emails
 **To customer** (React Email, neon on dark with light-mode fallback): subject "Your Charly's mockup is ready 🐾 + 15% off inside" · inline mockup image(s) plus attached PNGs · garment/color/location summary · coupon code with terms · CTA "Order this design" (deep link restoring the design via mockup id) · "Have a Ruffin awesome day."
@@ -91,8 +93,8 @@ Mockup images + **Download** buttons + coupon ticket (code, copy button, rules: 
 - [x] Owner email arrives with original artwork link
 - [x] Playwright e2e covers the happy path plus invalid email plus oversized file
 
-(All six garments shipped — the six in the table above; the "4" is a spec-era leftover. Mobile QA at 360px:
-no horizontal scroll, ≥ 44px targets, coarse-pointer Transformer anchors — `tests/e2e/builder.spec.ts`.)
+(v2, shipped 2026-11-25 — prompt P45-2: all six garments; **account + verified email required before upload**, with the gate dialog and `next` back to the builder; **color strip** per zone (hue-sorted, keyboard arrows/Home/End, no hex entry); **two send paths** with separate success screens; **order requests** land in "My designs"; step headlines + "Step n of 4" progress; the quote endpoint is gone. Mobile QA at 360px:
+no horizontal scroll, ≥ 44px primary targets (step pills ≥ 24px, WCAG 2.5.8) — `tests/e2e/builder.spec.ts`; full flow with accounts — `tests/e2e/builder-gate.spec.ts`.)
 
 ## Garment templates
 **Decided 2026-11-25: original vector drawings (Option A)**, drawn in code, so we own them outright (no licensing). Source: `scripts/garments/shapes.mjs` (paths) + `render.mjs` (SVG layers) → `node scripts/garments/build.mjs` writes PNGs; `--preview` also writes test composites to `tmp/garment-previews/`; `--only=<garment>` rebuilds one. Commit the PNGs; `sharp` is a dev dependency used only by this script.

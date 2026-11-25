@@ -8,24 +8,46 @@ import { readFileSync } from "node:fs";
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createSession } from "@/lib/auth/session";
+import { hashPassword } from "@/lib/auth/password";
+import { schema, type Db } from "@/lib/db";
 import { _memoryClear } from "@/lib/storage";
+import { upsertLead } from "@/lib/leads";
 import { hasTestDb, setupTestDb } from "@/test/db";
 import { GET as getRestore } from "@/app/api/mockups/[id]/route";
 
+// The session cookie the POST /api/mockups route reads via cookies() — set by signIn() below.
+const sessionCookie = vi.hoisted(() => ({ value: undefined as string | undefined }));
 let forwardedFor = "198.51.100.1";
-vi.mock("next/headers", () => ({ headers: async () => new Headers({ "x-forwarded-for": forwardedFor }) }));
-vi.mock("@/lib/turnstile", () => ({ verifyTurnstile: vi.fn().mockResolvedValue({ ok: true }) }));
+vi.mock("next/headers", () => ({
+  headers: async () => new Headers({ "x-forwarded-for": forwardedFor }),
+  cookies: async () => ({
+    get: (name: string) =>
+      name === "ccs_session" && sessionCookie.value ? { name, value: sessionCookie.value } : undefined,
+  }),
+}));
 
 const png = readFileSync("tests/fixtures/tiny.png");
 const blob = (b: Uint8Array, type = "image/png") =>
   new Blob([b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer], { type });
 
+let testDb: Db;
+
+const signIn = async (email: string, name: string | null = "Charly Customer") => {
+  const leadId = await upsertLead(testDb, { email, name });
+  const passwordHash = await hashPassword("fixture-credentials-only");
+  const [row] = await testDb
+    .insert(schema.users)
+    .values({ email, passwordHash, name, emailVerifiedAt: new Date(), leadId })
+    .returning({ id: schema.users.id });
+  const { token } = await createSession(testDb, row!.id);
+  sessionCookie.value = token;
+  return row!.id;
+};
+
 const postMockup = async (payloadOverride: Record<string, unknown> = {}) => {
   const { POST } = await import("@/app/api/mockups/route");
   const basePayload = {
-    email: "charly@example.com",
-    name: "Charly Customer",
-    phone: "772-555-0100",
     marketingOptIn: false,
     garment: "tshirt",
     colors: { body: "#263147" },
@@ -38,11 +60,9 @@ const postMockup = async (payloadOverride: Record<string, unknown> = {}) => {
     ],
     sizes: { M: 2 },
     notes: "SECRETNOTES-please-ignore",
-    wantsQuote: false,
   };
   const form = new FormData();
   form.append("payload", JSON.stringify({ ...basePayload, ...payloadOverride }));
-  form.append("turnstileToken", "tok");
   form.append("website", "");
   form.append("artwork", blob(png), "art.png");
   form.append("mockup-front", blob(png), "mockup-front.png");
@@ -58,12 +78,13 @@ describe.skipIf(!hasTestDb)("GET /api/mockups/[id] (real Postgres)", () => {
     process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
     process.env.EMAIL_DRIVER = "console";
     process.env.STORAGE_DRIVER = "memory";
-    ({ reset, close } = await setupTestDb());
+    ({ db: testDb, reset, close } = await setupTestDb());
   });
   beforeEach(async () => {
     await reset();
     _memoryClear();
     forwardedFor = "198.51.100.1";
+    await signIn("charly@example.com", "Charly Customer");
     const res = await postMockup();
     const json = (await res.json()) as { ok: true; mockupId: string };
     mockupId = json.mockupId;

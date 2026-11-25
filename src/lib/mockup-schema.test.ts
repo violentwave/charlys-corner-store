@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { effectiveDpi, mockupPayloadSchema } from "./mockup-schema";
 
 const base = {
-  email: "fan@example.com",
   garment: "raglan",
   colors: { body: "#ffffff", sleeves: "#263147" },
   views: [
@@ -25,7 +24,15 @@ describe("mockupPayloadSchema", () => {
   it("accepts a valid design and fills defaults", () => {
     const r = mockupPayloadSchema.parse(base);
     expect(r.marketingOptIn).toBe(false);
-    expect(r.wantsQuote).toBe(false);
+    expect(r.intent).toBe("email");
+  });
+
+  it("carries no identity: contact fields are the account's, not the client's", () => {
+    const r = mockupPayloadSchema.parse({ ...base, email: "sneaky@example.com", name: "Sneaky", phone: "555" });
+    expect(r).not.toHaveProperty("email");
+    expect(r).not.toHaveProperty("name");
+    expect(r).not.toHaveProperty("phone");
+    expect(r).not.toHaveProperty("wantsQuote");
   });
 
   it("requires a color for every zone, and only real hex colors", () => {
@@ -47,8 +54,7 @@ describe("mockupPayloadSchema", () => {
     expect(issues({ ...base, sizes: { OSFA: 1 } })).toContain("sizes.OSFA");
   });
 
-  it("rejects bad emails, unknown garments and non-finite transforms", () => {
-    expect(issues({ ...base, email: "nope" })).toContain("email");
+  it("rejects unknown garments and non-finite transforms", () => {
     expect(issues({ ...base, garment: "sock" })).toContain("garment");
     const t = { ...base.views[0].transform, width: Number.POSITIVE_INFINITY };
     expect(issues({ ...base, views: [{ ...base.views[0], transform: t }] }).length).toBeGreaterThan(0);

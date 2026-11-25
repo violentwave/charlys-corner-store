@@ -1,23 +1,32 @@
 // @vitest-environment node
 /**
- * Route tests for POST /api/mockups (the builder email gate), against real Postgres
- * with the memory storage driver and the console email driver.
+ * Route tests for POST /api/mockups (the builder send step, v2), against real Postgres
+ * with the memory storage driver and the console email driver. A verified account is
+ * required: identity (email/name/lead/user_id) comes from the session, not the payload.
  */
 import { readFileSync } from "node:fs";
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createSession } from "@/lib/auth/session";
+import { hashPassword } from "@/lib/auth/password";
 import { schema, type Db } from "@/lib/db";
 import { _clearOutbox, _outbox } from "@/lib/email";
 import { _memoryClear, _memoryKeys } from "@/lib/storage";
 import { upsertLead } from "@/lib/leads";
 import { hasTestDb, setupTestDb } from "@/test/db";
-import { POST as postQuote } from "./mockups/[id]/quote/route";
 import { POST as postMockup } from "./mockups/route";
 
+// The session cookie the route reads via cookies() — set by createVerifiedUser() below.
+const sessionCookie = vi.hoisted(() => ({ value: undefined as string | undefined }));
 let forwardedFor = "198.51.100.1";
-vi.mock("next/headers", () => ({ headers: async () => new Headers({ "x-forwarded-for": forwardedFor }) }));
-vi.mock("@/lib/turnstile", () => ({ verifyTurnstile: vi.fn().mockResolvedValue({ ok: true }) }));
+vi.mock("next/headers", () => ({
+  headers: async () => new Headers({ "x-forwarded-for": forwardedFor }),
+  cookies: async () => ({
+    get: (name: string) =>
+      name === "ccs_session" && sessionCookie.value ? { name, value: sessionCookie.value } : undefined,
+  }),
+}));
 // Spy that passes through by default; the insert-failure test rejects it once.
 vi.mock("@/lib/leads", async (importOriginal) => {
   const mod = await importOriginal<typeof import("@/lib/leads")>();
@@ -29,9 +38,6 @@ const blob = (b: Uint8Array, type = "image/png") =>
   new Blob([b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer], { type });
 
 const basePayload = {
-  email: "charly@example.com",
-  name: "Charly",
-  phone: "",
   marketingOptIn: false,
   garment: "tshirt",
   colors: { body: "#ffffff" },
@@ -49,7 +55,6 @@ const basePayload = {
   ],
   sizes: { M: 2 },
   notes: "SECRETNOTES-please-ignore",
-  wantsQuote: false,
 };
 
 const buildRequest = (
@@ -69,7 +74,6 @@ const buildRequest = (
 ) => {
   const form = new FormData();
   form.append("payload", JSON.stringify({ ...basePayload, ...payload }));
-  form.append("turnstileToken", "tok");
   form.append("website", website);
   form.append("artwork", artwork, "art.png");
   for (const view of views) form.append(`mockup-${view}`, blob(renderBytes), `mockup-${view}.png`);
@@ -80,6 +84,19 @@ describe.skipIf(!hasTestDb)("POST /api/mockups (real Postgres)", () => {
   let db: Db;
   let reset: () => Promise<void>;
   let close: () => Promise<void>;
+
+  /** A verified account with a session; sets the cookie the route reads. Returns the user id. */
+  async function createVerifiedUser(email: string, name: string | null = "Charly"): Promise<string> {
+    const leadId = await upsertLead(db, { email, name });
+    const passwordHash = await hashPassword("fixture-credentials-only");
+    const [row] = await db
+      .insert(schema.users)
+      .values({ email, passwordHash, name, emailVerifiedAt: new Date(), leadId })
+      .returning({ id: schema.users.id });
+    const { token } = await createSession(db, row!.id);
+    sessionCookie.value = token;
+    return row!.id;
+  }
 
   beforeAll(async () => {
     process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
@@ -92,11 +109,39 @@ describe.skipIf(!hasTestDb)("POST /api/mockups (real Postgres)", () => {
     _clearOutbox();
     _memoryClear();
     forwardedFor = "198.51.100.1";
+    sessionCookie.value = undefined;
     vi.mocked(upsertLead).mockClear();
   });
   afterAll(async () => close());
 
-  it("happy path: lead + coupon + mockup row + 1 artwork and N renders stored", async () => {
+  it("requires an account: signed out is 401", async () => {
+    const res = await postMockup(buildRequest());
+    expect(res.status).toBe(401);
+    const json = (await res.json()) as { ok: false; error: string };
+    expect(json.error).toMatch(/log in or create an account/i);
+    expect(_memoryKeys()).toHaveLength(0);
+  });
+
+  it("requires a verified email: unverified is 403", async () => {
+    // Same shape as a fresh signup: a user whose email hasn't been confirmed yet.
+    const leadId = await upsertLead(db, { email: "unverified@example.com", name: "Charly" });
+    const passwordHash = await hashPassword("fixture-credentials-only");
+    const [row] = await db
+      .insert(schema.users)
+      .values({ email: "unverified@example.com", passwordHash, name: "Charly", leadId })
+      .returning({ id: schema.users.id });
+    const { token } = await createSession(db, row!.id);
+    sessionCookie.value = token;
+
+    const res = await postMockup(buildRequest());
+    expect(res.status).toBe(403);
+    const json = (await res.json()) as { ok: false; error: string };
+    expect(json.error).toMatch(/confirm your email/i);
+    expect(_memoryKeys()).toHaveLength(0);
+  });
+
+  it("happy path: account identity on the lead + row, coupon, files stored", async () => {
+    const userId = await createVerifiedUser("charly@example.com", "Charly Dog");
     const res = await postMockup(buildRequest());
     expect(res.status).toBe(200);
     const json = (await res.json()) as { ok: true; mockupId: string; coupon: { code: string; isNew: boolean } };
@@ -109,11 +154,16 @@ describe.skipIf(!hasTestDb)("POST /api/mockups (real Postgres)", () => {
     expect(mockupRows[0]!.garment).toBe("tshirt");
     expect(mockupRows[0]!.notes).toBe("SECRETNOTES-please-ignore");
     expect(mockupRows[0]!.wantsQuote).toBe(false);
+    expect(mockupRows[0]!.userId).toBe(userId);
+    expect(mockupRows[0]!.kind).toBe("mockup");
     expect(mockupRows[0]!.views).toHaveLength(2);
     for (const view of mockupRows[0]!.views) expect(view.mockupKey).toMatch(/^mockups\//);
     expect(mockupRows[0]!.couponId).toBeTruthy();
 
-    expect(await db.select().from(schema.leads)).toHaveLength(1);
+    const leads = await db.select().from(schema.leads);
+    expect(leads).toHaveLength(1);
+    expect(leads[0]!.email).toBe("charly@example.com");
+    expect(leads[0]!.name).toBe("Charly Dog");
     const coupons = await db.select().from(schema.coupons);
     expect(coupons).toHaveLength(1);
     expect(coupons[0]!.code).toBe(json.coupon.code);
@@ -122,12 +172,11 @@ describe.skipIf(!hasTestDb)("POST /api/mockups (real Postgres)", () => {
     expect(_memoryKeys()).toHaveLength(3);
   });
 
-  it("same email again reuses the coupon code (isNew false) and creates a second mockup", async () => {
+  it("sending again from the same account reuses the coupon code (isNew false)", async () => {
+    await createVerifiedUser("charly@example.com");
     const first = await postMockup(buildRequest());
     expect(first.status).toBe(200);
-    const second = await postMockup(
-      buildRequest({ payload: { email: "CHARLY@example.com", views: [basePayload.views[0]] }, views: ["front"] }),
-    );
+    const second = await postMockup(buildRequest({ payload: { views: [basePayload.views[0]] }, views: ["front"] }));
     expect(second.status).toBe(200);
     const json = (await second.json()) as { coupon: { code: string; isNew: boolean } };
     expect(json.coupon.isNew).toBe(false);
@@ -139,13 +188,15 @@ describe.skipIf(!hasTestDb)("POST /api/mockups (real Postgres)", () => {
   });
 
   it("bad payload returns 400 with fieldErrors", async () => {
-    const res = await postMockup(buildRequest({ payload: { email: "not-an-email" } }));
+    await createVerifiedUser("charly@example.com");
+    const res = await postMockup(buildRequest({ payload: { colors: { body: "#ff2e97" } } }));
     expect(res.status).toBe(400);
     const json = (await res.json()) as { ok: false; fieldErrors: Record<string, string> };
-    expect(json.fieldErrors.email).toBeTruthy();
+    expect(json.fieldErrors["colors.body"]).toBeTruthy();
   });
 
   it("invalid JSON payload returns 400", async () => {
+    await createVerifiedUser("charly@example.com");
     const form = new FormData();
     form.append("payload", "{not json");
     const res = await postMockup(new Request("http://test/api/mockups", { method: "POST", body: form }));
@@ -153,6 +204,7 @@ describe.skipIf(!hasTestDb)("POST /api/mockups (real Postgres)", () => {
   });
 
   it("missing mockup file for a listed view returns 400 and stores nothing", async () => {
+    await createVerifiedUser("charly@example.com");
     const res = await postMockup(buildRequest({ views: ["front"] }));
     expect(res.status).toBe(400);
     expect(_memoryKeys()).toHaveLength(0);
@@ -160,6 +212,7 @@ describe.skipIf(!hasTestDb)("POST /api/mockups (real Postgres)", () => {
   });
 
   it("extra unexpected mockup file returns 400", async () => {
+    await createVerifiedUser("charly@example.com");
     const res = await postMockup(
       buildRequest({ payload: { views: [basePayload.views[0]] }, views: ["front", "back"] }),
     );
@@ -168,6 +221,7 @@ describe.skipIf(!hasTestDb)("POST /api/mockups (real Postgres)", () => {
   });
 
   it("artwork PDF returns 400 (not drawable on the mockup)", async () => {
+    await createVerifiedUser("charly@example.com");
     const pdf = blob(new TextEncoder().encode("%PDF-1.4 test"), "application/pdf");
     const res = await postMockup(buildRequest({ artwork: pdf }));
     expect(res.status).toBe(400);
@@ -175,6 +229,7 @@ describe.skipIf(!hasTestDb)("POST /api/mockups (real Postgres)", () => {
   });
 
   it("oversize render returns 400", async () => {
+    await createVerifiedUser("charly@example.com");
     const big = new Uint8Array(8 * 1024 * 1024 + 1);
     const res = await postMockup(buildRequest({ renderBytes: big }));
     expect(res.status).toBe(400);
@@ -182,6 +237,7 @@ describe.skipIf(!hasTestDb)("POST /api/mockups (real Postgres)", () => {
   });
 
   it("insert failure deletes the stored files", async () => {
+    await createVerifiedUser("charly@example.com");
     vi.mocked(upsertLead).mockRejectedValueOnce(new Error("boom"));
     const res = await postMockup(buildRequest());
     expect(res.status).toBe(500);
@@ -190,26 +246,43 @@ describe.skipIf(!hasTestDb)("POST /api/mockups (real Postgres)", () => {
   });
 
   it("honeypot returns a fake success and stores nothing", async () => {
+    await createVerifiedUser("charly@example.com");
     const res = await postMockup(buildRequest({ website: "http://spam.example" }));
     expect(res.status).toBe(200);
     const json = (await res.json()) as { ok: true };
     expect(json.ok).toBe(true);
     expect(_memoryKeys()).toHaveLength(0);
     expect(await db.select().from(schema.mockups)).toHaveLength(0);
-    expect(await db.select().from(schema.leads)).toHaveLength(0);
+    // The account's own lead exists (created at verification); no coupon was issued for a bot.
+    expect(await db.select().from(schema.coupons)).toHaveLength(0);
   });
 
-  it("rate limit returns 429 after 5 per hour per IP", async () => {
+  it("rate limit per account: 429 on the 4th send in a day", async () => {
+    await createVerifiedUser("charly@example.com");
     let last: Response | undefined;
-    for (let i = 0; i < 6; i++) {
-      last = (await postMockup(buildRequest({ payload: { email: `charly-${i}@example.com` } }))) as Response;
+    for (let i = 0; i < 4; i++) {
+      last = (await postMockup(
+        buildRequest({ payload: { views: [basePayload.views[0]] }, views: ["front"] }),
+      )) as Response;
     }
     expect(last!.status).toBe(429);
+    expect(await db.select().from(schema.mockups)).toHaveLength(3);
+  });
+
+  it("rate limit per IP: 429 after 5 sends an hour even from different accounts", async () => {
+    for (let i = 0; i < 6; i++) {
+      sessionCookie.value = undefined;
+      await createVerifiedUser(`charly-${i}@example.com`);
+      const res = await postMockup(buildRequest({ payload: { views: [basePayload.views[0]] }, views: ["front"] }));
+      if (i < 5) expect(res.status).toBe(200);
+      else expect(res.status).toBe(429);
+    }
     expect((await db.select().from(schema.mockups)).length).toBeLessThanOrEqual(5);
   });
 
-  it("customer email never echoes the notes, owner email does", async () => {
-    await postMockup(buildRequest({ payload: { wantsQuote: true } }));
+  it("mockup email never echoes the notes, owner email does", async () => {
+    await createVerifiedUser("charly@example.com");
+    await postMockup(buildRequest());
     const customer = _outbox().find((m) => m.to === "charly@example.com")!;
     expect(customer).toBeTruthy();
     expect(customer.subject).toContain("Your Charly's mockup is ready");
@@ -218,13 +291,13 @@ describe.skipIf(!hasTestDb)("POST /api/mockups (real Postgres)", () => {
 
     const owner = _outbox().find((m) => m.to !== "charly@example.com")!;
     expect(owner.subject).toContain("New mockup lead: T-Shirt · charly@example.com");
-    expect(owner.subject).toContain("QUOTE REQUESTED");
     expect(owner.html + owner.text).toContain("SECRETNOTES-please-ignore");
     expect(owner.html + owner.text).toMatch(/CHARLY-[A-Z2-9]{4}-[A-Z2-9]{4}/);
   });
 
   it("emails name the colors and attach the rendered PNGs", async () => {
-    await postMockup(buildRequest({ payload: { name: "", colors: { body: "#263147" } } }));
+    await createVerifiedUser("charly@example.com", null);
+    await postMockup(buildRequest({ payload: { colors: { body: "#263147" } } }));
     const customer = _outbox().find((m) => m.to === "charly@example.com")!;
     expect(customer.text).toContain("T-Shirt in Navy");
     expect(customer.text).toContain("Hi there,");
@@ -237,6 +310,7 @@ describe.skipIf(!hasTestDb)("POST /api/mockups (real Postgres)", () => {
   });
 
   it("rejects renders with absurd pixel dimensions", async () => {
+    await createVerifiedUser("charly@example.com");
     const huge = new Uint8Array(png);
     new DataView(huge.buffer).setUint32(16, 50_000);
     const res = await postMockup(buildRequest({ renderBytes: huge }));
@@ -244,50 +318,29 @@ describe.skipIf(!hasTestDb)("POST /api/mockups (real Postgres)", () => {
     expect(_memoryKeys()).toEqual([]);
   });
 
-  it("intent 'order' needs sizes, is stored as an order, and flags the owner email", async () => {
+  it("intent 'order' is stored as an order and gets the order-request email with the coupon", async () => {
+    await createVerifiedUser("charly@example.com", "Charly Dog");
     expect((await postMockup(buildRequest({ payload: { intent: "order", sizes: {} } }))).status).toBe(400);
-    expect((await postMockup(buildRequest({ payload: { intent: "order", sizes: { L: 3 } } }))).status).toBe(200);
+    _clearOutbox();
+    const res = await postMockup(buildRequest({ payload: { intent: "order", sizes: { L: 3 } } }));
+    expect(res.status).toBe(200);
     const [row] = await db.select().from(schema.mockups);
     expect(row!.kind).toBe("order");
+
+    const customer = _outbox().find((m) => m.to === "charly@example.com")!;
+    expect(customer.subject).toBe("We got your order request 🐾");
+    expect(customer.html + customer.text).toContain("confirm the price and send you an invoice");
+    expect(customer.html + customer.text).toContain("3 × L");
+    expect(customer.html + customer.text).toMatch(/CHARLY-[A-Z2-9]{4}-[A-Z2-9]{4}/);
+    expect(customer.html + customer.text).not.toContain("SECRETNOTES-please-ignore");
+
     const owner = _outbox().find((m) => m.to !== "charly@example.com")!;
     expect(owner.subject).toBe("ORDER REQUEST: T-Shirt · charly@example.com");
   });
 
   it("rejects colors that aren't real blanks for the garment", async () => {
+    await createVerifiedUser("charly@example.com");
     const res = await postMockup(buildRequest({ payload: { colors: { body: "#ff2e97" } } }));
     expect(res.status).toBe(400);
-  });
-
-  describe("POST /api/mockups/[id]/quote", () => {
-    const quote = (id: string) =>
-      postQuote(
-        new Request(`http://test/api/mockups/${id}/quote`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ turnstileToken: "tok" }),
-        }),
-        { params: Promise.resolve({ id }) },
-      );
-
-    it("flags the mockup once, notifies only the owner, and is idempotent", async () => {
-      const sent = (await (await postMockup(buildRequest())).json()) as { mockupId: string };
-      _clearOutbox();
-
-      expect((await quote(sent.mockupId)).status).toBe(200);
-      const [row] = await db.select().from(schema.mockups);
-      expect(row!.wantsQuote).toBe(true);
-      expect(_outbox()).toHaveLength(1);
-      expect(_outbox()[0]!.subject).toContain("Quote requested: T-Shirt · charly@example.com");
-      expect(_outbox()[0]!.to).not.toBe("charly@example.com");
-
-      expect((await quote(sent.mockupId)).status).toBe(200);
-      expect(_outbox()).toHaveLength(1);
-      expect(await db.select().from(schema.mockups)).toHaveLength(1);
-    });
-
-    it("404s for malformed and unknown ids", async () => {
-      expect((await quote("not-a-uuid")).status).toBe(404);
-      expect((await quote("00000000-0000-4000-8000-000000000000")).status).toBe(404);
-    });
   });
 });
