@@ -11,7 +11,7 @@ describe("MockupCustomerEmail", () => {
       MockupCustomerEmail({
         name: "Charly",
         garmentName: "T-Shirt",
-        colors: [{ label: "Shirt", hex: "#2233aa" }],
+        colors: [{ label: "Shirt", hex: "#2233aa", name: "Custom #2233aa" }],
         views: [{ view: "Front", area: "Full Front" }],
         coupon: { code: "CHARLY-ABCD-EFGH", expiresAt: new Date("2027-11-25"), isNew: true },
         mockups: [{ view: "front", signedUrl: "https://r2.example/mockup-front.png" }],
@@ -22,7 +22,7 @@ describe("MockupCustomerEmail", () => {
       MockupCustomerEmail({
         name: "Charly",
         garmentName: "T-Shirt",
-        colors: [{ label: "Shirt", hex: "#2233aa" }],
+        colors: [{ label: "Shirt", hex: "#2233aa", name: "Custom #2233aa" }],
         views: [{ view: "Front", area: "Full Front" }],
         coupon: { code: "CHARLY-ABCD-EFGH", expiresAt: new Date("2027-11-25"), isNew: true },
         mockups: [{ view: "front", signedUrl: "https://r2.example/mockup-front.png" }],
