@@ -61,6 +61,16 @@ export function _memoryObject(key: string) {
   return memoryStore.get(key);
 }
 
+/** Test helper: every storage key currently held by the memory driver. */
+export function _memoryKeys(): string[] {
+  return [...memoryStore.keys()];
+}
+
+/** Test helper: empty the memory driver between tests. */
+export function _memoryClear() {
+  memoryStore.clear();
+}
+
 function required(name: string): string {
   const v = process.env[name];
   if (!v) throw new Error(`${name} is not set (storage driver "s3")`);
