@@ -178,6 +178,7 @@ export async function POST(request: Request) {
         sizes: data.sizes,
         notes: data.notes || null,
         wantsQuote: data.wantsQuote,
+        kind: data.intent === "order" ? "order" : "mockup",
         artworkKey,
         artworkName: clip(artworkFile.name, 120),
         artworkContentType: artworkCheck.contentType,
@@ -201,7 +202,10 @@ export async function POST(request: Request) {
         .catch(() => `(link unavailable; storage key ${keysByView.get(entry.view)})`),
     })),
   );
-  const subject = `New mockup lead: ${garment.name} · ${data.email}${data.wantsQuote ? " · QUOTE REQUESTED" : ""}`;
+  const subject =
+    data.intent === "order"
+      ? `ORDER REQUEST: ${garment.name} · ${data.email}`
+      : `New mockup lead: ${garment.name} · ${data.email}${data.wantsQuote ? " · QUOTE REQUESTED" : ""}`;
   await notifyOwner(
     subject,
     MockupOwnerEmail({

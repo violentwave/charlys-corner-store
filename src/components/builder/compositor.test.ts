@@ -44,24 +44,24 @@ describe("garmentLayers", () => {
 
   it("fills one mask per zone in view order, each with its own color", () => {
     const view = getGarment("raglan").views[0]!;
-    const layers = garmentLayers(view, { body: "#f4f4f4", sleeves: "#1f2a44" });
+    const layers = garmentLayers(view, { body: "#ffffff", sleeves: "#263147" });
     const masks = layers.filter((l) => l.type === "mask");
     expect(masks).toHaveLength(2);
-    expect(masks[0]).toMatchObject({ zone: "body", color: "#f4f4f4" });
-    expect(masks[1]).toMatchObject({ zone: "sleeves", color: "#1f2a44" });
+    expect(masks[0]).toMatchObject({ zone: "body", color: "#ffffff" });
+    expect(masks[1]).toMatchObject({ zone: "sleeves", color: "#263147" });
   });
 
   it("dims the highlight on light fabric (sheen is for dark fabric)", () => {
     const view = getGarment("tshirt").views[0]!;
-    const highlight = garmentLayers(view, { body: "#f4f4f4" }).find((l) => l.type === "highlight")!;
+    const highlight = garmentLayers(view, { body: "#ffffff" }).find((l) => l.type === "highlight")!;
     expect(highlight.opacity).toBeLessThan(0.25);
   });
 
   it("falls back to the view's first zone color for the highlight (hat has no body)", () => {
     const view = getGarment("hat").views[0]!;
     expect(view.zones[0]).toBe("front");
-    expect(activeZoneColor(view, { front: "#1b1b1f", mesh: "#f4f4f4", brim: "#f4f4f4" })).toBe("#1b1b1f");
-    const highlight = garmentLayers(view, { front: "#1b1b1f", mesh: "#f4f4f4", brim: "#f4f4f4" }).find(
+    expect(activeZoneColor(view, { front: "#1b1b1f", mesh: "#ffffff", brim: "#ffffff" })).toBe("#1b1b1f");
+    const highlight = garmentLayers(view, { front: "#1b1b1f", mesh: "#ffffff", brim: "#ffffff" }).find(
       (l) => l.type === "highlight",
     )!;
     expect(highlight.opacity).toBeCloseTo(0.909, 2);
@@ -69,7 +69,7 @@ describe("garmentLayers", () => {
 
   it("uses every zone's mask src from the view config", () => {
     const view = getGarment("hoodie").views[0]!;
-    const masks = garmentLayers(view, { body: "#9a9ea3", lining: "#9a9ea3", drawstrings: "#f4f4f4" }).filter(
+    const masks = garmentLayers(view, { body: "#97999b", lining: "#97999b", drawstrings: "#ffffff" }).filter(
       (l) => l.type === "mask",
     );
     expect(masks.map((m) => (m.type === "mask" ? m.src : ""))).toEqual([

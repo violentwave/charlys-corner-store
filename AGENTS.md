@@ -37,6 +37,8 @@ src/lib/rate-limit.ts rateLimit(), clientIp(), LIMITS   src/lib/artwork.ts check
 src/lib/action-result.ts ActionResult, zodFieldErrors()  src/test/db.ts real-Postgres test helper
 src/lib/notify.ts   notifyOwner(), confirmCustomer() (per-recipient cap)   src/lib/http.ts readFormDataLimited(), fileParts(), clip()
 src/lib/garments.ts garment config (zones, palettes, print areas, layers)   src/lib/mockup-schema.ts mockupPayloadSchema (/api/mockups wire format)
+src/lib/auth/        accounts: password (scrypt), session (currentUser, verifiedUser), email-tokens, origin   src/lib/auth-schema.ts shared auth Zod schemas
+src/app/api/auth/    signup, verify, resend, login, logout, forgot, reset, me   src/lib/gildan-colors.ts Gildan palettes
 src/lib/coupon-store.ts issueCoupon() (idempotent, server-only)   scripts/garments/ garment template generator (writes public/garments)
 tests/e2e/          Playwright specs             public/brand/        logo for the web
 render.yaml         Render blueprint (the only host-specific file)

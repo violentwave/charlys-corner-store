@@ -24,6 +24,8 @@ import { REFERRAL_SOURCES } from "../src/lib/schemas";
 
 export const referralSource = pgEnum("referral_source", REFERRAL_SOURCES);
 export const couponStatus = pgEnum("coupon_status", ["issued", "eligible", "redeemed", "expired"]);
+export const mockupKind = pgEnum("mockup_kind", ["mockup", "order"]);
+export const authTokenPurpose = pgEnum("auth_token_purpose", ["verify_email", "reset_password"]);
 export const requestStatus = pgEnum("request_status", ["new", "contacted", "quoted", "ordered", "closed", "spam"]);
 
 const id = () => uuid("id").primaryKey().defaultRandom();
@@ -173,6 +175,10 @@ export const mockups = pgTable(
     sizes: jsonb("sizes").$type<MockupSizes>().notNull().default({}),
     notes: text("notes"),
     wantsQuote: boolean("wants_quote").notNull().default(false),
+    /** "mockup" = emailed mockup; "order" = order request (owner confirms price + invoices). */
+    kind: mockupKind("kind").notNull().default("mockup"),
+    /** Account that made it (null for rows from before accounts existed). */
+    userId: uuid("user_id").references(() => users.id),
     /** Original artwork, untouched, for production. */
     artworkKey: text("artwork_key").notNull(),
     artworkName: text("artwork_name").notNull(),
@@ -181,5 +187,63 @@ export const mockups = pgTable(
     status: requestStatus("status").notNull().default("new"),
     createdAt: createdAt(),
   },
-  (t) => [index("mockups_created_idx").on(t.createdAt), index("mockups_lead_idx").on(t.leadId)],
+  (t) => [
+    index("mockups_created_idx").on(t.createdAt),
+    index("mockups_lead_idx").on(t.leadId),
+    index("mockups_user_idx").on(t.userId),
+  ],
+);
+
+/**
+ * Customer accounts (decided 2026-11-25: email + password). Email is stored lowercase.
+ * Passwords are scrypt hashes (src/lib/auth/password.ts); the email must be verified with a
+ * 6-digit code before the account can upload artwork or send mockups/orders.
+ */
+export const users = pgTable(
+  "users",
+  {
+    id: id(),
+    email: text("email").notNull(),
+    passwordHash: text("password_hash").notNull(),
+    name: text("name"),
+    emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
+    /** Set on verification: the lead row for this email (coupons hang off leads). */
+    leadId: uuid("lead_id").references(() => leads.id),
+    createdAt: createdAt(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("users_email_unique").on(t.email)],
+);
+
+/** Login sessions. Only a SHA-256 of the cookie token is stored. */
+export const sessions = pgTable(
+  "sessions",
+  {
+    id: id(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull(),
+    createdAt: createdAt(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [uniqueIndex("sessions_token_unique").on(t.tokenHash), index("sessions_user_idx").on(t.userId)],
+);
+
+/** Email verification codes and password-reset tokens (hashed, single use, short-lived). */
+export const authTokens = pgTable(
+  "auth_tokens",
+  {
+    id: id(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    purpose: authTokenPurpose("purpose").notNull(),
+    tokenHash: text("token_hash").notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("auth_tokens_user_idx").on(t.userId, t.purpose), index("auth_tokens_hash_idx").on(t.tokenHash)],
 );

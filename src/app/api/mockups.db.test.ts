@@ -34,7 +34,7 @@ const basePayload = {
   phone: "",
   marketingOptIn: false,
   garment: "tshirt",
-  colors: { body: "#f4f4f4" },
+  colors: { body: "#ffffff" },
   views: [
     {
       view: "front",
@@ -224,7 +224,7 @@ describe.skipIf(!hasTestDb)("POST /api/mockups (real Postgres)", () => {
   });
 
   it("emails name the colors and attach the rendered PNGs", async () => {
-    await postMockup(buildRequest({ payload: { name: "", colors: { body: "#1F2A44" } } }));
+    await postMockup(buildRequest({ payload: { name: "", colors: { body: "#263147" } } }));
     const customer = _outbox().find((m) => m.to === "charly@example.com")!;
     expect(customer.text).toContain("T-Shirt in Navy");
     expect(customer.text).toContain("Hi there,");
@@ -233,7 +233,7 @@ describe.skipIf(!hasTestDb)("POST /api/mockups (real Postgres)", () => {
       "charlys-mockup-tshirt-back.png",
     ]);
     const owner = _outbox().find((m) => m.to !== "charly@example.com")!;
-    expect(owner.text).toContain("Shirt: Navy (#1F2A44)");
+    expect(owner.text).toContain("Shirt: Navy (#263147)");
   });
 
   it("rejects renders with absurd pixel dimensions", async () => {
@@ -242,6 +242,20 @@ describe.skipIf(!hasTestDb)("POST /api/mockups (real Postgres)", () => {
     const res = await postMockup(buildRequest({ renderBytes: huge }));
     expect(res.status).toBe(400);
     expect(_memoryKeys()).toEqual([]);
+  });
+
+  it("intent 'order' needs sizes, is stored as an order, and flags the owner email", async () => {
+    expect((await postMockup(buildRequest({ payload: { intent: "order", sizes: {} } }))).status).toBe(400);
+    expect((await postMockup(buildRequest({ payload: { intent: "order", sizes: { L: 3 } } }))).status).toBe(200);
+    const [row] = await db.select().from(schema.mockups);
+    expect(row!.kind).toBe("order");
+    const owner = _outbox().find((m) => m.to !== "charly@example.com")!;
+    expect(owner.subject).toBe("ORDER REQUEST: T-Shirt · charly@example.com");
+  });
+
+  it("rejects colors that aren't real blanks for the garment", async () => {
+    const res = await postMockup(buildRequest({ payload: { colors: { body: "#ff2e97" } } }));
+    expect(res.status).toBe(400);
   });
 
   describe("POST /api/mockups/[id]/quote", () => {

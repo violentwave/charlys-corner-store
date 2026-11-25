@@ -11,7 +11,7 @@
  */
 import { z } from "zod";
 
-import { GARMENT_IDS, getGarment, isHexColor, type GarmentId } from "./garments";
+import { GARMENT_IDS, getGarment, isHexColor, isPaletteColor, type GarmentId } from "./garments";
 import { emailField, nameField, phoneField, REFERRAL_SOURCES } from "./schemas";
 
 /** Formats the builder can draw on a canvas (a subset of src/lib/artwork.ts kinds). */
@@ -23,6 +23,8 @@ export const MOCKUP_RENDER_MAX_BYTES = 8 * 1024 * 1024;
 export const MIN_PRINT_DPI = 150;
 
 const VIEW_IDS = ["front", "back"] as const;
+export const MOCKUP_INTENTS = ["email", "order"] as const;
+export type MockupIntent = (typeof MOCKUP_INTENTS)[number];
 const finite = z.number().finite();
 
 /** Artwork placement in template pixels (the view's width × height), Konva-style: x/y = top-left before rotation. */
@@ -55,6 +57,11 @@ export const mockupPayloadSchema = z
     sizes: z.record(z.string().max(8), z.number().int().min(0).max(10000)).default({}),
     notes: z.string().trim().max(2000).optional(),
     wantsQuote: z.boolean().default(false),
+    /**
+     * "email" = send me this mockup; "order" = order request (needs at least one size/qty;
+     * the owner confirms the price and invoices). Decided 2026-11-25.
+     */
+    intent: z.enum(MOCKUP_INTENTS).default("email"),
   })
   .superRefine((v, ctx) => {
     if (v.referralSource === "other" && !v.referralOther) {
@@ -67,7 +74,11 @@ export const mockupPayloadSchema = z
       ctx.addIssue({ code: "custom", path: ["colors"], message: "Pick a color for every part of the garment" });
     }
     for (const [zone, hex] of Object.entries(v.colors)) {
-      if (!isHexColor(hex)) ctx.addIssue({ code: "custom", path: ["colors", zone], message: "Invalid color" });
+      if (!isHexColor(hex)) {
+        ctx.addIssue({ code: "custom", path: ["colors", zone], message: "Invalid color" });
+      } else if (!g.allowCustomHex && !isPaletteColor(g, hex)) {
+        ctx.addIssue({ code: "custom", path: ["colors", zone], message: "Pick one of the available colors" });
+      }
     }
     const seen = new Set<string>();
     v.views.forEach((entry, i) => {
@@ -84,6 +95,9 @@ export const mockupPayloadSchema = z
     });
     for (const size of Object.keys(v.sizes)) {
       if (!g.sizes.includes(size)) ctx.addIssue({ code: "custom", path: ["sizes", size], message: "Unknown size" });
+    }
+    if (v.intent === "order" && Object.values(v.sizes).reduce((sum, qty) => sum + qty, 0) < 1) {
+      ctx.addIssue({ code: "custom", path: ["sizes"], message: "Add at least one size and quantity to order" });
     }
   });
 

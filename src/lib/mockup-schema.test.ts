@@ -5,7 +5,7 @@ import { effectiveDpi, mockupPayloadSchema } from "./mockup-schema";
 const base = {
   email: "fan@example.com",
   garment: "raglan",
-  colors: { body: "#f4f4f4", sleeves: "#1f2a44" },
+  colors: { body: "#ffffff", sleeves: "#263147" },
   views: [
     {
       view: "front",
@@ -29,13 +29,13 @@ describe("mockupPayloadSchema", () => {
   });
 
   it("requires a color for every zone, and only real hex colors", () => {
-    expect(issues({ ...base, colors: { body: "#f4f4f4" } })).toContain("colors");
-    expect(issues({ ...base, colors: { body: "#f4f4f4", sleeves: "red" } })).toContain("colors.sleeves");
+    expect(issues({ ...base, colors: { body: "#ffffff" } })).toContain("colors");
+    expect(issues({ ...base, colors: { body: "#ffffff", sleeves: "red" } })).toContain("colors.sleeves");
     expect(issues({ ...base, colors: { ...base.colors, lining: "#000000" } })).toContain("colors");
   });
 
   it("rejects views and print areas the garment doesn't have", () => {
-    const hat = { ...base, garment: "hat", colors: { front: "#ffffff", mesh: "#000000", brim: "#000000" } };
+    const hat = { ...base, garment: "hat", colors: { front: "#f4f4f4", mesh: "#1b1b1f", brim: "#1b1b1f" } };
     expect(issues({ ...hat, views: [{ ...base.views[0], view: "back" }] })).toContain("views.0.view");
     expect(issues({ ...hat, views: [{ ...base.views[0], printArea: "full-front" }] })).toContain("views.0.printArea");
     expect(issues({ ...hat, views: [{ ...base.views[0], printArea: "hat-front" }], sizes: { OSFA: 3 } })).toEqual([]);
