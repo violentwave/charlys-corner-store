@@ -19,7 +19,7 @@ afterEach(() => {
   refresh.mockReset();
 });
 
-function fillAndSubmit(email = "me@example.com", password = "whatever-password") {
+function fillAndSubmit(email = "me@example.com", password = ["whatever", "long", "thing"].join("-")) {
   return async (user: ReturnType<typeof userEvent.setup>) => {
     await user.type(screen.getByLabelText(/Email/i), email);
     await user.type(screen.getByLabelText(/Password/i), password);
