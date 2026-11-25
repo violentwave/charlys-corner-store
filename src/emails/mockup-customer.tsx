@@ -8,10 +8,11 @@ export interface MockupCustomerEmailProps {
   /** Clipped by the route: customer emails never echo free text beyond a short name. */
   name: string;
   garmentName: string;
-  colors: { label: string; hex: string }[];
+  /** Zone label ("Sleeves & collar") + palette name ("Navy" or "Custom #rrggbb"). */
+  colors: { label: string; hex: string; name: string }[];
   views: { view: string; area: string }[];
   coupon: { code: string; expiresAt: Date; isNew: boolean };
-  /** Rendered mockups, inlined via 7-day signed storage URLs. */
+  /** Rendered mockups, inlined via 7-day signed storage URLs (the PNGs are also attached, so they outlive the links). */
   mockups: { view: string; signedUrl: string }[];
   /** Deep link: /design?mockup=<id> restores this design in the builder (design data only, no PII). */
   mockupId: string;
@@ -46,8 +47,12 @@ export function MockupCustomerEmail(p: MockupCustomerEmailProps) {
           </Text>
           <Text>
             {p.garmentName}
-            {p.colors.length > 0 ? ` in ${p.colors.map((c) => c.label).join(", ")}` : ""} · print on{" "}
-            {p.views.map((v) => `${v.view.toLowerCase()} (${v.area})`).join(", ")}
+            {p.colors.length === 1
+              ? ` in ${p.colors[0]!.name}`
+              : p.colors.length > 1
+                ? ` (${p.colors.map((c) => `${c.label.toLowerCase()}: ${c.name}`).join(", ")})`
+                : ""}{" "}
+            · print on {p.views.map((v) => `${v.view.toLowerCase()} (${v.area})`).join(", ")}
           </Text>
           {p.mockups.map((m) => (
             <Img key={m.signedUrl} src={m.signedUrl} alt={`Your ${p.garmentName.toLowerCase()} mockup — ${m.view}`} />

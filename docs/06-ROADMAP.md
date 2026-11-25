@@ -73,6 +73,7 @@ Each page prompt is shipped by the agent (Ship section); Claude reviews every me
 - [ ] City/service landing pages (Brief §2.4)
 - [ ] Analytics + builder funnel events; Search Console
 - [ ] Accessibility audit (axe + manual keyboard pass); Lighthouse targets
+- [ ] R2 bucket CORS: allow `GET` from the site origin (the /design restore link fetches the original artwork from a signed R2 URL in the browser); MinIO allows it locally by default
 - [ ] Backups: confirm Render Postgres backup/retention on our plan; add a scheduled `pg_dump` to the bucket if it isn't enough
 - [ ] Owner walkthrough and content sign-off
 - [ ] DNS cutover from Weebly: owner adds Render's DNS records at his registrar (lower TTL a day before); 301 redirects for old `.html` URLs; verify forms in production

@@ -7,9 +7,9 @@ import { zodFieldErrors } from "@/lib/action-result";
 import { ARTWORK_MAX_BYTES, checkArtwork } from "@/lib/artwork";
 import { getDb, schema } from "@/lib/db";
 import { clip, BodyTooLargeError, readFormDataLimited } from "@/lib/http";
-import { getGarment } from "@/lib/garments";
 import { issueCoupon } from "@/lib/coupon-store";
 import { upsertLead } from "@/lib/leads";
+import { mockupSummary } from "@/lib/mockup-summary";
 import { MOCKUP_ARTWORK_KINDS, MOCKUP_RENDER_MAX_BYTES, mockupPayloadSchema } from "@/lib/mockup-schema";
 import { confirmCustomer, notifyOwner } from "@/lib/notify";
 import { clientIp, LIMITS, rateLimit } from "@/lib/rate-limit";
@@ -18,6 +18,16 @@ import { verifyTurnstile } from "@/lib/turnstile";
 
 /** Original artwork (≤ 20 MB) + up to 2 rendered mockups (≤ 8 MB each) + form overhead. */
 const MAX_REQUEST_BYTES = ARTWORK_MAX_BYTES + 2 * MOCKUP_RENDER_MAX_BYTES + 1024 * 1024;
+
+/** Rendered mockups are exported at template size; anything far larger is not ours. */
+const MAX_RENDER_PX = 4096;
+
+/** Width/height from a PNG's IHDR chunk (bytes 16–23, big-endian). Caller has checked the signature. */
+function pngSize(bytes: Uint8Array): { width: number; height: number } {
+  if (bytes.byteLength < 24) return { width: 0, height: 0 };
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  return { width: view.getUint32(16), height: view.getUint32(20) };
+}
 
 const fail = (error: string, status: number, fieldErrors?: Record<string, string>) =>
   NextResponse.json({ ok: false, error, ...(fieldErrors ? { fieldErrors } : {}) }, { status });
@@ -94,6 +104,12 @@ export async function POST(request: Request) {
     if (!check.ok || check.kind !== "png") {
       return fail("Something went wrong rendering your mockup. Please try again.", 400);
     }
+    // Renders are template-sized (1000 px wide); refuse oversized dimensions so a tiny,
+    // highly compressed PNG can't decompress into a huge image in someone's mail client.
+    const { width, height } = pngSize(bytes);
+    if (width < 1 || height < 1 || width > MAX_RENDER_PX || height > MAX_RENDER_PX) {
+      return fail("Something went wrong rendering your mockup. Please try again.", 400);
+    }
     renders.push({ view: key.slice("mockup-".length), bytes });
   }
 
@@ -136,16 +152,7 @@ export async function POST(request: Request) {
     return fail("We couldn't store your files. Please try again or email us.", 502);
   }
 
-  const garment = getGarment(data.garment);
-  const colorRows = garment.colorZones.map((zone) => ({ label: zone.label, hex: data.colors[zone.id] ?? "" }));
-  const viewRows = data.views.map((entry) => {
-    const view = garment.views.find((v) => v.id === entry.view)!;
-    const area = view.printAreas.find((a) => a.id === entry.printArea) ?? view.printAreas[0]!;
-    return { view: view.label, area: area.label };
-  });
-  const sizeRows = Object.entries(data.sizes)
-    .filter(([, qty]) => qty > 0)
-    .map(([size, qty]) => `${qty} × ${size}`);
+  const { garment, colorRows, viewRows, sizeRows } = mockupSummary(data.garment, data.colors, data.views, data.sizes);
 
   let mockupId: string;
   let leadId: string;
@@ -224,7 +231,7 @@ export async function POST(request: Request) {
     data.email,
     "Your Charly's mockup is ready 🐾 + 15% off inside",
     MockupCustomerEmail({
-      name: clip(data.name ?? "there", 40),
+      name: data.name ? clip(data.name, 40) : "there",
       garmentName: garment.name,
       colors: colorRows,
       views: viewRows,
@@ -233,6 +240,12 @@ export async function POST(request: Request) {
       mockupId,
     }),
     { mockupId, leadId },
+    // Attach the PNGs too: inline images use signed URLs that expire after 7 days.
+    renders.map((r) => ({
+      filename: `charlys-mockup-${data.garment}-${r.view}.png`,
+      content: r.bytes,
+      contentType: "image/png",
+    })),
   );
 
   // Fresh short-lived links for the success screen.

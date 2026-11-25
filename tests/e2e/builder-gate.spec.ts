@@ -94,7 +94,7 @@ test("happy path: success screen with coupon ticket, downloads and a stored lead
   expect(saved).toContain('"step":1');
 });
 
-test("requesting a quote re-sends the design and re-uses the coupon code", async ({ page }) => {
+test("requesting a quote flags the sent mockup without re-sending it", async ({ page }) => {
   const suffix = `${Date.now()}${test.info().workerIndex}`;
   const email = `builder-quote-${suffix}@example.com`;
   await openGateWithArtwork(page);
@@ -105,12 +105,14 @@ test("requesting a quote re-sends the design and re-uses the coupon code", async
   await expect(success).toBeVisible({ timeout: 30_000 });
   const firstCode = await success.getByText(/CHARLY-[A-Z2-9]{4}-[A-Z2-9]{4}/).textContent();
 
-  // The re-send needs a fresh single-use Turnstile token.
+  // The quote request needs a fresh single-use Turnstile token.
   await expect(page.getByTestId("turnstile-token")).not.toHaveValue("", { timeout: 20_000 });
+  const quoteCall = page.waitForRequest((r) => /\/api\/mockups\/[0-9a-f-]{36}\/quote$/.test(r.url()));
   await success.getByTestId("request-quote").click();
+  await quoteCall;
   await expect(page.getByTestId("quote-requested")).toBeVisible({ timeout: 30_000 });
-  // Same coupon code again (one per email), now flagged as a re-send.
+  // Same success screen and code; nothing was re-uploaded.
   await expect(success.getByText(/CHARLY-[A-Z2-9]{4}-[A-Z2-9]{4}/)).toHaveText(firstCode ?? "");
-  await expect(success.getByText("Here's your code again.")).toBeVisible();
+  await expect(success.getByTestId("request-quote")).toHaveCount(0);
   await expect(success.getByTestId("design-another")).toBeVisible();
 });

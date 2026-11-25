@@ -75,7 +75,6 @@ export function Builder() {
   const [success, setSuccess] = useState<MockupResult | null>(null);
   const [exportedUrls, setExportedUrls] = useState<Partial<Record<ViewId, string>>>({});
   const [quoteRequested, setQuoteRequested] = useState(false);
-  const lastContactRef = useRef<GateContact | null>(null);
 
   // Only one object URL alive at a time; revoked on replace and on unmount.
   useEffect(
@@ -328,7 +327,6 @@ export function Builder() {
         if (blob) urls[view as ViewId] = URL.createObjectURL(blob);
       }
       setExportedUrls(urls);
-      lastContactRef.current = contact;
       setQuoteRequested((prev) => prev || wantsQuote);
       setSuccess({ mockupId: json.mockupId, coupon: json.coupon, mockups: json.mockups });
     } catch {
@@ -340,11 +338,30 @@ export function Builder() {
     }
   };
 
-  /** Success-screen CTA: re-sends the same request with wantsQuote: true. */
+  /**
+   * Success-screen CTA: flags the mockup that was just sent (POST /api/mockups/<id>/quote)
+   * rather than re-uploading it, so there's no duplicate row or second customer email.
+   */
   const requestQuote = async () => {
-    const contact = lastContactRef.current;
-    if (!contact || quoteRequested || sending) return;
-    await send(contact, true);
+    if (!success || quoteRequested || sending) return;
+    track("quote_requested", { garment: design.garment });
+    setSending(true);
+    setGateError(null);
+    try {
+      const res = await fetch(`/api/mockups/${success.mockupId}/quote`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ turnstileToken }),
+      });
+      const json = (await res.json()) as { ok: true } | { ok: false; error: string };
+      if (json.ok) setQuoteRequested(true);
+      else setGateError(json.error ?? "Something went wrong. Please try again or email us.");
+    } catch {
+      setGateError("Something went wrong. Please try again or email us.");
+    } finally {
+      setSending(false);
+      refreshTurnstile();
+    }
   };
 
   const designAnother = () => {
@@ -354,7 +371,6 @@ export function Builder() {
     setQuoteRequested(false);
     setGateError(null);
     setGateFieldErrors(null);
-    lastContactRef.current = null;
     if (fileUrl) URL.revokeObjectURL(fileUrl);
     setFile(null);
     setFileUrl(null);
