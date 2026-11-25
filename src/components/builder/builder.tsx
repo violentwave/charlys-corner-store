@@ -5,10 +5,11 @@
  * (ssr:false) because Konva must never run on the server.
  */
 import { useEffect, useRef, useState } from "react";
+import { z } from "zod";
 
 import { detectArtworkKind, ARTWORK_MAX_BYTES } from "@/lib/artwork";
-import { getGarment, GARMENTS, type ViewId } from "@/lib/garments";
-import { MOCKUP_ARTWORK_KINDS } from "@/lib/mockup-schema";
+import { getGarment, GARMENTS, isHexColor, type GarmentId, type ViewId } from "@/lib/garments";
+import { MOCKUP_ARTWORK_KINDS, mockupViewSchema } from "@/lib/mockup-schema";
 import { track } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -19,7 +20,14 @@ import { DetailsStep } from "./details-step";
 import { GateStep, type GateContact } from "./gate-step";
 import { GarmentPicker } from "./garment-picker";
 import { GarmentStage, loadTemplate, type GarmentStageHandle } from "./garment-stage";
-import { initialDesign, toPayloadDesign, useBuilderState, type BuilderStep } from "./use-builder-state";
+import {
+  designFromRestore,
+  initialDesign,
+  toPayloadDesign,
+  useBuilderState,
+  type BuilderStep,
+  type RestoredDesign,
+} from "./use-builder-state";
 import { SuccessScreen, type MockupResult } from "./success-screen";
 
 const STEPS: { id: BuilderStep; label: string }[] = [
@@ -31,6 +39,16 @@ const STEPS: { id: BuilderStep; label: string }[] = [
 ];
 
 const raf = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+/** File name for a restored artwork: the key's basename, or a friendly fallback. */
+function safeUrlFileName(url: string): string {
+  try {
+    const name = new URL(url).pathname.split("/").pop();
+    return name && name.length > 0 && name.length <= 255 ? name : "your-design.png";
+  } catch {
+    return "your-design.png";
+  }
+}
 
 export function Builder() {
   const { state, dispatch, canUndo, canRedo, undo, redo } = useBuilderState();
@@ -66,6 +84,97 @@ export function Builder() {
     },
     [fileUrl],
   );
+
+  // Restore-design deep link (email CTA: /design?mockup=<id>). Runs once per mount.
+  const restoredRef = useRef(false);
+  const [restoreStatus, setRestoreStatus] = useState<"loading" | "loaded" | "failed" | null>(null);
+
+  const restoreMockup = async (mockupId: string) => {
+    // One deferred tick: no setState may run synchronously inside the mount effect.
+    await Promise.resolve();
+    setRestoreStatus("loading");
+    try {
+      const res = await fetch(`/api/mockups/${mockupId}`);
+      if (!res.ok) throw new Error("restore request failed");
+      const json = (await res.json()) as
+        | { ok: true; design: RestoredDesign; artwork: { url: string } }
+        | { ok: false; error: string };
+      if (!json.ok) throw new Error(json.error);
+      // Re-validate on the client: the same schemas the server used for the row.
+      const garmentEnum = z.enum(GARMENTS.map((g) => g.id) as [GarmentId, ...GarmentId[]]);
+      const garmentId = garmentEnum.safeParse(json.design.garment).success ? json.design.garment : null;
+      const views = json.design.views.flatMap((entry) => {
+        const parsed = mockupViewSchema.safeParse(entry);
+        return parsed.success ? [parsed.data] : [];
+      });
+      if (!garmentId || views.length === 0) throw new Error("restore payload invalid");
+      const viewEntries = views.map((v) => ({ view: v.view as ViewId, printArea: v.printArea, transform: v.transform }));
+      const colors = Object.fromEntries(Object.entries(json.design.colors).filter(([, hex]) => isHexColor(hex)));
+
+      // The artwork is cross-origin (R2/MinIO): fetch it as a Blob and use an object
+      // URL, so the canvas stays untainted and the mockup can still be exported.
+      const blob = await fetch(json.artwork.url).then((r) => {
+        if (!r.ok) throw new Error("artwork fetch failed");
+        return r.blob();
+      });
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      const kind = detectArtworkKind(bytes);
+      const builderKind = MOCKUP_ARTWORK_KINDS.find((k) => k === kind);
+      if (!builderKind) throw new Error("artwork not drawable");
+      const fileName = safeUrlFileName(json.artwork.url);
+      const file = new File([blob], fileName, { type: blob.type || "image/png" });
+      const objectUrl = URL.createObjectURL(file);
+      let img: HTMLImageElement;
+      try {
+        img = await loadTemplate(objectUrl);
+      } catch {
+        URL.revokeObjectURL(objectUrl);
+        throw new Error("artwork decode failed");
+      }
+      if (img.naturalWidth === 0) {
+        URL.revokeObjectURL(objectUrl);
+        throw new Error("artwork has no size");
+      }
+
+      dispatch({
+        type: "hydrate",
+        step: 3,
+        design: designFromRestore(
+          { garment: garmentId, colors, views: viewEntries, sizes: json.design.sizes },
+          {
+            name: fileName,
+            kind: builderKind,
+            naturalWidth: img.naturalWidth,
+            naturalHeight: img.naturalHeight,
+          },
+        ),
+      });
+      setFile(file);
+      setFileUrl(objectUrl);
+      setArtworkImg(img);
+      setRestoreStatus("loaded");
+    } catch {
+      // Unknown id, expired link, or a hiccup: friendly message, fresh builder.
+      dispatch({ type: "hydrate", step: 1, design: initialDesign(GARMENTS[0]!.id) });
+      setRestoreStatus("failed");
+    }
+  };
+
+  useEffect(() => {
+    const mockupId = new URLSearchParams(window.location.search).get("mockup");
+    if (!mockupId) return;
+    // Deferred: the restore fetch (and its status updates) must not run inside the
+    // effect body — React runs this after paint, same as any fetch-on-mount. The
+    // guard lives in the callback so StrictMode's setup→cleanup→setup doesn't
+    // swallow the run (dev double-invokes effects with this ref already set).
+    const timer = setTimeout(() => {
+      if (restoredRef.current) return;
+      restoredRef.current = true;
+      void restoreMockup(mockupId);
+    }, 0);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Object URLs for the success screen: revoked when replaced or on unmount.
   useEffect(
@@ -297,6 +406,19 @@ export function Builder() {
           </Card>
         ) : (
           <>
+            {restoreStatus ? (
+              <p
+                role="status"
+                data-testid="restore-status"
+                className={restoreStatus === "failed" ? "text-danger text-sm" : "text-neon-cyan text-sm"}
+              >
+                {restoreStatus === "loading"
+                  ? "Loading your saved design…"
+                  : restoreStatus === "loaded"
+                    ? "Loaded your saved design."
+                    : "We couldn't load that saved design — starting fresh."}
+              </p>
+            ) : null}
             <ol className="flex flex-wrap items-center gap-1.5" aria-label="Builder steps">
               {STEPS.map(({ id, label }) => (
                 <li key={id} className="flex items-center gap-1.5" aria-current={step === id ? "step" : undefined}>
@@ -306,8 +428,8 @@ export function Builder() {
                     aria-label={`Step ${id}: ${label}`}
                     className={
                       step === id
-                        ? "bg-neon-pink text-bg-0 focus-visible:ring-neon-cyan rounded-full px-3 py-1 text-xs font-semibold focus-visible:ring-2 focus-visible:outline-none"
-                        : "border-border bg-bg-2 text-text-2 focus-visible:ring-neon-cyan hover:border-border-strong rounded-full border px-3 py-1 text-xs focus-visible:ring-2 focus-visible:outline-none"
+                        ? "bg-neon-pink text-bg-0 focus-visible:ring-neon-cyan flex min-h-11 items-center rounded-full px-3 text-xs font-semibold focus-visible:ring-2 focus-visible:outline-none"
+                        : "border-border bg-bg-2 text-text-2 focus-visible:ring-neon-cyan hover:border-border-strong flex min-h-11 items-center rounded-full border px-3 text-xs focus-visible:ring-2 focus-visible:outline-none"
                     }
                   >
                     {id}. {label}
