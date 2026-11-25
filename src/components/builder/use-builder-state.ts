@@ -427,7 +427,9 @@ export function designFromRestore(restored: RestoredDesign, meta: Omit<ArtworkMe
   );
   const colors: MockupColors = {};
   for (const zone of garment.colorZones) {
-    colors[zone.id] = isHexColor(restored.colors[zone.id] ?? "") ? restored.colors[zone.id]! : garment.defaultColors[zone.id] ?? "#f4f4f4";
+    colors[zone.id] = isHexColor(restored.colors[zone.id] ?? "")
+      ? restored.colors[zone.id]!
+      : (garment.defaultColors[zone.id] ?? "#f4f4f4");
   }
   return { garment: garment.id, colors, views, sizes, notes: "", referral: {} };
 }

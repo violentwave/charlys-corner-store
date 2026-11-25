@@ -283,7 +283,13 @@ describe("designFromRestore (deep link)", () => {
       {
         garment: "hat",
         colors: { body: "#ff2e97", notAZone: "#000000" },
-        views: [{ view: "front", printArea: "made-up-area", transform: { ...fitTransform({ x: 0, y: 0, w: 100, h: 100 }, 600, 300), rotation: 999 } }],
+        views: [
+          {
+            view: "front",
+            printArea: "made-up-area",
+            transform: { ...fitTransform({ x: 0, y: 0, w: 100, h: 100 }, 600, 300), rotation: 999 },
+          },
+        ],
         sizes: { OSFA: 3, "2XL": 5 },
       },
       meta,

@@ -97,8 +97,7 @@ export function Builder() {
       const res = await fetch(`/api/mockups/${mockupId}`);
       if (!res.ok) throw new Error("restore request failed");
       const json = (await res.json()) as
-        | { ok: true; design: RestoredDesign; artwork: { url: string } }
-        | { ok: false; error: string };
+        { ok: true; design: RestoredDesign; artwork: { url: string } } | { ok: false; error: string };
       if (!json.ok) throw new Error(json.error);
       // Re-validate on the client: the same schemas the server used for the row.
       const garmentEnum = z.enum(GARMENTS.map((g) => g.id) as [GarmentId, ...GarmentId[]]);
@@ -108,7 +107,11 @@ export function Builder() {
         return parsed.success ? [parsed.data] : [];
       });
       if (!garmentId || views.length === 0) throw new Error("restore payload invalid");
-      const viewEntries = views.map((v) => ({ view: v.view as ViewId, printArea: v.printArea, transform: v.transform }));
+      const viewEntries = views.map((v) => ({
+        view: v.view as ViewId,
+        printArea: v.printArea,
+        transform: v.transform,
+      }));
       const colors = Object.fromEntries(Object.entries(json.design.colors).filter(([, hex]) => isHexColor(hex)));
 
       // The artwork is cross-origin (R2/MinIO): fetch it as a Blob and use an object
