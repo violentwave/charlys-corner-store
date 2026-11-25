@@ -1,6 +1,5 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { getGarment } from "@/lib/garments";
@@ -14,7 +13,7 @@ afterEach(() => cleanup());
 describe("ColorPicker", () => {
   it("labels swatches with the color name and marks the selected one with aria-pressed", () => {
     const onZoneColor = vi.fn();
-    render(<ColorPicker garment={tshirt} colors={{ body: "#1b1b1f" }} onZoneColor={onZoneColor} />);
+    render(<ColorPicker garment={tshirt} colors={{ body: "#25282a" }} onZoneColor={onZoneColor} />);
 
     const black = screen.getByRole("button", { name: "Black" });
     const white = screen.getByRole("button", { name: "White" });
@@ -28,52 +27,14 @@ describe("ColorPicker", () => {
   it("dispatches a hex when a swatch is clicked", async () => {
     const user = userEvent.setup();
     const onZoneColor = vi.fn();
-    render(<ColorPicker garment={tshirt} colors={{ body: "#f4f4f4" }} onZoneColor={onZoneColor} />);
+    render(<ColorPicker garment={tshirt} colors={{ body: "#ffffff" }} onZoneColor={onZoneColor} />);
     await user.click(screen.getByRole("button", { name: "Navy" }));
-    expect(onZoneColor).toHaveBeenCalledWith("body", "#1f2a44");
+    expect(onZoneColor).toHaveBeenCalledWith("body", "#263147");
   });
 
-  it("accepts a valid custom hex and notes the closest-blank match", async () => {
-    const user = userEvent.setup();
-    const onZoneColor = vi.fn();
-    function Harness() {
-      const [colors, setColors] = useState({ body: "#f4f4f4" });
-      return (
-        <ColorPicker
-          garment={tshirt}
-          colors={colors}
-          onZoneColor={(zone, hex) => {
-            onZoneColor(zone, hex);
-            setColors((c) => ({ ...c, [zone]: hex }));
-          }}
-        />
-      );
-    }
-    render(<Harness />);
-
-    const hex = screen.getByLabelText("Custom Shirt hex color");
-    await user.type(hex, "#ff2e97");
-    expect(onZoneColor).toHaveBeenCalledWith("body", "#ff2e97");
-    expect(screen.getByText(/We'll match the closest available blank/i)).toBeInTheDocument();
-  });
-
-  it("accepts a hex typed without the # and normalizes it", async () => {
-    const user = userEvent.setup();
-    const onZoneColor = vi.fn();
-    render(<ColorPicker garment={tshirt} colors={{ body: "#f4f4f4" }} onZoneColor={onZoneColor} />);
-    await user.type(screen.getByLabelText("Custom Shirt hex color"), "4b2e83");
-    expect(onZoneColor).toHaveBeenCalledWith("body", "#4b2e83");
-  });
-
-  it("shows a friendly error and does not dispatch an invalid hex", async () => {
-    const user = userEvent.setup();
-    const onZoneColor = vi.fn();
-    render(<ColorPicker garment={tshirt} colors={{ body: "#f4f4f4" }} onZoneColor={onZoneColor} />);
-
-    const hex = screen.getByLabelText("Custom Shirt hex color");
-    await user.type(hex, "zzz");
-    expect(onZoneColor).not.toHaveBeenCalled();
-    expect(screen.getByRole("alert")).toHaveTextContent(/6-digit hex/i);
+  it("offers no free hex entry: only real blank colors (decided 2026-11-25)", () => {
+    render(<ColorPicker garment={tshirt} colors={{ body: "#ffffff" }} onZoneColor={vi.fn()} />);
+    expect(screen.queryByLabelText(/hex color/i)).toBeNull();
   });
 
   it("labels the zone group with the config's zone label", () => {

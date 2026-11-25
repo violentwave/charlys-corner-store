@@ -95,14 +95,14 @@ describe("builderReducer — artwork", () => {
 
 describe("builderReducer — colors and garment switch", () => {
   it("sets a zone color when it is a valid hex and ignores garbage", () => {
-    let state = builderReducer(start(), { type: "setZoneColor", zone: "body", hex: "#ff2e97" });
-    expect(state.design.colors.body).toBe("#ff2e97");
+    let state = builderReducer(start(), { type: "setZoneColor", zone: "body", hex: "#d50032" });
+    expect(state.design.colors.body).toBe("#d50032");
     state = builderReducer(state, { type: "setZoneColor", zone: "body", hex: "neon" });
-    expect(state.design.colors.body).toBe("#ff2e97");
+    expect(state.design.colors.body).toBe("#d50032");
   });
 
   it("carries shared zone colors on a garment switch, defaults new zones, clears views and invalid sizes", () => {
-    let state = builderReducer(start(), { type: "setZoneColor", zone: "body", hex: "#ff2e97" });
+    let state = builderReducer(start(), { type: "setZoneColor", zone: "body", hex: "#d50032" });
     state = builderReducer(state, { type: "setSize", size: "2XL", qty: 4 });
     state = builderReducer(state, {
       type: "placeArtwork",
@@ -112,7 +112,7 @@ describe("builderReducer — colors and garment switch", () => {
     state = builderReducer(state, { type: "selectGarment", garmentId: "raglan" });
 
     expect(state.design.garment).toBe("raglan");
-    expect(state.design.colors.body).toBe("#ff2e97"); // carried over
+    expect(state.design.colors.body).toBe("#d50032"); // carried over
     expect(state.design.colors.sleeves).toBe(getGarment("raglan").defaultColors.sleeves);
     expect(Object.keys(state.design.views).sort()).toEqual(["back", "front"]);
     expect(state.design.views.front?.artwork).toBeNull(); // geometry differs per garment
@@ -167,7 +167,7 @@ describe("builderReducer — details don't flood history", () => {
 
 describe("sessionStorage round-trip (jsdom)", () => {
   it("restores design + step and drops stale views/sizes", () => {
-    let state = builderReducer(start(), { type: "setZoneColor", zone: "body", hex: "#ff2e97" });
+    let state = builderReducer(start(), { type: "setZoneColor", zone: "body", hex: "#d50032" });
     state = builderReducer(state, { type: "setSize", size: "2XL", qty: 2 });
     state = builderReducer(state, {
       type: "placeArtwork",
@@ -179,7 +179,7 @@ describe("sessionStorage round-trip (jsdom)", () => {
     const restored = loadPersistedBuilderState();
     expect(restored).not.toBeNull();
     expect(restored!.step).toBe(3);
-    expect(restored!.design.colors.body).toBe("#ff2e97");
+    expect(restored!.design.colors.body).toBe("#d50032");
     expect(restored!.design.views.front?.artwork?.name).toBe("art.png");
     expect(restored!.design.views.front?.artwork?.transform.width).toBeGreaterThan(0);
 
@@ -214,7 +214,7 @@ describe("sessionStorage round-trip (jsdom)", () => {
 
 describe("toPayloadDesign", () => {
   it("maps the design 1:1 onto mockupPayloadSchema's design portion", () => {
-    let state = builderReducer(start(), { type: "setZoneColor", zone: "body", hex: "#ff2e97" });
+    let state = builderReducer(start(), { type: "setZoneColor", zone: "body", hex: "#d50032" });
     state = builderReducer(state, {
       type: "placeArtwork",
       views: ["front"],
@@ -282,7 +282,7 @@ describe("designFromRestore (deep link)", () => {
     const design = designFromRestore(
       {
         garment: "hat",
-        colors: { body: "#ff2e97", notAZone: "#000000" },
+        colors: { body: "#d50032", notAZone: "#000000" },
         views: [
           {
             view: "front",

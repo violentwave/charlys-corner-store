@@ -44,10 +44,10 @@ test("changing a zone color marks the swatch", async ({ page }) => {
   await openBuilder(page);
   await page.getByRole("button", { name: "Step 2: Colors" }).click();
   const shirtGroup = page.getByRole("group", { name: "Shirt color" });
-  await shirtGroup.getByRole("button", { name: "Black" }).click();
-  await expect(shirtGroup.getByRole("button", { name: "Black" })).toHaveAttribute("aria-pressed", "true");
-  await expect(shirtGroup.getByRole("button", { name: "Black" })).toHaveText("✓");
-  await expect(shirtGroup.getByRole("button", { name: "White" })).toHaveAttribute("aria-pressed", "false");
+  await shirtGroup.getByRole("button", { name: "Black", exact: true }).click();
+  await expect(shirtGroup.getByRole("button", { name: "Black", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(shirtGroup.getByRole("button", { name: "Black", exact: true })).toHaveText("✓");
+  await expect(shirtGroup.getByRole("button", { name: "White", exact: true })).toHaveAttribute("aria-pressed", "false");
   // Canvas still there with the new color (no theme on the garment, just the fill).
   await expect(page.getByTestId("builder-canvas")).toBeVisible();
 });
@@ -133,19 +133,17 @@ test("front/back toggle gives each side its own artwork", async ({ page }) => {
 test("a refresh keeps the garment, colors and step", async ({ page }) => {
   await openBuilder(page);
   await page.getByTestId("garment-hoodie").click(); // advances to Colors
-  await page.getByRole("group", { name: "Body color" }).getByRole("button", { name: "Black" }).click();
-  await expect(page.getByRole("group", { name: "Body color" }).getByRole("button", { name: "Black" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  await page.getByRole("group", { name: "Body color" }).getByRole("button", { name: "Black", exact: true }).click();
+  await expect(
+    page.getByRole("group", { name: "Body color" }).getByRole("button", { name: "Black", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
 
   await page.reload();
   // The step is persisted too: the builder reopens on Colors.
   await expect(page.getByRole("group", { name: "Body color" })).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByRole("group", { name: "Body color" }).getByRole("button", { name: "Black" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  await expect(
+    page.getByRole("group", { name: "Body color" }).getByRole("button", { name: "Black", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "Step 1: Garment" }).click();
   await expect(page.getByTestId("garment-hoodie")).toHaveAttribute("aria-pressed", "true");
 });

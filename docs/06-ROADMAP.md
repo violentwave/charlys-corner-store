@@ -60,6 +60,12 @@ Each page prompt is shipped by the agent (Ship section); Claude reviews every me
 - [x] Playwright e2e for the full flow; mobile QA
 - [x] Builder embedded at the top of the home page (Logan, 2026-11-25)
 
+## Phase 4.5: Accounts + builder v2 (Logan, 2026-11-25)
+
+- [x] Foundation (Claude): `users`/`sessions`/`auth_tokens` tables; scrypt passwords; `/api/auth/*` (signup, verify, resend, login, logout, forgot, reset, me); `/api/account/mockups`; full Gildan color lists, server-enforced; `intent: "email" | "order"` on `/api/mockups`
+- [ ] Account pages: sign up, verify code, log in, forgot/reset password, "My designs" + order history (prompt P45-1)
+- [ ] Builder v2: cleaner UI + clear instructions, color strip, sign-in before upload, two paths (email mockup / order request), `/api/mockups` requires a verified account (prompt P45-2)
+
 ## Phase 5: Shop and checkout
 
 - [ ] Payments provider decision (Square vs Stripe) and catalog import of the 9 current products + variants

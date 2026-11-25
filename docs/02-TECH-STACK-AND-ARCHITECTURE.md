@@ -74,6 +74,10 @@ leads        id, email (unique, citext), name, phone, referral_source, marketing
 mockups      id, lead_id, coupon_id, garment, colors jsonb, views jsonb
              (per view: view, printArea, transform{x,y,width,height,rotation,flipX}, mockupKey), sizes jsonb, notes,
              wants_quote, artwork_key/name/content_type/size_bytes, status (request_status), created_at
+users        id, email (unique, lowercase), password_hash (scrypt), name, email_verified_at, lead_id, created_at, updated_at
+sessions     id, user_id, token_hash (sha256 of cookie token, unique), created_at, expires_at (30 days)
+auth_tokens  id, user_id, purpose (verify_email|reset_password), token_hash, attempts, expires_at, used_at
+             mockups also carry kind (mockup|order) and user_id
 coupons      id, lead_id (unique: one per email), code (unique), percent_off, min_order_cents,
              status (issued|eligible|redeemed|expired), issued_at, expires_at, redeemed_order_ref
 orders       id, lead_id, provider (square|stripe), provider_order_id, total_cents, coupon_id, created_at
@@ -136,6 +140,9 @@ See `.env.example`. Never commit `.env*` (except the example). Secrets live in t
 | 2026-11-23 | Builder ships 6 garments (adds Polo + Tank)                                                                                                                                  | Owner answer                                                                              |
 | 2026-11-23 | Owner notifications go to one inbox: CHARLYSCORNERSTORE@GMAIL.COM                                                                                                            | Owner answer                                                                              |
 | 2026-11-25 | **Garment templates: original vector drawings (Option A)**, neutral/realistic, no site theme on garments or canvas backdrop. Layer contract in docs/04 | Logan |
+| 2026-11-25 | **Customer accounts: email + password** (scrypt via `node:crypto`, hashed session tokens in Postgres, httpOnly cookie, email verified by 6-digit code, reset by one-time link). Account required before uploading artwork or sending a mockup/order. "My designs" + order history for signed-in users. No auth vendor (portability) | Logan (options) / Claude (implementation) |
+| 2026-11-25 | **Builder colors: full Gildan list per style, hue-sorted strip, no custom hex** (server-enforced) | Logan |
+| 2026-11-25 | **Builder has two paths: "Email me this mockup" and "Order this design" (order request; owner confirms price + invoices)**. Online payment for custom orders waits for pricing + Square/Stripe | Logan |
 | 2026-11-25 | **The mockup builder is the top of the home page** (first thing visitors see); `/design` stays as its own page for links, email CTAs and restore links | Logan |
 | 2026-11-25 | **Canvas lib: Konva + react-konva** (MIT licensed, free for commercial use) | Logan |
 | 2026-11-25 | Phase 4 backend: `coupons` (one per lead, unique index) + `mockups` tables (migration 0001); `issueCoupon()` idempotent and race-safe; shared `mockupPayloadSchema` | Claude |

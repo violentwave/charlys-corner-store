@@ -18,10 +18,17 @@
  * Print-area rects are in template pixels (each view's `width` x `height`).
  */
 
+import { GILDAN_18500, GILDAN_5000, sortByHue } from "./gildan-colors";
+
 export type GarmentId = "tshirt" | "raglan" | "hoodie" | "hat" | "polo" | "tank";
 export type ViewId = "front" | "back";
 
-export type GarmentColor = { name: string; hex: string };
+export type GarmentColor = {
+  name: string;
+  hex: string;
+  /** True when no published hex existed and the value was matched by eye. */
+  approx?: boolean;
+};
 
 export type ColorZone = { id: string; label: string };
 
@@ -56,30 +63,18 @@ export type GarmentConfig = {
   /** Default color per zone (hex). */
   defaultColors: Record<string, string>;
   palette: GarmentColor[];
-  /** Customers may pick any hex; the UI notes "we'll match the closest available blank". */
+  /**
+   * Free hex entry. Off for every garment since 2026-11-25: customers pick from the real
+   * blank colors only (the color strip), and the server rejects anything else.
+   */
   allowCustomHex: boolean;
   views: GarmentView[];
   sizes: string[];
 };
 
-// TODO(content): owner to confirm which Gildan colors are stocked (Brief §6).
-// Hex values approximate common Gildan blank colors.
-const SHIRT_PALETTE: GarmentColor[] = [
-  { name: "White", hex: "#f4f4f4" },
-  { name: "Black", hex: "#1b1b1f" },
-  { name: "Sport Grey", hex: "#9a9ea3" },
-  { name: "Charcoal", hex: "#4a4c50" },
-  { name: "Navy", hex: "#1f2a44" },
-  { name: "Royal", hex: "#2453a6" },
-  { name: "Carolina Blue", hex: "#7ba4db" },
-  { name: "Red", hex: "#c62828" },
-  { name: "Maroon", hex: "#5b1a2a" },
-  { name: "Orange", hex: "#e8632b" },
-  { name: "Gold", hex: "#f2b230" },
-  { name: "Forest Green", hex: "#1f4a32" },
-  { name: "Purple", hex: "#4b2e83" },
-  { name: "Light Pink", hex: "#f2b8c9" },
-];
+// Every Gildan blank color for the style, sorted by hue for the color strip (src/lib/gildan-colors.ts).
+const SHIRT_PALETTE: GarmentColor[] = sortByHue(GILDAN_5000);
+const HOODIE_PALETTE: GarmentColor[] = sortByHue(GILDAN_18500);
 
 // TODO(content): owner to confirm hat colors.
 const HAT_PALETTE: GarmentColor[] = [
@@ -158,9 +153,9 @@ export const GARMENTS: GarmentConfig[] = [
     name: "T-Shirt",
     description: "Classic short-sleeve tee.",
     colorZones: [{ id: "body", label: "Shirt" }],
-    defaultColors: { body: "#f4f4f4" },
+    defaultColors: { body: "#ffffff" },
     palette: SHIRT_PALETTE,
-    allowCustomHex: true,
+    allowCustomHex: false,
     views: [
       view("tshirt", "front", ["body"], [FRONT_CHEST, LEFT_CHEST, FULL_FRONT]),
       view("tshirt", "back", ["body"], [FULL_BACK]),
@@ -175,9 +170,9 @@ export const GARMENTS: GarmentConfig[] = [
       { id: "body", label: "Body" },
       { id: "sleeves", label: "Sleeves & collar" },
     ],
-    defaultColors: { body: "#f4f4f4", sleeves: "#1f2a44" },
+    defaultColors: { body: "#ffffff", sleeves: "#263147" },
     palette: SHIRT_PALETTE,
-    allowCustomHex: true,
+    allowCustomHex: false,
     views: [
       view("raglan", "front", ["body", "sleeves"], [FRONT_CHEST, LEFT_CHEST, FULL_FRONT]),
       view("raglan", "back", ["body", "sleeves"], [{ ...FULL_BACK, rect: { ...FULL_BACK.rect, y: 276 } }]),
@@ -193,9 +188,9 @@ export const GARMENTS: GarmentConfig[] = [
       { id: "lining", label: "Hood lining" },
       { id: "drawstrings", label: "Drawstrings" },
     ],
-    defaultColors: { body: "#9a9ea3", lining: "#9a9ea3", drawstrings: "#f4f4f4" },
-    palette: SHIRT_PALETTE,
-    allowCustomHex: true,
+    defaultColors: { body: "#97999b", lining: "#97999b", drawstrings: "#ffffff" },
+    palette: HOODIE_PALETTE,
+    allowCustomHex: false,
     views: [
       view(
         "hoodie",
@@ -231,7 +226,7 @@ export const GARMENTS: GarmentConfig[] = [
     ],
     defaultColors: { front: "#f4f4f4", mesh: "#1b1b1f", brim: "#1b1b1f" },
     palette: HAT_PALETTE,
-    allowCustomHex: true,
+    allowCustomHex: false,
     views: [
       view(
         "hat",
@@ -255,9 +250,9 @@ export const GARMENTS: GarmentConfig[] = [
     name: "Polo",
     description: "Short-sleeve polo with a three-button placket.",
     colorZones: [{ id: "body", label: "Shirt" }],
-    defaultColors: { body: "#f4f4f4" },
+    defaultColors: { body: "#ffffff" },
     palette: SHIRT_PALETTE,
-    allowCustomHex: true,
+    allowCustomHex: false,
     views: [
       view("polo", "front", ["body"], [{ ...LEFT_CHEST, rect: { ...LEFT_CHEST.rect, x: 576, y: 304 } }]),
       view("polo", "back", ["body"], [FULL_BACK]),
@@ -269,9 +264,9 @@ export const GARMENTS: GarmentConfig[] = [
     name: "Tank Top",
     description: "Sleeveless tank.",
     colorZones: [{ id: "body", label: "Shirt" }],
-    defaultColors: { body: "#f4f4f4" },
+    defaultColors: { body: "#ffffff" },
     palette: SHIRT_PALETTE,
-    allowCustomHex: true,
+    allowCustomHex: false,
     views: [
       view(
         "tank",
@@ -313,6 +308,11 @@ export function getGarment(id: GarmentId): GarmentConfig {
 }
 
 const HEX = /^#[0-9a-f]{6}$/i;
+
+/** True when `hex` is one of the garment's palette colors (case-insensitive). */
+export function isPaletteColor(garment: GarmentConfig, hex: string): boolean {
+  return garment.palette.some((c) => c.hex.toLowerCase() === hex.toLowerCase());
+}
 
 /** Palette name for a hex ("Navy"), or "Custom #rrggbb" when it isn't a listed blank color. */
 export function colorName(garment: GarmentConfig, hex: string): string {

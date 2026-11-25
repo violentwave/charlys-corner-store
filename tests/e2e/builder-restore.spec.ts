@@ -15,7 +15,7 @@ async function openAndSubmit(page: Page, email: string) {
   // Hoodie: a distinctive garment (3 color zones, own print areas) so the restore
   // assertions prove garment + colors + print location came from the link.
   await page.getByTestId("garment-hoodie").click();
-  await page.getByRole("group", { name: "Body color" }).getByRole("button", { name: "Black" }).click();
+  await page.getByRole("group", { name: "Body color" }).getByRole("button", { name: "Black", exact: true }).click();
   await page.getByRole("button", { name: "Step 3: Design" }).click();
   await expect(page.getByTestId("artwork-controls")).toBeVisible();
   await page.locator("input[type=file]").setInputFiles("tests/e2e/fixtures/art.png");
@@ -60,10 +60,9 @@ test("the restore link loads garment, colors, print location and artwork at the 
   await page.getByRole("button", { name: "Step 1: Garment" }).click();
   await expect(page.getByTestId("garment-hoodie")).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "Step 2: Colors" }).click();
-  await expect(page.getByRole("group", { name: "Body color" }).getByRole("button", { name: "Black" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  await expect(
+    page.getByRole("group", { name: "Body color" }).getByRole("button", { name: "Black", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("zone-lining")).toBeVisible();
 });
 

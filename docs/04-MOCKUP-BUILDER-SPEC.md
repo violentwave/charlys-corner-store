@@ -7,9 +7,12 @@
 
 ## Flow
 
+> **v2 (decided 2026-11-25, Logan):** customers need an **account (email + password, email verified by a 6-digit code)** before they can upload artwork or send anything. The builder ends in **two clearly separate paths**: **"Email me this mockup"** (mockup + coupon) and **"Order this design"** (an order request with sizes/quantities; the owner confirms the price and sends an invoice; no online payment yet). Garment colors come only from the **full Gildan color list for that style**, shown as a scrollable hue-sorted color strip; no free hex entry. Signed-in customers get **"My designs"** (saved mockups + order history). The builder must feel clean and sharp, with very clear, short instructions at every step. Sections below are updated where they changed.
+
 ```
-1. Garment ─► 2. Colors ─► 3. Design (upload + place, front/back) ─► 4. Details ─► 5. Email gate ─► 6. Success
+1. Garment ─► 2. Colors ─► [sign up / log in + verify email, if needed] ─► 3. Design (upload + place) ─► 4. Choose: Email me this mockup | Order this design ─► 5. Done
 ```
+Garment and color can be explored without an account; the sign-in step appears when the visitor first tries to upload artwork.
 A single page with a stepper (mobile: bottom-sheet steps; desktop: canvas left, controls right). State persists in `sessionStorage` so a refresh doesn't lose work.
 
 ### 1. Choose garment
@@ -40,7 +43,7 @@ Implemented in `src/lib/garments.ts` (with `highlightOpacity()`, `printedInches(
 
 ### 2. Choose color(s)
 - **Multi-zone color** is what makes "custom color(s)" real: raglan body plus sleeves, hat front/mesh/brim, hoodie body plus hood lining.
-- Curated swatch palette per garment (named, aria-labelled) plus a "Custom" picker (hex). Show a note when a custom hex isn't a stocked blank: "We'll match the closest available blank."
+- **Color strip (v2):** every Gildan blank color for the garment's style (`src/lib/gildan-colors.ts`: 5000 tee list, 18500 hoodie list; hats curated), sorted by hue, in a horizontally scrolling strip with the selected color's name always shown. Keyboard: arrow keys move through colors. No custom hex: the server rejects colors not in the garment's palette (`allowCustomHex: false`). Owner confirms styles/colors (Brief §6).
 - Recolor technique: per zone, fill the mask with the chosen color → composite the **shading layer with `multiply`** (and an optional `screen` highlight layer) so folds and texture survive. Templates: see **Garment templates** below.
 - **Garments stay neutral and realistic.** The site's neon theme never touches the garment, the canvas backdrop (plain light studio gray), or the exported mockup: the customer's colors and artwork are the only thing on show. Theme lives in the surrounding UI only.
 

@@ -28,7 +28,7 @@ const postMockup = async (payloadOverride: Record<string, unknown> = {}) => {
     phone: "772-555-0100",
     marketingOptIn: false,
     garment: "tshirt",
-    colors: { body: "#2233aa" },
+    colors: { body: "#263147" },
     views: [
       {
         view: "front",
@@ -95,7 +95,7 @@ describe.skipIf(!hasTestDb)("GET /api/mockups/[id] (real Postgres)", () => {
     // The design itself round-trips.
     expect(json.design).toMatchObject({
       garment: "tshirt",
-      colors: { body: "#2233aa" },
+      colors: { body: "#263147" },
       sizes: { M: 2 },
       views: [
         {

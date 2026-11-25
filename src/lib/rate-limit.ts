@@ -62,6 +62,14 @@ export const LIMITS = {
   mockupEmail: { limit: 3, windowSeconds: 24 * 60 * 60 },
   /** Restore-design deep link GET /api/mockups/[id] (design data only, no PII). */
   mockupRestore: { limit: 30, windowSeconds: 60 * 60 },
+  /** Accounts (src/lib/auth). Signup per IP; login per IP and per email; codes per user. */
+  signup: { limit: 5, windowSeconds: 60 * 60 },
+  login: { limit: 10, windowSeconds: 15 * 60 },
+  loginEmail: { limit: 5, windowSeconds: 15 * 60 },
+  verifyCode: { limit: 20, windowSeconds: 60 * 60 },
+  resendCode: { limit: 3, windowSeconds: 60 * 60 },
+  forgotPassword: { limit: 3, windowSeconds: 60 * 60 },
+  resetPassword: { limit: 10, windowSeconds: 60 * 60 },
   /** Customer confirmation emails per recipient address: stops the forms being used to mail strangers. */
   confirmation: { limit: 3, windowSeconds: 24 * 60 * 60 },
 } as const;
