@@ -80,13 +80,16 @@ Mockup images + **Download** buttons + coupon ticket (code, copy button, rules: 
 - Analytics events: `builder_start`, `garment_selected`, `artwork_uploaded`, `gate_viewed`, `gate_submitted`, `quote_requested`, `mockup_downloaded`.
 
 ## Acceptance criteria
-- [ ] All 4 required garments with front/back (hat: front) and multi-zone recolor that looks realistic
-- [ ] Upload, drag, scale, rotate, center, remove, undo, front/back, print-location presets on mobile and desktop
-- [ ] Low-DPI warning appears correctly
-- [ ] Download is impossible before the email is submitted; after it, works per view
-- [ ] Customer email arrives with mockup(s) and a unique coupon; resubmitting with the same email re-sends the same code
-- [ ] Owner email arrives with original artwork link
-- [ ] Playwright e2e covers the happy path plus invalid email plus oversized file
+- [x] All 4 required garments with front/back (hat: front) and multi-zone recolor that looks realistic
+- [x] Upload, drag, scale, rotate, center, remove, undo, front/back, print-location presets on mobile and desktop
+- [x] Low-DPI warning appears correctly
+- [x] Download is impossible before the email is submitted; after it, works per view
+- [x] Customer email arrives with mockup(s) and a unique coupon; resubmitting with the same email re-sends the same code
+- [x] Owner email arrives with original artwork link
+- [x] Playwright e2e covers the happy path plus invalid email plus oversized file
+
+(All six garments shipped — the six in the table above; the "4" is a spec-era leftover. Mobile QA at 360px:
+no horizontal scroll, ≥ 44px targets, coarse-pointer Transformer anchors — `tests/e2e/builder.spec.ts`.)
 
 ## Garment templates
 **Decided 2026-11-25: original vector drawings (Option A)**, drawn in code, so we own them outright (no licensing). Source: `scripts/garments/shapes.mjs` (paths) + `render.mjs` (SVG layers) → `node scripts/garments/build.mjs` writes PNGs; `--preview` also writes test composites to `tmp/garment-previews/`; `--only=<garment>` rebuilds one. Commit the PNGs; `sharp` is a dev dependency used only by this script.
