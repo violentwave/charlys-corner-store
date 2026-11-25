@@ -13,7 +13,7 @@ import Konva from "konva";
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { Group, Image as KonvaImage, Layer, Rect, Stage, Transformer } from "react-konva";
 
-import type { GarmentView } from "@/lib/garments";
+import type { GarmentView, ViewId } from "@/lib/garments";
 import type { MockupColors } from "@/lib/mockup-schema";
 
 import { composeArtworkLayer, composeGarment, type TemplateImages } from "./compositor";
@@ -67,6 +67,8 @@ function loadTemplate(src: string) {
 }
 
 export interface GarmentStageHandle {
+  /** The id of the view the stage is currently showing (exportViewPng waits for it). */
+  getView(): ViewId;
   /** Renders the current view at native template size and returns a PNG blob. */
   exportPng(): Promise<Blob | null>;
 }
@@ -240,6 +242,7 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
   };
 
   useImperativeHandle(ref, () => ({
+    getView: () => view.id,
     async exportPng() {
       const stage = stageRef.current;
       if (!stage) return null;
