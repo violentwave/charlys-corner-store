@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Section } from "@/components/sections/section";
 import { Hero } from "@/components/neon/hero";
+import { BuilderLoader } from "@/components/builder/builder-loader";
+import { PageHeader } from "@/components/sections/page-header";
 import { ReferralSurvey } from "@/components/forms/referral-survey";
 import { catalog, formatPrice } from "@/content/catalog";
 import { services } from "@/content/services";
@@ -42,17 +44,28 @@ const minOrderDollars = (COUPON_RULES.minOrderCents / 100).toLocaleString("en-US
 export default function Home() {
   return (
     <>
+      {/* The mockup builder is the first thing visitors see (Logan, 2026-11-25). */}
+      <Section id="design" className="pt-8 sm:pt-12">
+        <PageHeader
+          eyebrow={`${site.city}, ${site.region} · Custom apparel`}
+          title="Design your own custom gear"
+          description={`Pick a tee, raglan, hoodie, hat, polo, or tank, choose your colors, and drop in your art. We'll email you the mockup plus ${COUPON_RULES.percentOff}% off your 2nd order (${minOrderDollars} minimum).`}
+        />
+        <BuilderLoader />
+      </Section>
+
       <Hero
-        eyebrow="Port St. Lucie, FL"
+        titleAs="h2"
+        eyebrow="Printed on the Treasure Coast"
         title="Wear the message. Make the moment."
-        subtitle="Custom tees, hats, hoodies, and promo products printed on the Treasure Coast. Design your own mockup online or send us your art."
+        subtitle="Custom tees, hats, hoodies, and promo products printed in Port St. Lucie. Design it above, or send us your art and we'll take it from there."
         actions={
           <>
             <Button asChild>
-              <Link href="/design">Design Your Own</Link>
+              <Link href="/business#quote">Get a Quote</Link>
             </Button>
             <Button asChild variant="secondary">
-              <Link href="/business#quote">Get a Quote</Link>
+              <Link href="/upload">Upload Artwork</Link>
             </Button>
           </>
         }
@@ -110,27 +123,6 @@ export default function Home() {
               </CardContent>
             </Card>
           ))}
-        </div>
-      </Section>
-
-      <Section
-        id="builder"
-        eyebrow="Build your own"
-        title="Design your own mockup"
-        description="Pick a garment, choose a color, upload your design, and see it come to life. Then email it to us and get a real quote."
-      >
-        <div className="border-border bg-bg-2/60 flex flex-col gap-6 rounded-2xl border p-6 sm:p-8">
-          <p className="text-text-2 max-w-2xl">
-            Use the mockup builder to try out your idea before you commit. When you submit, we send the mockup to your
-            inbox along with a coupon for{" "}
-            <span className="text-neon-yellow font-mono">{COUPON_RULES.percentOff}% off your 2nd order</span> (minimum
-            order {minOrderDollars}).
-          </p>
-          <div>
-            <Button asChild>
-              <Link href="/design">Start designing</Link>
-            </Button>
-          </div>
         </div>
       </Section>
 
