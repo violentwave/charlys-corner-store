@@ -5,6 +5,7 @@ import { mockupPayloadSchema } from "@/lib/mockup-schema";
 
 import {
   builderReducer,
+  designFromRestore,
   fitTransform,
   initialDesign,
   loadPersistedBuilderState,
@@ -241,6 +242,65 @@ describe("toPayloadDesign", () => {
     const state = start();
     const design = toPayloadDesign(state.design);
     expect(design.views).toEqual([]);
+  });
+});
+
+describe("designFromRestore (deep link)", () => {
+  const meta = { name: "art.png", kind: "png", naturalWidth: 600, naturalHeight: 300 } as const;
+
+  it("rebuilds the design from the API response and keeps the saved transforms", () => {
+    const design = designFromRestore(
+      {
+        garment: "tshirt",
+        colors: { body: "#2233aa" },
+        views: [
+          {
+            view: "front",
+            printArea: "full-front",
+            transform: { x: 344, y: 292, width: 312, height: 364, rotation: 15, flipX: false },
+          },
+        ],
+        sizes: { M: 2 },
+      },
+      meta,
+    );
+    expect(design.garment).toBe("tshirt");
+    expect(design.colors.body).toBe("#2233aa");
+    expect(design.views.front?.printArea).toBe("full-front");
+    expect(design.views.front?.artwork).toMatchObject({
+      name: "art.png",
+      kind: "png",
+      transform: { rotation: 15, flipX: false },
+    });
+    expect(design.views.back?.artwork).toBeNull();
+    expect(design.sizes).toEqual({ M: 2 });
+    // Notes are not part of the restore response; the design starts clean.
+    expect(design.notes).toBe("");
+  });
+
+  it("falls back to garment defaults for unknown zones, print areas and sizes", () => {
+    const design = designFromRestore(
+      {
+        garment: "hat",
+        colors: { body: "#ff2e97", notAZone: "#000000" },
+        views: [
+          {
+            view: "front",
+            printArea: "made-up-area",
+            transform: { ...fitTransform({ x: 0, y: 0, w: 100, h: 100 }, 600, 300), rotation: 999 },
+          },
+        ],
+        sizes: { OSFA: 3, "2XL": 5 },
+      },
+      meta,
+    );
+    expect(design.colors.front).toBe(getGarment("hat").defaultColors.front);
+    expect(design.colors.notAZone).toBeUndefined();
+    const front = design.views.front!;
+    expect(front.printArea).toBe("hat-front"); // unknown area → the view's first
+    // A corrupt transform (rotation outside ±360) re-fits into the area instead.
+    expect(front.artwork!.transform.rotation).toBe(0);
+    expect(design.sizes).toEqual({ OSFA: 3 }); // 2XL isn't a hat size
   });
 });
 

@@ -52,12 +52,12 @@ Each page prompt is shipped by the agent (Ship section); Claude reviews every me
 - [x] Garment templates (asset decision) for T-shirt, Raglan, Hoodie, Hat, Polo, Tank
 - [x] Garment config data (`src/lib/garments.ts`), unit-tested
 - [x] Foundation (Claude): Konva decided + installed; `coupons` + `mockups` tables; `issueCoupon()`; `mockupPayloadSchema`; mockup rate limits
-- [ ] Recolor compositor in the builder (mask + multiply shading + screen highlight), unit-tested
-- [ ] Canvas: upload, transform, print areas, front/back, presets, undo/redo, keyboard
-- [ ] DPI warning; sizes/qty; notes
-- [ ] Email gate + `/api/mockups` + coupon issuance + customer and owner emails
-- [ ] Success screen, download, "request quote," restore-design deep link
-- [ ] Playwright e2e for the full flow; mobile QA
+- [x] Recolor compositor in the builder (mask + multiply shading + screen highlight), unit-tested
+- [x] Canvas: upload, transform, print areas, front/back, presets, undo/redo, keyboard
+- [x] DPI warning; sizes/qty; notes
+- [x] Email gate + `/api/mockups` + coupon issuance + customer and owner emails
+- [x] Success screen, download, "request quote," restore-design deep link
+- [x] Playwright e2e for the full flow; mobile QA
 
 ## Phase 5: Shop and checkout
 

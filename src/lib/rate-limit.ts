@@ -60,6 +60,8 @@ export const LIMITS = {
   /** Mockup email gate (docs/04): 5 per hour per IP, plus `mockupEmail` per address. */
   mockup: { limit: 5, windowSeconds: 60 * 60 },
   mockupEmail: { limit: 3, windowSeconds: 24 * 60 * 60 },
+  /** Restore-design deep link GET /api/mockups/[id] (design data only, no PII). */
+  mockupRestore: { limit: 30, windowSeconds: 60 * 60 },
   /** Customer confirmation emails per recipient address: stops the forms being used to mail strangers. */
   confirmation: { limit: 3, windowSeconds: 24 * 60 * 60 },
 } as const;

@@ -386,6 +386,55 @@ export function useBuilderState() {
 }
 
 /* ------------------------------------------------------------------ */
+/* Restoring a design from GET /api/mockups/[id] (deep link)           */
+/* ------------------------------------------------------------------ */
+
+/** The design portion of the GET /api/mockups/[id] response (no PII by design). */
+export type RestoredDesign = {
+  garment: GarmentId;
+  colors: Record<string, string>;
+  views: { view: ViewId; printArea: string; transform: BuilderTransform }[];
+  sizes: MockupSizes;
+};
+
+/**
+ * Rebuilds a BuilderDesign from the restore endpoint's response. Only keys that
+ * match the garment survive (views, print areas, sizes, zones); anything unknown
+ * falls back to the garment defaults, and corrupt transforms re-fit to the area.
+ */
+export function designFromRestore(restored: RestoredDesign, meta: Omit<ArtworkMeta, "transform">): BuilderDesign {
+  const garment = getGarment(restored.garment);
+  const byView = new Map(restored.views.map((v) => [v.view, v]));
+  const views: BuilderDesign["views"] = {};
+  for (const view of garment.views) {
+    const saved = byView.get(view.id);
+    const area =
+      saved && view.printAreas.some((a) => a.id === saved.printArea) ? saved.printArea : view.printAreas[0]!.id;
+    const artwork: ArtworkMeta | null = saved
+      ? {
+          ...meta,
+          transform: artworkTransformSchema.safeParse(saved.transform).success
+            ? saved.transform
+            : fitTransform(view.printAreas.find((a) => a.id === area)!.rect, meta.naturalWidth, meta.naturalHeight),
+        }
+      : null;
+    views[view.id] = { printArea: area, artwork };
+  }
+  const sizes = Object.fromEntries(
+    Object.entries(restored.sizes).filter(
+      ([size, qty]) => garment.sizes.includes(size) && Number.isInteger(qty) && qty > 0 && qty <= 10000,
+    ),
+  );
+  const colors: MockupColors = {};
+  for (const zone of garment.colorZones) {
+    colors[zone.id] = isHexColor(restored.colors[zone.id] ?? "")
+      ? restored.colors[zone.id]!
+      : (garment.defaultColors[zone.id] ?? "#f4f4f4");
+  }
+  return { garment: garment.id, colors, views, sizes, notes: "", referral: {} };
+}
+
+/* ------------------------------------------------------------------ */
 /* Mapping onto the /api/mockups payload (P4-2 adds email + Turnstile) */
 /* ------------------------------------------------------------------ */
 

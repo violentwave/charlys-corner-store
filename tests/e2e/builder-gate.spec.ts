@@ -38,6 +38,29 @@ test("invalid email shows the field error", async ({ page }) => {
   await expect(page.getByTestId("builder-success")).toHaveCount(0);
 });
 
+test("oversized artwork (>20 MB) shows the size error and sends nothing", async ({ page }) => {
+  const posted: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/api/mockups")) posted.push(request.url());
+  });
+
+  await page.setExtraHTTPHeaders({ "x-forwarded-for": `203.0.113.${1 + Math.floor(Math.random() * 254)}` });
+  await page.goto("/design");
+  await expect(page.getByTestId("garment-picker")).toBeVisible({ timeout: 30_000 });
+  await page.getByRole("button", { name: "Step 3: Design" }).click();
+  await expect(page.getByTestId("artwork-controls")).toBeVisible();
+  await page.locator("input[type=file]").setInputFiles({
+    name: "big.png",
+    mimeType: "image/png",
+    buffer: Buffer.alloc(20 * 1024 * 1024 + 1, 1),
+  });
+  await expect(page.getByText("larger than 20 MB")).toBeVisible();
+  // Nothing was placed and nothing was sent.
+  await expect(page.getByTestId("artwork-name")).toHaveCount(0);
+  await expect(page.getByTestId("builder-success")).toHaveCount(0);
+  expect(posted).toEqual([]);
+});
+
 test("happy path: success screen with coupon ticket, downloads and a stored lead", async ({ page }) => {
   const suffix = `${Date.now()}${test.info().workerIndex}`;
   const email = `builder-${suffix}@example.com`;

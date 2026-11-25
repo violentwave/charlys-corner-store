@@ -60,7 +60,7 @@ export function DetailsStep({ garment, design, onSize, onNotes, onReferral }: De
                 step={1}
                 value={design.sizes[size] ?? 0}
                 onChange={(e) => onSize(size, Number(e.target.value))}
-                className="h-10 w-full text-sm"
+                className="h-11 w-full text-sm"
               />
             </Field>
           ))}

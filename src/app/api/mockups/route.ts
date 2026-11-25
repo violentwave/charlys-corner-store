@@ -230,6 +230,7 @@ export async function POST(request: Request) {
       views: viewRows,
       coupon: { code: coupon.code, expiresAt: coupon.expiresAt, isNew: coupon.isNew },
       mockups: mockupUrls,
+      mockupId,
     }),
     { mockupId, leadId },
   );

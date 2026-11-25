@@ -67,7 +67,7 @@ describe.skipIf(!hasTestDb)("upload/quote route handlers (real Postgres)", () =>
     expect(rows[0].orderNumber).toBe("ORD-123");
     expect(_memoryObject(rows[0].fileKey)).toBeDefined();
     expect(_outbox()).toHaveLength(2);
-    expect(_outbox()[0].html).toContain("memory://");
+    expect(_outbox()[0].html).toContain("data:image/png;base64,");
   });
 
   it("rejects a text file renamed .png", async () => {

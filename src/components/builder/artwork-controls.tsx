@@ -73,7 +73,7 @@ export function ArtworkControls({
                 aria-pressed={v.id === view.id}
                 data-testid={`view-${v.id}`}
                 onClick={() => onViewChange(v.id)}
-                className="border-border bg-bg-3 text-text-1 focus-visible:ring-neon-cyan hover:border-border-strong aria-pressed:border-neon-cyan aria-pressed:text-neon-cyan rounded-full border px-4 py-1.5 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                className="border-border bg-bg-3 text-text-1 focus-visible:ring-neon-cyan hover:border-border-strong aria-pressed:border-neon-cyan aria-pressed:text-neon-cyan flex min-h-11 items-center rounded-full border px-4 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
               >
                 {v.label}
               </button>
@@ -92,7 +92,7 @@ export function ArtworkControls({
               aria-pressed={area.id === placement?.printArea}
               data-testid={`print-area-${area.id}`}
               onClick={() => onSetPrintArea(view.id, area.id)}
-              className="border-border bg-bg-3 text-text-2 focus-visible:ring-neon-cyan hover:border-border-strong aria-pressed:border-neon-pink aria-pressed:text-text-1 rounded-full border px-3 py-1.5 text-xs transition-colors focus-visible:ring-2 focus-visible:outline-none"
+              className="border-border bg-bg-3 text-text-2 focus-visible:ring-neon-cyan hover:border-border-strong aria-pressed:border-neon-pink aria-pressed:text-text-1 flex min-h-11 items-center rounded-full border px-3 text-xs transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
               {area.label}
             </button>
@@ -153,7 +153,7 @@ export function ArtworkControls({
             type="button"
             onClick={onRemove}
             data-testid="remove-artwork"
-            className="text-neon-cyan focus-visible:ring-neon-cyan mt-1 rounded-md px-1 text-xs focus-visible:ring-2 focus-visible:outline-none"
+            className="text-neon-cyan focus-visible:ring-neon-cyan mt-1 inline-flex min-h-11 items-center rounded-md px-1 text-xs focus-visible:ring-2 focus-visible:outline-none"
           >
             Remove from {view.label.toLowerCase()}
           </button>

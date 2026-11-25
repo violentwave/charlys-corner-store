@@ -1,4 +1,4 @@
-import { Body, Container, Head, Heading, Html, Img, Preview, Text } from "@react-email/components";
+import { Body, Button, Container, Head, Heading, Html, Img, Preview, Text } from "@react-email/components";
 import * as React from "react";
 
 import { COUPON_RULES } from "@/lib/coupons";
@@ -13,6 +13,8 @@ export interface MockupCustomerEmailProps {
   coupon: { code: string; expiresAt: Date; isNew: boolean };
   /** Rendered mockups, inlined via 7-day signed storage URLs. */
   mockups: { view: string; signedUrl: string }[];
+  /** Deep link: /design?mockup=<id> restores this design in the builder (design data only, no PII). */
+  mockupId: string;
 }
 
 /** Fixed to the shop's time zone so the printed expiry matches the CouponTicket on screen. */
@@ -54,6 +56,23 @@ export function MockupCustomerEmail(p: MockupCustomerEmailProps) {
             Coupon code: <strong>{p.coupon.code}</strong>
           </Text>
           <Text>{terms}</Text>
+          <Button
+            href={`${site.url}/design?mockup=${p.mockupId}`}
+            style={{
+              backgroundColor: "#FF2E97",
+              borderRadius: "999px",
+              color: "#0A0A14",
+              fontWeight: 600,
+              padding: "12px 24px",
+              textDecoration: "none",
+            }}
+          >
+            Order this design
+          </Button>
+          <Text>
+            Or pick up where you left off — that button reopens your design in our mockup builder, ready to tweak or
+            share.
+          </Text>
           <Text>Ready to print it? Reply to this email or request a quote and we&apos;ll take it from here.</Text>
           <Text>Questions? Email {site.email.toLowerCase()}.</Text>
           <Text>{site.tagline}! 🐾</Text>

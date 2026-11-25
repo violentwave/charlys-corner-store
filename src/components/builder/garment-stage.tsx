@@ -102,6 +102,10 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
   const [containerWidth, setContainerWidth] = useState(0);
   // Selection is per view: it survives re-renders but never leaks across views.
   const [selectedView, setSelectedView] = useState<string | null>(null);
+  /** Touch: 10px Transformer handles are unusable with a finger — enlarge on coarse pointers. */
+  const [coarsePointer] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches,
+  );
   const selected = selectedView === view.id;
   const { images, error } = useTemplateImages(view);
 
@@ -122,6 +126,9 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
 
   const scale = containerWidth > 0 ? containerWidth / view.width : 0;
   const stageHeight = scale > 0 ? Math.round(view.height * scale) : 0;
+  /** `anchorSize` is in template px and scales with the stage; this keeps ≈22 CSS px on touch. */
+  const anchorSize = coarsePointer && scale > 0 ? Math.ceil(22 / scale) : 10;
+  const anchorCornerRadius = coarsePointer && scale > 0 ? Math.ceil(11 / scale) : 2;
 
   // Deselect when the view changes (the artwork node is replaced).
   const selectThisView = () => setSelectedView(view.id);
@@ -343,6 +350,8 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
               keepRatio
               rotateEnabled
               enabledAnchors={["top-left", "top-right", "bottom-left", "bottom-right"]}
+              anchorSize={anchorSize}
+              anchorCornerRadius={anchorCornerRadius}
               boundBoxFunc={(oldBox, newBox) => (newBox.width < 8 || newBox.height < 8 ? oldBox : newBox)}
             />
             {placement ? (

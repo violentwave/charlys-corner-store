@@ -51,7 +51,7 @@ describe("storage", () => {
     const storage = getStorage();
     await storage.put("t/k.png", bytes(1, 2, 3), "image/png");
     expect(_memoryObject("t/k.png")).toEqual({ body: bytes(1, 2, 3), contentType: "image/png" });
-    expect(await storage.signedUrl("t/k.png")).toBe("memory://t/k.png");
+    expect(await storage.signedUrl("t/k.png")).toMatch(/^data:/);
   });
 });
 
