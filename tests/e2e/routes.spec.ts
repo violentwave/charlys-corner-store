@@ -16,13 +16,18 @@ for (const [from, to] of legacy) {
   });
 }
 
-for (const path of ["/shop", "/design"]) {
-  test(`${path} shows an honest coming-soon page`, async ({ page }) => {
-    await page.goto(path);
-    await expect(page.getByText(/coming soon/i)).toBeVisible();
-    await expect(page.locator("#main").getByRole("link", { name: /charlyscornerstore@gmail\.com/i })).toBeVisible();
-  });
-}
+test("/shop shows an honest coming-soon page", async ({ page }) => {
+  await page.goto("/shop");
+  await expect(page.getByText(/coming soon/i)).toBeVisible();
+  await expect(page.locator("#main").getByRole("link", { name: /charlyscornerstore@gmail\.com/i })).toBeVisible();
+});
+
+test("/design is the mockup builder (no longer coming soon)", async ({ page }) => {
+  await page.goto("/design");
+  await expect(page.getByRole("heading", { level: 1, name: /design your own mockup/i })).toBeVisible();
+  // The builder itself is client-only; the picker appears once Konva's bundle loads.
+  await expect(page.getByTestId("garment-picker")).toBeVisible({ timeout: 30_000 });
+});
 
 test("/upload shows the artwork upload form", async ({ page }) => {
   await page.goto("/upload");

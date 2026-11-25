@@ -19,6 +19,7 @@
   --color-neon-yellow: var(--neon-yellow);
   --color-neon-green: var(--neon-green);
   --color-danger: var(--danger);
+  --color-builder-backdrop: var(--builder-backdrop);
 
   --shadow-glow-pink: var(--glow-pink);
   --shadow-glow-cyan: var(--glow-cyan);
