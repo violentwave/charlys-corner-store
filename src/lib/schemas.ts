@@ -12,9 +12,9 @@ export const referralLabels: Record<(typeof REFERRAL_SOURCES)[number], string> =
   other: "Other",
 };
 
-const name = z.string().trim().min(1, "Please enter your name").max(100);
-const email = z.email("Please enter a valid email").trim().max(254);
-const phone = z
+export const nameField = z.string().trim().min(1, "Please enter your name").max(100);
+export const emailField = z.email("Please enter a valid email").trim().max(254);
+export const phoneField = z
   .string()
   .trim()
   .max(30)
@@ -36,9 +36,9 @@ export const referralSchema = z
 /** About + Contact pages (old About page form: name, email, comment). */
 export const contactSchema = z
   .object({
-    name,
-    email,
-    phone,
+    name: nameField,
+    email: emailField,
+    phone: phoneField,
     message: z.string().trim().min(1, "Please enter a message").max(5000),
     referralSource: z.enum(REFERRAL_SOURCES).optional(),
     referralOther: z.string().trim().max(200).optional(),
@@ -50,9 +50,9 @@ export const contactSchema = z
 
 /** Business & Promo quote request. Artwork upload is added in Phase 3 (storage). */
 export const quoteSchema = z.object({
-  name,
-  email,
-  phone,
+  name: nameField,
+  email: emailField,
+  phone: phoneField,
   company: z.string().trim().max(120).optional(),
   items: z.string().trim().min(1, "Tell us what you'd like made").max(2000),
   quantity: z.preprocess(
@@ -68,7 +68,7 @@ export const quoteSchema = z.object({
 export const uploadSchema = z.object({
   firstName: z.string().trim().min(1, "Please enter your first name").max(100),
   lastName: z.string().trim().min(1, "Please enter your last name").max(100),
-  email,
+  email: emailField,
   orderNumber: z.string().trim().min(1, "Please enter your order number").max(40),
   notes: z.string().trim().max(2000).optional(),
 });

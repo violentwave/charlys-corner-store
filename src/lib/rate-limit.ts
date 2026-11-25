@@ -57,6 +57,9 @@ export const LIMITS = {
   quote: { limit: 5, windowSeconds: 60 * 60 },
   upload: { limit: 10, windowSeconds: 60 * 60 },
   survey: { limit: 10, windowSeconds: 60 * 60 },
+  /** Mockup email gate (docs/04): 5 per hour per IP, plus `mockupEmail` per address. */
+  mockup: { limit: 5, windowSeconds: 60 * 60 },
+  mockupEmail: { limit: 3, windowSeconds: 24 * 60 * 60 },
   /** Customer confirmation emails per recipient address: stops the forms being used to mail strangers. */
   confirmation: { limit: 3, windowSeconds: 24 * 60 * 60 },
 } as const;
