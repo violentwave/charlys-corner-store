@@ -67,6 +67,8 @@ jobs:
       OWNER_NOTIFY_EMAIL: owner@example.com
       NEXT_PUBLIC_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
       TURNSTILE_SECRET_KEY: 1x0000000000000000000000000000000AA
+      # Test-only email helper (/api/test/last-email) for the account e2e specs.
+      ENABLE_TEST_HOOKS: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
