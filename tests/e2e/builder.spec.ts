@@ -150,7 +150,7 @@ test("a refresh keeps the garment, colors and step", async ({ page }) => {
   await expect(page.getByTestId("garment-hoodie")).toHaveAttribute("aria-pressed", "true");
 });
 
-test("details step has sizes, notes and referral; gate is a disabled placeholder", async ({ page }) => {
+test("details step has sizes, notes and referral; gate shows the real email form", async ({ page }) => {
   await openBuilder(page);
   await page.getByRole("button", { name: "Step 4: Details" }).click();
   await expect(page.getByTestId("details-step")).toBeVisible();
@@ -159,8 +159,10 @@ test("details step has sizes, notes and referral; gate is a disabled placeholder
   await expect(page.getByLabel(/How did you hear about us\?/i)).toBeVisible();
 
   await page.getByRole("button", { name: "Step 5: Get mockup" }).click();
-  const gate = page.getByTestId("email-gate-placeholder");
+  // P4-2: the gate is a real form now (no artwork yet → blocked until step 3 is used).
+  const gate = page.getByTestId("email-gate");
   await expect(gate).toBeVisible();
-  await expect(gate.getByRole("button", { name: /Get my mockup \+ 15% off/i })).toBeDisabled();
-  await expect(gate.getByText(/Coming next/i)).toBeVisible();
+  await expect(gate.getByText(/15% off your 2nd order/i)).toBeVisible();
+  await expect(gate.getByTestId("gate-email")).toBeVisible();
+  await expect(gate.getByTestId("gate-blocked")).toBeVisible();
 });

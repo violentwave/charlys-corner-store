@@ -9,6 +9,8 @@ import { COUPON_RULES } from "@/lib/coupons";
 export interface CouponTicketProps {
   code: string;
   expiresAt: Date;
+  /** Called after a successful clipboard copy (the success screen fires a toast with it). */
+  onCopied?: () => void;
   className?: string;
 }
 
@@ -26,7 +28,7 @@ function formatMinimum(cents: number): string {
   return `$${(cents / 100).toFixed(0)}`;
 }
 
-export function CouponTicket({ code, expiresAt, className }: CouponTicketProps) {
+export function CouponTicket({ code, expiresAt, onCopied, className }: CouponTicketProps) {
   const [status, setStatus] = React.useState<"" | "copied" | "selected">("");
   const resetTimer = React.useRef<number | undefined>(undefined);
   React.useEffect(() => () => window.clearTimeout(resetTimer.current), []);
@@ -58,6 +60,7 @@ export function CouponTicket({ code, expiresAt, className }: CouponTicketProps) 
       }
     }
     setStatus(ok ? "copied" : "selected");
+    if (ok) onCopied?.();
     window.clearTimeout(resetTimer.current);
     resetTimer.current = window.setTimeout(() => setStatus(""), 3000);
   };
