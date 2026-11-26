@@ -37,6 +37,9 @@ import { SendStep } from "./send-step";
 import { SuccessScreen, type MockupResult } from "./success-screen";
 import { uploadGateFor } from "./upload-gate";
 import "./text-fonts.css";
+import { loadTextFont } from "./load-text-font";
+import { initialTextTransform, refitTextBox } from "./text-measure";
+import type { TextFontId } from "@/lib/text-fonts";
 
 const STEPS: { id: BuilderStep; label: string; headline: string; helper: string }[] = [
   {
@@ -398,17 +401,57 @@ export function Builder() {
   };
 
   /** "Add text": a fresh text layer on the current side, selected and ready to type. */
-  const addText = () => {
+  const addText = async () => {
+    const viewId = activeViewId;
+    const rect = (activeView.printAreas.find((a) => a.id === activeViewState.printArea) ?? activeView.printAreas[0]!)
+      .rect;
+    // Measure with the real font so the new text starts at its natural shape, not squashed.
+    await loadTextFont(DEFAULT_TEXT_FONT);
     dispatch({
       type: "addTextLayer",
-      view: activeViewId,
+      view: viewId,
       input: {
         text: DEFAULT_TEXT,
         font: DEFAULT_TEXT_FONT,
         color: defaultTextColor(design.colors[garment.colorZones[0]!.id]),
+        transform: initialTextTransform(DEFAULT_TEXT, DEFAULT_TEXT_FONT, 0, rect),
       },
     });
     track("text_added", { garment: design.garment });
+  };
+
+  /**
+   * Text edits. Changing the words, font or spacing resizes the box so the letters keep their
+   * current proportions (text-measure.ts refitTextBox) instead of squashing into the old box.
+   */
+  const changeText = async (
+    layerId: string,
+    patch: {
+      text?: string;
+      font?: TextFontId;
+      color?: string;
+      align?: "left" | "center" | "right";
+      letterSpacing?: number;
+    },
+    mergeKey?: string,
+  ) => {
+    const viewId = activeViewId;
+    const layer = activeViewState.layers.find((l) => l.id === layerId);
+    const reshapes = patch.text !== undefined || patch.font !== undefined || patch.letterSpacing !== undefined;
+    if (!layer || layer.type !== "text" || !reshapes) {
+      dispatch({ type: "updateLayer", view: viewId, layerId, patch, mergeKey });
+      return;
+    }
+    const rect = (activeView.printAreas.find((a) => a.id === activeViewState.printArea) ?? activeView.printAreas[0]!)
+      .rect;
+    if (patch.font) await loadTextFont(patch.font);
+    const next = {
+      text: patch.text ?? layer.text,
+      font: patch.font ?? layer.font,
+      letterSpacing: patch.letterSpacing ?? layer.letterSpacing,
+    };
+    const transform = refitTextBox(layer, next, rect);
+    dispatch({ type: "updateLayer", view: viewId, layerId, patch: { ...patch, transform }, mergeKey });
   };
 
   /** Tab cycles the side's layer selection (shift goes backwards). */
@@ -730,9 +773,7 @@ export function Builder() {
                   onTransform={(layerId, transform, mergeKey) =>
                     dispatch({ type: "updateLayer", view: activeViewId, layerId, patch: { transform }, mergeKey })
                   }
-                  onTextChange={(layerId, patch, mergeKey) =>
-                    dispatch({ type: "updateLayer", view: activeViewId, layerId, patch, mergeKey })
-                  }
+                  onTextChange={changeText}
                   onOutlineChange={(layerId, outline, mergeKey) =>
                     dispatch({
                       type: "updateLayer",

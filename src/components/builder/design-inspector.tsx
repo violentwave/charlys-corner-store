@@ -11,6 +11,7 @@ import type { GarmentView, ViewId } from "@/lib/garments";
 import { effectiveDpi, MAX_LAYERS_PER_VIEW } from "@/lib/mockup-schema";
 import { printedInches } from "@/lib/garments";
 
+import { isOutsideArea } from "./geometry";
 import { InspectorSection } from "./inspector-section";
 import { LayersPanel } from "./layers-panel";
 import { LayerControls } from "./layer-controls";
@@ -191,6 +192,17 @@ export function DesignInspector({
           {selected.type === "image" && !selectedFileReady ? (
             <p className="border-border bg-bg-2/60 mb-2 rounded-md border p-2 text-xs" data-testid="relink-note">
               Your saved design is still here — upload the file again to put it back.
+            </p>
+          ) : null}
+          {isOutsideArea(selected.transform, area.rect) ? (
+            <p
+              role="status"
+              data-testid="outside-area"
+              className="border-border bg-bg-2/60 text-text-2 mb-2 flex items-start gap-1.5 rounded-md border p-2 text-xs"
+            >
+              <span aria-hidden="true">⚠</span>
+              Part of this runs past the print area (dashed box) and won&apos;t print. Shown faded on the shirt. Use
+              &ldquo;Fit to area&rdquo; to pull it in, or pick a bigger print location.
             </p>
           ) : null}
           <LayerControls

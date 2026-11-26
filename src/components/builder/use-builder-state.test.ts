@@ -17,7 +17,16 @@ import {
   usedFileIndexes,
   type BuilderState,
 } from "./use-builder-state";
-import { centerInRect, nudgeTransform, rotateAroundCenter, scaleAroundCenter } from "./geometry";
+import {
+  centerInRect,
+  fitIntoRect,
+  isOutsideArea,
+  layerBounds,
+  nudgeTransform,
+  rotateAroundCenter,
+  scaleAroundCenter,
+  setRotationAroundCenter,
+} from "./geometry";
 import { isLowResolution } from "./print";
 
 const start = (): BuilderState => ({
@@ -44,12 +53,13 @@ describe("builderReducer — layers (v4)", () => {
     expect(front.layers).toHaveLength(1);
     const layer = front.layers[0]!;
     expect(layer.type).toBe("image");
-    // The initial print area is the front view's first: Front Chest (260×130).
-    const chest = getGarment("tshirt").views[0]!.printAreas[0]!.rect;
-    expect(chest).toEqual({ x: 370, y: 292, w: 260, h: 130 });
-    // 600×300 fits at scale 0.433 → 260×130, centered.
-    expect(layer.type === "image" && layer.transform.width).toBeCloseTo(260);
-    expect(layer.type === "image" && layer.transform.height).toBeCloseTo(130);
+    // The initial print area is the front view's first, its largest: Full Front (312×364).
+    const front0 = getGarment("tshirt").views[0]!.printAreas[0]!;
+    expect(front0.id).toBe("full-front");
+    expect(front0.rect).toEqual({ x: 344, y: 292, w: 312, h: 364 });
+    // 600×300 fits at scale 0.52 → 312×156, centered.
+    expect(layer.type === "image" && layer.transform.width).toBeCloseTo(312);
+    expect(layer.type === "image" && layer.transform.height).toBeCloseTo(156);
     expect(front.selectedLayerId).toBe(layer.id);
   });
 
@@ -515,6 +525,33 @@ describe("designFromRestore (deep link, v4: layers)", () => {
     // A corrupt transform (rotation outside ±360) re-fits into the area instead.
     expect(front.layers[0]!.type === "image" && front.layers[0]!.transform.rotation).toBe(0);
     expect(design.sizes).toEqual({ OSFA: 3 }); // 2XL isn't a hat size
+  });
+});
+
+describe("layer geometry (outside area, fit, rotate around center)", () => {
+  const rect = { x: 344, y: 292, w: 312, h: 364 };
+  it("flags a layer that runs past the print area, rotation and skew included", () => {
+    const t = fitTransform(rect, 600, 300);
+    expect(isOutsideArea(t, rect)).toBe(false);
+    expect(isOutsideArea({ ...t, skewX: 0.5 }, rect)).toBe(true);
+    expect(isOutsideArea(setRotationAroundCenter(t, 45), rect)).toBe(true);
+  });
+  it("fit keeps shape, rotation and skew and lands fully inside", () => {
+    const t = { ...setRotationAroundCenter(fitTransform(rect, 600, 300), 30), skewX: 0.4 };
+    const fitted = fitIntoRect(t, rect);
+    expect(fitted.rotation).toBe(30);
+    expect(fitted.skewX).toBe(0.4);
+    expect(fitted.width / fitted.height).toBeCloseTo(t.width / t.height);
+    expect(isOutsideArea(fitted, rect)).toBe(false);
+    const b = layerBounds(fitted);
+    expect(b.x + b.w / 2).toBeCloseTo(rect.x + rect.w / 2);
+  });
+  it("rotating keeps the center where it was", () => {
+    const t = fitTransform(rect, 600, 300);
+    const before = layerBounds(t);
+    const after = layerBounds(setRotationAroundCenter(t, 90));
+    expect(after.x + after.w / 2).toBeCloseTo(before.x + before.w / 2);
+    expect(after.y + after.h / 2).toBeCloseTo(before.y + before.h / 2);
   });
 });
 

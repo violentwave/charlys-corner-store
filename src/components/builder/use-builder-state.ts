@@ -36,6 +36,8 @@ import {
 import { TEXT_FONT_IDS, type TextFontId } from "@/lib/text-fonts";
 import { REFERRAL_SOURCES } from "@/lib/schemas";
 
+import { fitIntoRect } from "./geometry";
+
 export const PERSIST_KEY = "charly.builder.v2";
 const PERSIST_VERSION = 2;
 /** Undo/redo history cap (docs/04). */
@@ -135,6 +137,8 @@ export type TextLayerInput = {
   text: string;
   font: TextFontId;
   color: string;
+  /** Measured starting box (text-measure.ts initialTextTransform); a default box otherwise. */
+  transform?: BuilderTransform;
 };
 
 export type BuilderAction =
@@ -323,11 +327,9 @@ export function builderReducer(state: BuilderState, action: BuilderAction): Buil
         },
         action.view,
       );
-      // Image layers refit into the new area; text keeps its position (it's anchored).
+      // Every layer refits into the new area, keeping its shape, rotation and skew.
       const layers = current.layers.map((layer) =>
-        layer.type === "image" && rect
-          ? { ...layer, transform: fitTransform(rect, layer.naturalWidth, layer.naturalHeight) }
-          : layer,
+        rect ? ({ ...layer, transform: fitIntoRect(layer.transform, rect) } as BuilderLayer) : layer,
       );
       return withHistory(state, {
         ...state.design,
@@ -368,7 +370,7 @@ export function builderReducer(state: BuilderState, action: BuilderAction): Buil
       const area = view.printAreas.find((a) => a.id === viewState.printArea) ?? view.printAreas[0]!;
       const layer: BuilderTextLayer = {
         id: nextLayerId(),
-        ...defaultTextLayer(area.rect, action.input),
+        ...defaultTextLayer(area.rect, action.input, action.input.transform),
       };
       return withHistory(state, {
         ...state.design,
