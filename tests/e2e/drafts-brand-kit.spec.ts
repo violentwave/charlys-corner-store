@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { openToolTab } from "./builder-tabs";
+
 /**
  * Saved drafts + the brand kit (P49-3, docs/02 Member perks): the builder's Save draft
  * (name dialog, update vs save-as-new), opening a draft via /?draft=<id>#design (the same
@@ -30,8 +32,10 @@ async function buildImageAndText(page: Page, text: string) {
   await page.getByTestId("upload-image").click();
   await page.locator("[data-testid='builder-file-input']").setInputFiles("tests/e2e/fixtures/art.png");
   await expect(page.getByRole("region", { name: "Selected image" })).toBeVisible({ timeout: 15_000 });
+  await openToolTab(page, "add");
   await page.getByTestId("add-text").click();
   await page.getByTestId("text-layer-input").fill(text);
+  await openToolTab(page, "layers");
   await expect(page.getByTestId("layers-panel")).toContainText(text); // 2 layers: the list shows
 }
 
@@ -49,7 +53,9 @@ test("save a draft with an image + text, start over, open it from the Drafts tab
   await expect(page.getByText("Draft saved").first()).toBeVisible({ timeout: 15_000 });
   await expect(page.getByTestId("save-draft-dialog")).toHaveCount(0);
 
-  // Start over wipes the board (and the draft link — confirm first).
+  // Start over wipes the board (and the draft link — confirm first). On mobile it lives
+  // in the action bar's More menu (P51-1).
+  if (test.info().project.name === "mobile-360") await page.getByTestId("action-more").click();
   await page.getByRole("button", { name: /start over/i }).click();
   await page.getByTestId("start-over-confirm").click();
   await expect(page.getByTestId("garment-picker")).toBeVisible({ timeout: 15_000 });
@@ -63,6 +69,7 @@ test("save a draft with an image + text, start over, open it from the Drafts tab
 
   // The builder hydrates the draft exactly like the restore link.
   await expect(page.getByTestId("restore-status")).toContainText(/Loaded your saved design/i, { timeout: 30_000 });
+  await openToolTab(page, "layers");
   await expect(page.getByTestId("layers-panel")).toContainText("art.png");
   await expect(page.getByTestId("layers-panel")).toContainText("RUFF");
 
@@ -108,8 +115,11 @@ test("the brand kit: save colors + font + logo → the builder shows them first"
   await page.getByTestId("text-layer-font").click();
   await page.getByRole("option", { name: "Oswald" }).first().click();
 
-  // "Add my logo" drops the kit's logo in through the normal upload path.
+  // "Add my logo" drops the kit's logo in through the normal upload path (the Add tab
+  // on mobile — P51-1).
+  await openToolTab(page, "add");
   await page.getByTestId("add-my-logo").click();
   await expect(page.getByRole("region", { name: "Selected image" })).toBeVisible({ timeout: 15_000 });
+  await openToolTab(page, "layers");
   await expect(page.getByTestId("layers-panel")).toContainText("art.png"); // the logo's file name
 });

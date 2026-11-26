@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { openToolTab } from "./builder-tabs";
+
 /**
  * The /design builder v4: the account gate before upload, per-side LAYERS (images + text),
  * the two send paths. Runs on the desktop and mobile-360 projects (playwright.config.ts).
@@ -322,6 +324,7 @@ test("same design on front and back: one artwork file, both views point at it", 
   await expect(page.getByRole("region", { name: "Selected image" })).toBeVisible({ timeout: 15_000 });
 
   // The back has no art yet: the empty state offers the same design.
+  await openToolTab(page, "side");
   await page.getByTestId("view-back").click();
   await expect(page.getByTestId("canvas-empty")).toBeVisible();
   await expect(page.getByTestId("side-chooser")).toBeVisible();
@@ -329,6 +332,7 @@ test("same design on front and back: one artwork file, both views point at it", 
   await expect(page.getByRole("region", { name: "Selected image" })).toBeVisible();
 
   // Side picker marks sides that have a design (visible dot + screen-reader text).
+  await openToolTab(page, "side");
   await page.getByTestId("view-back").getByText("(has a design)", { exact: false }).isVisible();
 
   const { artworks, views } = await sentMockupRow(page, email, async () => {
@@ -360,6 +364,7 @@ test("a different design on the back: two artwork files, front and back each the
   await page.locator("[data-testid='builder-file-input']").setInputFiles("tests/e2e/fixtures/art.png");
   await expect(page.getByRole("region", { name: "Selected image" })).toBeVisible({ timeout: 15_000 });
 
+  await openToolTab(page, "side");
   await page.getByTestId("view-back").click();
   await expect(page.getByTestId("side-chooser")).toBeVisible();
   // "Upload a different design" opens the picker for a second file.
@@ -396,15 +401,21 @@ test("text on the left sleeve: runs down the sleeve, arched, stored as a text la
   await page.getByTestId("garment-longsleeve").click();
   await page.getByTestId("garment-continue").click();
   await page.getByRole("button", { name: "Step 3: Design" }).click();
+  await openToolTab(page, "side");
   await expect(page.getByTestId("view-left")).toBeVisible();
   await expect(page.getByTestId("view-right")).toBeVisible();
 
+  await openToolTab(page, "side");
   await page.getByTestId("view-left").click();
+  // Switching to an empty side deselects → the tabs land on Add; come back to Side
+  // for the print location (P51-1).
+  await openToolTab(page, "side");
   await page.getByTestId("print-location").click();
   await page.getByRole("option", { name: "Full Sleeve" }).click();
 
   // Text layer: custom copy, font and ink (the quick swatch row is always visible; the
   // color picker and hex field fold behind "Custom").
+  await openToolTab(page, "add");
   await page.getByTestId("add-text").click();
   await page.getByTestId("text-layer-input").fill("RUFF");
   await page.getByTestId("text-layer-font").click();
@@ -456,8 +467,10 @@ test("image + text on the front: two layers in stack order", async ({ page }) =>
   await page.getByTestId("upload-image").click();
   await page.locator("[data-testid='builder-file-input']").setInputFiles("tests/e2e/fixtures/art.png");
   await expect(page.getByRole("region", { name: "Selected image" })).toBeVisible({ timeout: 15_000 });
+  await openToolTab(page, "add");
   await page.getByTestId("add-text").click();
   await page.getByTestId("text-layer-input").fill("Front");
+  await openToolTab(page, "layers");
   await expect(page.getByTestId("layers-panel")).toContainText("Front");
 
   const { artworks, views } = await sentMockupRow(page, email, async () => {
@@ -497,6 +510,7 @@ test("a text-only design sends without any upload", async ({ page }) => {
 test("t-shirt shows no sleeve options", async ({ page }) => {
   await openBuilder(page);
   await page.getByRole("button", { name: "Step 3: Design" }).click();
+  await openToolTab(page, "side");
   await expect(page.getByTestId("view-front")).toBeVisible();
   await expect(page.getByTestId("view-back")).toBeVisible();
   await expect(page.getByTestId("view-left")).toHaveCount(0);

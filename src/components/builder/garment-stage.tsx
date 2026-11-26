@@ -107,6 +107,13 @@ export interface GarmentStageProps {
   };
   /** "Lock ratio" for the Transformer (default on for images, off for text). */
   lockRatio: boolean;
+  /**
+   * Mobile sticky canvas (P51-1): also fit the stage inside the container's height — the
+   * container's height comes from the `--canvas-h` custom property the builder sets
+   * (42svh, 30svh with the keyboard open). Desktop leaves it unset: the stage keeps
+   * filling the container's width exactly as before.
+   */
+  fitContainerHeight?: boolean;
   onSelectLayer: (layerId: string | null) => void;
   onTransformCommit: (layerId: string, transform: BuilderTransform) => void;
   onRemoveLayer: (layerId: string) => void;
@@ -174,6 +181,7 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
     images: stageImages,
     emptyState,
     lockRatio,
+    fitContainerHeight = false,
     onSelectLayer,
     onTransformCommit,
     onRemoveLayer,
@@ -211,7 +219,7 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
   const hGuideRef = useRef<Konva.Line>(null);
   const layerRef = useRef<Konva.Layer>(null);
   const pinchRef = useRef<{ dist: number; angle: number } | null>(null);
-  const [containerWidth, setContainerWidth] = useState(0);
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   // Selection is per view: it survives re-renders but never leaks across views.
   const [selectedView, setSelectedView] = useState<string | null>(null);
   /** Touch: 10px Transformer handles are unusable with a finger — enlarge on coarse pointers. */
@@ -231,17 +239,63 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
     if (!el) return;
     const observer = new ResizeObserver((entries) => {
       const width = Math.floor(entries[0]?.contentRect.width ?? 0);
-      if (width > 0) setContainerWidth(width);
+      const height = Math.floor(entries[0]?.contentRect.height ?? 0);
+      setContainerSize({ width, height });
     });
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
 
-  const scale = containerWidth > 0 ? containerWidth / view.width : 0;
-  const stageHeight = scale > 0 ? Math.round(view.height * scale) : 0;
+  // View-only zoom (P51-1): the export and the print math ignore it — it only magnifies
+  // what's on screen. Levels are stepped; a pinch can land between them (clamped 1–3).
+  const ZOOM_LEVELS = [1, 1.5, 2, 3] as const;
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const zoomRef = useRef(1);
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
+
+  const fitScale =
+    containerSize.width > 0
+      ? Math.min(
+          containerSize.width / view.width,
+          // With fitContainerHeight the container's height is fixed by CSS (--canvas-h),
+          // so the stage fits inside it instead of sizing it.
+          fitContainerHeight && containerSize.height > 0
+            ? containerSize.height / view.height
+            : Number.POSITIVE_INFINITY,
+        )
+      : 0;
+  const viewScale = fitScale * zoom;
+  const stageWidth = fitScale > 0 ? Math.round(view.width * fitScale) : 0;
+  const stageHeight = fitScale > 0 ? Math.round(view.height * fitScale) : 0;
+  /** Clamps a pan offset (stage px) so the zoomed content keeps covering the viewport. */
+  const clampPan = (x: number, y: number, nextZoom = zoomRef.current) => ({
+    x: Math.min(0, Math.max(-stageWidth * (nextZoom - 1), x)),
+    y: Math.min(0, Math.max(-stageHeight * (nextZoom - 1), y)),
+  });
+  const applyZoom = (next: number) => {
+    const z = Math.min(3, Math.max(1, next));
+    setPan((p) => clampPan(p.x, p.y, z));
+    setZoom(z);
+  };
+  const zoomStep = (direction: 1 | -1) => {
+    const current = zoomRef.current;
+    const level = ZOOM_LEVELS.find((l) => (direction === 1 ? l > current + 0.01 : l < current - 0.01));
+    applyZoom(level ?? (direction === 1 ? ZOOM_LEVELS[ZOOM_LEVELS.length - 1]! : 1));
+  };
+  const zoomFit = () => {
+    setPan({ x: 0, y: 0 });
+    setZoom(1);
+  };
+
+  // Pinch on the empty canvas zooms the view; a pinch that starts on a layer is handled
+  // per layer below (scale/rotate), so the two never fight.
+  const stagePinchRef = useRef<{ dist: number; zoom: number } | null>(null);
   /** `anchorSize` is in template px and scales with the stage; this keeps ≈22 CSS px on touch. */
-  const anchorSize = coarsePointer && scale > 0 ? Math.ceil(22 / scale) : 10;
-  const anchorCornerRadius = coarsePointer && scale > 0 ? Math.ceil(11 / scale) : 2;
+  const anchorSize = coarsePointer && viewScale > 0 ? Math.ceil(22 / viewScale) : 10;
+  const anchorCornerRadius = coarsePointer && viewScale > 0 ? Math.ceil(11 / viewScale) : 2;
 
   // Deselect when the view changes (the layer nodes are replaced).
   const selectThisView = () => setSelectedView(view.id);
@@ -317,8 +371,8 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
    */
   const snapToCenter = (layerId: string) => {
     const node = nodeRefs.current.get(layerId);
-    if (!node || scale <= 0) return;
-    const threshold = SNAP_SCREEN_PX / scale;
+    if (!node || viewScale <= 0) return;
+    const threshold = SNAP_SCREEN_PX / viewScale;
     const cx = activeArea.rect.x + activeArea.rect.w / 2;
     const cy = activeArea.rect.y + activeArea.rect.h / 2;
     const snapX = Math.abs(node.x() - cx) <= threshold;
@@ -447,6 +501,15 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
       if (!stage) return null;
       // Fonts first: the export must show the real lettering, not a fallback.
       await Promise.all(layers.filter((l) => l.type === "text").map((l) => loadTextFontSafe(l.font)));
+      // The view-only zoom/pan (P51-1) never reaches the export: drop back to the 1×
+      // fit scale, centered, for the render, then put the visitor's view back.
+      const baseScale = stage.width() / view.width;
+      const previousScale = stage.scaleX();
+      const previousPosition = stage.position();
+      if (previousScale !== baseScale || previousPosition.x !== 0 || previousPosition.y !== 0) {
+        stage.scale({ x: baseScale, y: baseScale });
+        stage.position({ x: 0, y: 0 });
+      }
       // Guides and transformer handles never appear in the export.
       const selectedNodes = transformerRef.current?.nodes() ?? [];
       const ghosts = stage.find(`.${GHOST_NAME}`);
@@ -466,6 +529,10 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
       guideRef.current?.visible(true);
       transformerRef.current?.visible(true);
       transformerRef.current?.nodes(selectedNodes);
+      if (previousScale !== baseScale || previousPosition.x !== 0 || previousPosition.y !== 0) {
+        stage.scale({ x: previousScale, y: previousScale });
+        stage.position(previousPosition);
+      }
       layerRef.current?.batchDraw();
       return blob;
     },
@@ -497,221 +564,251 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
       }Keyboard: Tab moves through layers, arrow keys nudge, plus and minus scale, R rotates, Delete removes, Control-Z undoes.`}
       onKeyDown={handleKeyDown}
       className="bg-builder-backdrop focus-visible:ring-neon-cyan relative w-full overflow-hidden rounded-xl focus-visible:ring-2 focus-visible:outline-none"
+      // Mobile sticky canvas: the height comes from --canvas-h (the builder sets 42svh,
+      // or 30svh while the on-screen keyboard is open) and the stage fits inside it.
+      style={fitContainerHeight ? { height: "var(--canvas-h)" } : undefined}
     >
       {error ? (
         <p role="alert" className="text-text-2 flex min-h-64 items-center justify-center gap-2 p-6 text-sm">
           <span aria-hidden="true">⚠</span> We couldn&apos;t load the garment preview. Please refresh the page.
         </p>
-      ) : scale > 0 && garmentCanvas ? (
-        <Stage
-          ref={stageRef}
-          width={containerWidth}
-          height={stageHeight}
-          scaleX={scale}
-          scaleY={scale}
-          onMouseDown={(e) => {
-            if (e.target === e.target.getStage()) {
-              setSelectedView(null);
-              onSelectLayer(null);
-            }
-          }}
-          onTouchStart={(e) => {
-            if (e.target === e.target.getStage()) {
-              setSelectedView(null);
-              onSelectLayer(null);
-            }
-          }}
-        >
-          <Layer listening={false}>
-            <KonvaImage image={garmentCanvas} x={0} y={0} width={view.width} height={view.height} />
-          </Layer>
-          <Layer ref={layerRef}>
-            {layers.map((layer) => {
-              const attachRef = (node: Konva.Node | null) => {
-                if (node) nodeRefs.current.set(layer.id, node);
-                else nodeRefs.current.delete(layer.id);
-              };
-              const attachCopyRef = (node: Konva.Node | null) => {
-                if (node) copyRefs.current.set(layer.id, node);
-                else copyRefs.current.delete(layer.id);
-              };
-              const layerHandlers = {
-                draggable: true,
-                onClick: () => {
-                  selectThisView();
-                  onSelectLayer(layer.id);
-                },
-                onTap: () => {
-                  selectThisView();
-                  onSelectLayer(layer.id);
-                },
-                onDragMove: () => {
-                  snapToCenter(layer.id);
-                  syncCopy(layer.id);
-                },
-                onTransform: () => syncCopy(layer.id),
-                onDragEnd: () => {
-                  hideSnapGuides();
-                  selectThisView();
-                  const node = nodeRefs.current.get(layer.id);
-                  if (node) commitTransform(layer, node);
-                },
-                onTransformEnd: () => {
-                  selectThisView();
-                  const node = nodeRefs.current.get(layer.id);
-                  if (node) commitTransform(layer, node);
-                },
-                onTouchMove: (e: Konva.KonvaEventObject<TouchEvent>) => handleTouchMove(e, layer),
-                onTouchEnd: () => handleTouchEnd(layer),
-                onMouseEnter: (e: Konva.KonvaEventObject<MouseEvent>) => {
-                  const stage = e.target.getStage();
-                  if (stage) stage.container().style.cursor = "move";
-                },
-                onMouseLeave: (e: Konva.KonvaEventObject<MouseEvent>) => {
-                  const stage = e.target.getStage();
-                  if (stage) stage.container().style.cursor = "";
-                },
-              };
-              // x/y is the box's top-left corner as rotated (geometry.ts): place the node at its center.
-              const center = topLeftToCenter(layer.transform);
-              const position = {
-                x: center.cx,
-                y: center.cy,
-                rotation: layer.transform.rotation,
-                skewX: layer.transform.skewX,
-                skewY: layer.transform.skewY,
-              };
-              /** The layer's node; drawn twice (see below), only the interactive one gets handlers. */
-              const node = (interactive: boolean) => {
-                const extra = interactive
-                  ? { ref: attachRef, ...layerHandlers }
-                  : { ref: attachCopyRef, listening: false };
-                if (layer.type === "image") {
-                  return (
-                    <KonvaImage
-                      image={artworkCanvas(layer)}
-                      {...position}
-                      offsetX={layer.transform.width / 2}
-                      offsetY={layer.transform.height / 2}
-                      width={layer.transform.width}
-                      height={layer.transform.height}
-                      scaleX={layer.transform.flipX ? -1 : 1}
-                      {...extra}
-                    />
-                  );
-                }
-                const geo = textGeometry(layer.text, layer.font, layer.letterSpacing, layer.curve);
-                const font = getTextFont(layer.font);
-                const sx = layer.transform.width / geo.width;
-                const sy = layer.transform.height / geo.height;
-                const textProps = {
-                  text: layer.text,
-                  fontSize: TEXT_BASE_FONT_SIZE,
-                  fontFamily: font?.family ?? "sans-serif",
-                  fontStyle: font ? `${font.weight}` : "normal",
-                  letterSpacing: layer.letterSpacing,
-                  fill: layer.color,
-                  stroke: layer.outline.width > 0 ? layer.outline.color : undefined,
-                  strokeWidth: textStrokeWidth(layer.outline.width, sx, sy),
-                  fillAfterStrokeEnabled: true,
-                  ...position,
-                  offsetX: geo.offsetX,
-                  offsetY: geo.offsetY,
-                  scaleX: sx * (layer.transform.flipX ? -1 : 1),
-                  scaleY: sy,
-                };
-                // Arched text runs along an arc path (text-measure.ts); straight text is one line.
-                return geo.path ? (
-                  <TextPath {...textProps} data={geo.path} align="center" {...extra} />
-                ) : (
-                  <Text {...textProps} align={layer.align} {...extra} />
-                );
-              };
-              // Two copies: the interactive one is drawn faded and unclipped, so a design that
-              // runs past the print area is still visible and easy to grab; a clipped copy on top
-              // shows exactly what prints. The export hides the faded one (exportPng).
-              return (
-                <Fragment key={layer.id}>
-                  <Group name={GHOST_NAME} opacity={0.3}>
-                    {node(true)}
-                  </Group>
-                  <Group
-                    listening={false}
-                    clip={{
-                      x: activeArea.rect.x,
-                      y: activeArea.rect.y,
-                      width: activeArea.rect.w,
-                      height: activeArea.rect.h,
-                    }}
-                  >
-                    {node(false)}
-                  </Group>
-                </Fragment>
+      ) : fitScale > 0 && garmentCanvas ? (
+        <div className="mx-auto" style={{ width: stageWidth, height: stageHeight }}>
+          <Stage
+            ref={stageRef}
+            width={stageWidth}
+            height={stageHeight}
+            scaleX={viewScale}
+            scaleY={viewScale}
+            x={pan.x}
+            y={pan.y}
+            // Zoomed in: a drag on the empty canvas pans the view (layers still drag
+            // themselves — Konva resolves the drag to the node under the pointer).
+            draggable={zoom > 1}
+            dragBoundFunc={(pos) => clampPan(pos.x, pos.y)}
+            onDragEnd={(e) => setPan(clampPan(e.target.x(), e.target.y()))}
+            onMouseDown={(e) => {
+              if (e.target === e.target.getStage()) {
+                setSelectedView(null);
+                onSelectLayer(null);
+              }
+            }}
+            onTouchStart={(e) => {
+              if (e.target === e.target.getStage()) {
+                setSelectedView(null);
+                onSelectLayer(null);
+              }
+            }}
+            onTouchMove={(e) => {
+              const touches = e.evt.touches;
+              if (touches.length !== 2 || e.target !== e.target.getStage()) return;
+              e.evt.preventDefault();
+              const dist = Math.hypot(
+                touches[0]!.clientX - touches[1]!.clientX,
+                touches[0]!.clientY - touches[1]!.clientY,
               );
-            })}
-            <Transformer
-              ref={transformerRef}
-              keepRatio={lockRatio}
-              rotateEnabled
-              enabledAnchors={[
-                "top-left",
-                "top-center",
-                "top-right",
-                "middle-left",
-                "middle-right",
-                "bottom-left",
-                "bottom-center",
-                "bottom-right",
-              ]}
-              anchorSize={anchorSize}
-              anchorCornerRadius={anchorCornerRadius}
-              boundBoxFunc={(oldBox, newBox) => (newBox.width < 8 || newBox.height < 8 ? oldBox : newBox)}
-            />
-            <Rect
-              ref={guideRef}
-              x={activeArea.rect.x}
-              y={activeArea.rect.y}
-              width={activeArea.rect.w}
-              height={activeArea.rect.h}
-              stroke="#4b4b57"
-              strokeWidth={1.5}
-              dash={[8, 6]}
-              listening={false}
-            />
-            {/* Snap-to-center guides: shown only while a layer is locked onto the middle. */}
-            <Line
-              ref={vGuideRef}
-              points={[
-                activeArea.rect.x + activeArea.rect.w / 2,
-                activeArea.rect.y,
-                activeArea.rect.x + activeArea.rect.w / 2,
-                activeArea.rect.y + activeArea.rect.h,
-              ]}
-              stroke={SNAP_GUIDE_COLOR}
-              strokeWidth={1.5}
-              visible={false}
-              listening={false}
-            />
-            <Line
-              ref={hGuideRef}
-              points={[
-                activeArea.rect.x,
-                activeArea.rect.y + activeArea.rect.h / 2,
-                activeArea.rect.x + activeArea.rect.w,
-                activeArea.rect.y + activeArea.rect.h / 2,
-              ]}
-              stroke={SNAP_GUIDE_COLOR}
-              strokeWidth={1.5}
-              visible={false}
-              listening={false}
-            />
-          </Layer>
-        </Stage>
+              const last = stagePinchRef.current;
+              if (!last) {
+                stagePinchRef.current = { dist, zoom: zoomRef.current };
+                return;
+              }
+              applyZoom((last.zoom * dist) / last.dist);
+            }}
+            onTouchEnd={() => {
+              stagePinchRef.current = null;
+            }}
+          >
+            <Layer listening={false}>
+              <KonvaImage image={garmentCanvas} x={0} y={0} width={view.width} height={view.height} />
+            </Layer>
+            <Layer ref={layerRef}>
+              {layers.map((layer) => {
+                const attachRef = (node: Konva.Node | null) => {
+                  if (node) nodeRefs.current.set(layer.id, node);
+                  else nodeRefs.current.delete(layer.id);
+                };
+                const attachCopyRef = (node: Konva.Node | null) => {
+                  if (node) copyRefs.current.set(layer.id, node);
+                  else copyRefs.current.delete(layer.id);
+                };
+                const layerHandlers = {
+                  draggable: true,
+                  onClick: () => {
+                    selectThisView();
+                    onSelectLayer(layer.id);
+                  },
+                  onTap: () => {
+                    selectThisView();
+                    onSelectLayer(layer.id);
+                  },
+                  onDragMove: () => {
+                    snapToCenter(layer.id);
+                    syncCopy(layer.id);
+                  },
+                  onTransform: () => syncCopy(layer.id),
+                  onDragEnd: () => {
+                    hideSnapGuides();
+                    selectThisView();
+                    const node = nodeRefs.current.get(layer.id);
+                    if (node) commitTransform(layer, node);
+                  },
+                  onTransformEnd: () => {
+                    selectThisView();
+                    const node = nodeRefs.current.get(layer.id);
+                    if (node) commitTransform(layer, node);
+                  },
+                  onTouchMove: (e: Konva.KonvaEventObject<TouchEvent>) => handleTouchMove(e, layer),
+                  onTouchEnd: () => handleTouchEnd(layer),
+                  onMouseEnter: (e: Konva.KonvaEventObject<MouseEvent>) => {
+                    const stage = e.target.getStage();
+                    if (stage) stage.container().style.cursor = "move";
+                  },
+                  onMouseLeave: (e: Konva.KonvaEventObject<MouseEvent>) => {
+                    const stage = e.target.getStage();
+                    if (stage) stage.container().style.cursor = "";
+                  },
+                };
+                // x/y is the box's top-left corner as rotated (geometry.ts): place the node at its center.
+                const center = topLeftToCenter(layer.transform);
+                const position = {
+                  x: center.cx,
+                  y: center.cy,
+                  rotation: layer.transform.rotation,
+                  skewX: layer.transform.skewX,
+                  skewY: layer.transform.skewY,
+                };
+                /** The layer's node; drawn twice (see below), only the interactive one gets handlers. */
+                const node = (interactive: boolean) => {
+                  const extra = interactive
+                    ? { ref: attachRef, ...layerHandlers }
+                    : { ref: attachCopyRef, listening: false };
+                  if (layer.type === "image") {
+                    return (
+                      <KonvaImage
+                        image={artworkCanvas(layer)}
+                        {...position}
+                        offsetX={layer.transform.width / 2}
+                        offsetY={layer.transform.height / 2}
+                        width={layer.transform.width}
+                        height={layer.transform.height}
+                        scaleX={layer.transform.flipX ? -1 : 1}
+                        {...extra}
+                      />
+                    );
+                  }
+                  const geo = textGeometry(layer.text, layer.font, layer.letterSpacing, layer.curve);
+                  const font = getTextFont(layer.font);
+                  const sx = layer.transform.width / geo.width;
+                  const sy = layer.transform.height / geo.height;
+                  const textProps = {
+                    text: layer.text,
+                    fontSize: TEXT_BASE_FONT_SIZE,
+                    fontFamily: font?.family ?? "sans-serif",
+                    fontStyle: font ? `${font.weight}` : "normal",
+                    letterSpacing: layer.letterSpacing,
+                    fill: layer.color,
+                    stroke: layer.outline.width > 0 ? layer.outline.color : undefined,
+                    strokeWidth: textStrokeWidth(layer.outline.width, sx, sy),
+                    fillAfterStrokeEnabled: true,
+                    ...position,
+                    offsetX: geo.offsetX,
+                    offsetY: geo.offsetY,
+                    scaleX: sx * (layer.transform.flipX ? -1 : 1),
+                    scaleY: sy,
+                  };
+                  // Arched text runs along an arc path (text-measure.ts); straight text is one line.
+                  return geo.path ? (
+                    <TextPath {...textProps} data={geo.path} align="center" {...extra} />
+                  ) : (
+                    <Text {...textProps} align={layer.align} {...extra} />
+                  );
+                };
+                // Two copies: the interactive one is drawn faded and unclipped, so a design that
+                // runs past the print area is still visible and easy to grab; a clipped copy on top
+                // shows exactly what prints. The export hides the faded one (exportPng).
+                return (
+                  <Fragment key={layer.id}>
+                    <Group name={GHOST_NAME} opacity={0.3}>
+                      {node(true)}
+                    </Group>
+                    <Group
+                      listening={false}
+                      clip={{
+                        x: activeArea.rect.x,
+                        y: activeArea.rect.y,
+                        width: activeArea.rect.w,
+                        height: activeArea.rect.h,
+                      }}
+                    >
+                      {node(false)}
+                    </Group>
+                  </Fragment>
+                );
+              })}
+              <Transformer
+                ref={transformerRef}
+                keepRatio={lockRatio}
+                rotateEnabled
+                enabledAnchors={[
+                  "top-left",
+                  "top-center",
+                  "top-right",
+                  "middle-left",
+                  "middle-right",
+                  "bottom-left",
+                  "bottom-center",
+                  "bottom-right",
+                ]}
+                anchorSize={anchorSize}
+                anchorCornerRadius={anchorCornerRadius}
+                boundBoxFunc={(oldBox, newBox) => (newBox.width < 8 || newBox.height < 8 ? oldBox : newBox)}
+              />
+              <Rect
+                ref={guideRef}
+                x={activeArea.rect.x}
+                y={activeArea.rect.y}
+                width={activeArea.rect.w}
+                height={activeArea.rect.h}
+                stroke="#4b4b57"
+                strokeWidth={1.5}
+                dash={[8, 6]}
+                listening={false}
+              />
+              {/* Snap-to-center guides: shown only while a layer is locked onto the middle. */}
+              <Line
+                ref={vGuideRef}
+                points={[
+                  activeArea.rect.x + activeArea.rect.w / 2,
+                  activeArea.rect.y,
+                  activeArea.rect.x + activeArea.rect.w / 2,
+                  activeArea.rect.y + activeArea.rect.h,
+                ]}
+                stroke={SNAP_GUIDE_COLOR}
+                strokeWidth={1.5}
+                visible={false}
+                listening={false}
+              />
+              <Line
+                ref={hGuideRef}
+                points={[
+                  activeArea.rect.x,
+                  activeArea.rect.y + activeArea.rect.h / 2,
+                  activeArea.rect.x + activeArea.rect.w,
+                  activeArea.rect.y + activeArea.rect.h / 2,
+                ]}
+                stroke={SNAP_GUIDE_COLOR}
+                strokeWidth={1.5}
+                visible={false}
+                listening={false}
+              />
+            </Layer>
+          </Stage>
+        </div>
       ) : (
         <div className="bg-builder-backdrop min-h-64 w-full animate-pulse" aria-hidden="true" />
       )}
       {/* Empty side (v3): dashed guide, one-line instruction, same/different chooser. */}
-      {scale > 0 && garmentCanvas && !hasLayers && emptyState ? (
+      {fitScale > 0 && garmentCanvas && !hasLayers && emptyState ? (
         <div className="bg-builder-backdrop/90 absolute inset-0 flex flex-col items-center justify-center gap-2 p-3 text-center">
           <p className="text-text-2 text-sm font-medium" data-testid="canvas-empty">
             Your design goes here
@@ -730,6 +827,49 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
           )}
         </div>
       ) : null}
+      {/* View-only zoom controls (P51-1): "−", badge, "Fit", "+" on the canvas corner. */}
+      <div
+        role="group"
+        aria-label="Canvas zoom"
+        className="bg-bg-0/80 border-border absolute top-2 left-2 z-10 flex items-center gap-1 rounded-full border p-1 backdrop-blur-sm"
+      >
+        <button
+          type="button"
+          data-testid="canvas-zoom-out"
+          aria-label="Zoom out"
+          disabled={zoom <= 1}
+          onClick={() => zoomStep(-1)}
+          className="text-text-1 hover:bg-bg-2 focus-visible:ring-neon-cyan inline-flex h-11 w-11 items-center justify-center rounded-full text-base transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"
+        >
+          <span aria-hidden="true">−</span>
+        </button>
+        <span
+          data-testid="canvas-zoom-badge"
+          aria-live="polite"
+          className="text-text-2 w-10 text-center font-mono text-xs"
+        >
+          {`${Math.round(zoom * 10) / 10}×`}
+        </span>
+        <button
+          type="button"
+          data-testid="canvas-zoom-fit"
+          aria-label="Fit the whole garment at 1×"
+          onClick={zoomFit}
+          className="text-text-1 hover:bg-bg-2 focus-visible:ring-neon-cyan inline-flex h-11 items-center justify-center rounded-full px-2.5 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+        >
+          Fit
+        </button>
+        <button
+          type="button"
+          data-testid="canvas-zoom-in"
+          aria-label="Zoom in"
+          disabled={zoom >= 3}
+          onClick={() => zoomStep(1)}
+          className="text-text-1 hover:bg-bg-2 focus-visible:ring-neon-cyan inline-flex h-11 w-11 items-center justify-center rounded-full text-base transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"
+        >
+          <span aria-hidden="true">+</span>
+        </button>
+      </div>
       <p className="sr-only" aria-live="polite" data-testid="builder-transform">
         {selectedLayerId
           ? layers.find((l) => l.id === selectedLayerId)

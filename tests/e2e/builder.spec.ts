@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { openToolTab } from "./builder-tabs";
+
 /**
  * The /design builder controls (v4: layers, text, stretch/skew). Runs on the desktop and
  * mobile-360 projects (playwright.config.ts) — the builder is the money path, so both get
@@ -110,6 +112,7 @@ test("switching the print location refits the artwork", async ({ page }) => {
   await goToDesignStep(page);
   await uploadImage(page, "tests/e2e/fixtures/art.png");
   const before = await transformText(page);
+  await openToolTab(page, "side");
   await page.getByTestId("print-location").click();
   // Full Front is the default (largest first); switch to the smaller Front Chest.
   await page.getByRole("option", { name: "Front Chest" }).click();
@@ -153,7 +156,11 @@ test("the layer row tools reorder, duplicate and delete", async ({ page }) => {
   await openBuilderSignedIn(page);
   await goToDesignStep(page);
   await uploadImage(page, "tests/e2e/fixtures/art.png");
+  await openToolTab(page, "add");
   await page.getByTestId("add-text").click();
+  // Adding a layer lands on Item (the tab auto-switch); the text field proves it settled.
+  await expect(page.getByTestId("text-layer-input")).toBeVisible();
+  await openToolTab(page, "layers");
   await expect(page.getByTestId("layers-panel")).toContainText("Your text");
 
   // Duplicate the image layer: two rows, the copy selected above the original.
@@ -168,13 +175,18 @@ test("front/back toggle gives each side its own layer stack", async ({ page }) =
   await goToDesignStep(page);
   await uploadImage(page, "tests/e2e/fixtures/art.png");
 
+  await openToolTab(page, "side");
   await page.getByTestId("view-back").click();
   await expect(page.getByTestId("view-back")).toHaveAttribute("aria-pressed", "true");
   // The back starts empty: the same design is one click away.
   await expect(page.getByTestId("side-chooser")).toBeVisible();
   await page.getByTestId("use-design-0").click();
   await expect(page.getByRole("region", { name: "Selected image" })).toBeVisible();
+  await openToolTab(page, "side");
   await page.getByTestId("view-front").click();
+  // The front keeps its own selected layer, but a side switch leaves the visitor in the
+  // Side tab (P51-1) — go to Item for the selected-item panel.
+  await openToolTab(page, "item");
   await expect(page.getByRole("region", { name: "Selected image" })).toBeVisible();
 });
 
@@ -241,13 +253,20 @@ test.describe("mobile QA at 360px (docs/04)", () => {
       .toBeLessThanOrEqual(0);
 
     // Step pills are compact (v2) but still ≥ 24px (WCAG 2.5.8); the print-location select
-    // and the upload action keep the 44px target.
+    // and the upload action keep the 44px target. On mobile each lives in its tool tab.
     const stepPill = page.getByRole("button", { name: "Step 3: Design" });
     await expect(stepPill).toBeVisible();
     expect((await stepPill.boundingBox())!.height).toBeGreaterThanOrEqual(24);
-    for (const control of [page.getByTestId("print-location"), page.getByTestId("upload-image")]) {
-      await expect(control).toBeVisible();
-      expect((await control.boundingBox())!.height).toBeGreaterThanOrEqual(24);
+    if (testInfo.project.name === "mobile-360") {
+      await openToolTab(page, "side");
+      expect((await page.getByTestId("print-location").boundingBox())!.height).toBeGreaterThanOrEqual(24);
+      await openToolTab(page, "add");
+      expect((await page.getByTestId("upload-image").boundingBox())!.height).toBeGreaterThanOrEqual(24);
+    } else {
+      for (const control of [page.getByTestId("print-location"), page.getByTestId("upload-image")]) {
+        await expect(control).toBeVisible();
+        expect((await control.boundingBox())!.height).toBeGreaterThanOrEqual(24);
+      }
     }
 
     // Steps 3 and 4 (the two with the most controls) never scroll sideways at 360px.
