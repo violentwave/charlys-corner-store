@@ -30,13 +30,13 @@ describe("garmentLayers", () => {
       color: "#1b1b1f",
       op: "source-in",
     });
-    expect(shading).toMatchObject({ src: "/garments/tshirt/front/shading.png", op: "multiply", opacity: 1 });
+    expect(shading).toMatchObject({ src: "/garments/tshirt/front/shading.webp", op: "multiply", opacity: 1 });
     // #1b1b1f is near-black: opacity = 0.15 + 0.85 × (1 − luma) ≈ 0.909 — near-full sheen.
-    expect(highlight).toMatchObject({ src: "/garments/tshirt/front/highlight.png", op: "screen" });
+    expect(highlight).toMatchObject({ src: "/garments/tshirt/front/highlight.webp", op: "screen" });
     expect(highlight.opacity).toBeCloseTo(0.15 + 0.85 * (1 - 0.10588), 2);
-    expect(silhouette).toMatchObject({ src: "/garments/tshirt/front/shading.png", op: "destination-in" });
+    expect(silhouette).toMatchObject({ src: "/garments/tshirt/front/shading.webp", op: "destination-in" });
     expect(over).toMatchObject({
-      src: "/garments/tshirt/front/shading.png",
+      src: "/garments/tshirt/front/shading.webp",
       op: "multiply",
       opacity: SHADING_OVER_ARTWORK_OPACITY,
     });
@@ -68,14 +68,14 @@ describe("garmentLayers", () => {
   });
 
   it("uses every zone's mask src from the view config", () => {
-    const view = getGarment("hoodie").views[0]!;
-    const masks = garmentLayers(view, { body: "#97999b", lining: "#97999b", drawstrings: "#ffffff" }).filter(
+    const view = getGarment("hat").views[0]!;
+    const masks = garmentLayers(view, { front: "#1c1c1e", mesh: "#f4f4f4", brim: "#1c1c1e" }).filter(
       (l) => l.type === "mask",
     );
     expect(masks.map((m) => (m.type === "mask" ? m.src : ""))).toEqual([
-      "/garments/hoodie/front/mask-body.png",
-      "/garments/hoodie/front/mask-lining.png",
-      "/garments/hoodie/front/mask-drawstrings.png",
+      "/garments/hat/front/mask-front.png",
+      "/garments/hat/front/mask-mesh.png",
+      "/garments/hat/front/mask-brim.png",
     ]);
   });
 });

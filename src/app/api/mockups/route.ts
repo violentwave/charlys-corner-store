@@ -7,19 +7,27 @@ import { OrderRequestCustomerEmail } from "@/emails/order-request-customer";
 import { zodFieldErrors } from "@/lib/action-result";
 import { isSameOrigin } from "@/lib/auth/origin";
 import { verifiedUser } from "@/lib/auth/session";
-import { ARTWORK_MAX_BYTES, checkArtwork } from "@/lib/artwork";
+import { checkArtwork } from "@/lib/artwork";
 import { getDb, schema } from "@/lib/db";
 import { clip, BodyTooLargeError, readFormDataLimited } from "@/lib/http";
 import { issueCoupon } from "@/lib/coupon-store";
 import { upsertLead } from "@/lib/leads";
 import { mockupSummary } from "@/lib/mockup-summary";
-import { MOCKUP_ARTWORK_KINDS, MOCKUP_RENDER_MAX_BYTES, mockupPayloadSchema } from "@/lib/mockup-schema";
+import { VIEW_LABELS } from "@/lib/garments";
+import {
+  artworkCount,
+  MOCKUP_ARTWORK_KINDS,
+  MOCKUP_ARTWORK_TOTAL_BYTES,
+  MOCKUP_RENDER_MAX_BYTES,
+  mockupPayloadSchema,
+  type MockupArtworkRecord,
+} from "@/lib/mockup-schema";
 import { confirmCustomer, notifyOwner } from "@/lib/notify";
 import { clientIp, LIMITS, rateLimit } from "@/lib/rate-limit";
 import { buildObjectKey, getStorage } from "@/lib/storage";
 
-/** Original artwork (≤ 20 MB) + up to 2 rendered mockups (≤ 8 MB each) + form overhead. */
-const MAX_REQUEST_BYTES = ARTWORK_MAX_BYTES + 2 * MOCKUP_RENDER_MAX_BYTES + 1024 * 1024;
+/** Original artwork (≤ 30 MB in total) + up to 4 rendered mockups (≤ 4 MB each) + form overhead. */
+const MAX_REQUEST_BYTES = MOCKUP_ARTWORK_TOTAL_BYTES + 4 * MOCKUP_RENDER_MAX_BYTES + 1024 * 1024;
 
 /** Rendered mockups are exported at template size; anything far larger is not ours. */
 const MAX_RENDER_PX = 4096;
@@ -48,7 +56,7 @@ export async function POST(request: Request) {
     form = await readFormDataLimited(request, MAX_REQUEST_BYTES);
   } catch (error) {
     if (error instanceof BodyTooLargeError) {
-      return fail("That upload is too large — artwork and mockups together must be 37 MB or less.", 413);
+      return fail("That upload is too large — your artwork files must be 30 MB or less in total.", 413);
     }
     return fail("Invalid request.", 400);
   }
@@ -71,12 +79,24 @@ export async function POST(request: Request) {
   if (!parsed.success) return fail("Please fix the highlighted fields.", 400, zodFieldErrors(parsed.error));
   const data = parsed.data;
 
-  // Exactly one artwork file.
-  const artworkParts = [...form.entries()].filter(
-    ([key, value]) => key === "artwork" && value instanceof File && (value.size > 0 || value.name !== ""),
+  // Artwork files: exactly artwork-0 … artwork-(n-1), one per distinct views[].artwork index.
+  // (A single legacy "artwork" field counts as artwork-0.)
+  const isFile = (value: FormDataEntryValue): value is File =>
+    value instanceof File && (value.size > 0 || value.name !== "");
+  const artworkEntries = [...form.entries()].filter(
+    (e): e is [string, File] => /^artwork(-\d)?$/.test(e[0]) && isFile(e[1]),
   );
-  if (artworkParts.length !== 1) return fail("Please attach your artwork file.", 400);
-  const artworkFile = artworkParts[0]![1] as File;
+  const artworkFiles: File[] = [];
+  for (const [key, file] of artworkEntries) {
+    const index = key === "artwork" ? 0 : Number(key.slice("artwork-".length));
+    if (artworkFiles[index]) return fail("Please attach each artwork file once.", 400);
+    artworkFiles[index] = file;
+  }
+  const needed = artworkCount(data.views);
+  const missing = Array.from({ length: needed }, (_, i) => i).some((i) => !artworkFiles[i]);
+  if (artworkFiles.length !== needed || missing) {
+    return fail(needed === 1 ? "Please attach your artwork file." : "Please attach every artwork file.", 400);
+  }
 
   // Exactly one mockup-<view> per listed view, and no others (field name is the source of truth,
   // never the browser-supplied file name).
@@ -95,13 +115,22 @@ export async function POST(request: Request) {
   }
 
   // Validate EVERY file before storing ANY, so a bad file never leaves orphans behind.
-  const artworkBytes = new Uint8Array(await artworkFile.arrayBuffer());
-  const artworkCheck = checkArtwork(artworkBytes);
-  const kindOk = artworkCheck.ok && (MOCKUP_ARTWORK_KINDS as readonly string[]).includes(artworkCheck.kind);
-  if (!kindOk) {
-    return fail("That artwork type won't render on the mockup. Please use PNG, JPG, WEBP, or SVG.", 400, {
-      artwork: artworkCheck.ok ? "That file type won't render on the mockup." : artworkCheck.error,
-    });
+  const artworks: { file: File; bytes: Uint8Array; contentType: string }[] = [];
+  let artworkTotal = 0;
+  for (const file of artworkFiles) {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    artworkTotal += bytes.byteLength;
+    if (artworkTotal > MOCKUP_ARTWORK_TOTAL_BYTES) {
+      return fail("Your artwork files must be 30 MB or less in total.", 400, { artwork: "Files too large" });
+    }
+    const check = checkArtwork(bytes);
+    const kindOk = check.ok && (MOCKUP_ARTWORK_KINDS as readonly string[]).includes(check.kind);
+    if (!check.ok || !kindOk) {
+      return fail("That artwork type won't render on the mockup. Please use PNG, JPG, WEBP, or SVG.", 400, {
+        artwork: check.ok ? "That file type won't render on the mockup." : check.error,
+      });
+    }
+    artworks.push({ file, bytes, contentType: check.contentType });
   }
 
   const renders: { view: string; bytes: Uint8Array }[] = [];
@@ -133,17 +162,16 @@ export async function POST(request: Request) {
   const storage = getStorage();
   const stored: { key: string; name: string; contentType: string; size: number }[] = [];
   const cleanup = () => Promise.all(stored.map((f) => storage.delete(f.key).catch(() => {})));
-  let artworkKey: string;
+  const artworkRecords: MockupArtworkRecord[] = [];
   const keysByView = new Map<string, string>();
   try {
-    artworkKey = buildObjectKey("mockups", artworkFile.name);
-    await storage.put(artworkKey, artworkBytes, artworkCheck.contentType);
-    stored.push({
-      key: artworkKey,
-      name: clip(artworkFile.name, 120),
-      contentType: artworkCheck.contentType,
-      size: artworkBytes.byteLength,
-    });
+    for (const art of artworks) {
+      const key = buildObjectKey("mockups", art.file.name);
+      await storage.put(key, art.bytes, art.contentType);
+      const record = { key, name: clip(art.file.name, 120), contentType: art.contentType, size: art.bytes.byteLength };
+      stored.push(record);
+      artworkRecords.push(record);
+    }
     for (const render of renders) {
       const key = buildObjectKey("mockups", `mockup-${render.view}.png`);
       await storage.put(key, render.bytes, "image/png");
@@ -183,10 +211,11 @@ export async function POST(request: Request) {
         sizes: data.sizes,
         notes: data.notes || null,
         kind: data.intent === "order" ? "order" : "mockup",
-        artworkKey,
-        artworkName: clip(artworkFile.name, 120),
-        artworkContentType: artworkCheck.contentType,
-        artworkSizeBytes: artworkBytes.byteLength,
+        artworks: artworkRecords,
+        artworkKey: artworkRecords[0]!.key,
+        artworkName: artworkRecords[0]!.name,
+        artworkContentType: artworkRecords[0]!.contentType,
+        artworkSizeBytes: artworkRecords[0]!.size,
       })
       .returning({ id: schema.mockups.id });
     mockupId = row!.id;
@@ -197,7 +226,13 @@ export async function POST(request: Request) {
   }
 
   // Row is stored; emails are best-effort from here (row first, email second).
-  const artworkUrl = await storage.signedUrl(artworkKey).catch(() => `(link unavailable; storage key ${artworkKey})`);
+  const artworkLinks = await Promise.all(
+    artworkRecords.map(async (a) => ({
+      ...a,
+      signedUrl: await storage.signedUrl(a.key).catch(() => `(link unavailable; storage key ${a.key})`),
+      usedOn: data.views.filter((v) => artworkRecords[v.artwork] === a).map((v) => VIEW_LABELS[v.view]),
+    })),
+  );
   const mockupUrls = await Promise.all(
     data.views.map(async (entry, i) => ({
       view: viewRows[i]!.view,
@@ -222,12 +257,7 @@ export async function POST(request: Request) {
       notes: data.notes ? clip(data.notes, 2000) : undefined,
       couponCode: coupon.code,
       kind: data.intent === "order" ? "order" : "mockup",
-      artwork: {
-        name: clip(artworkFile.name, 120),
-        contentType: artworkCheck.contentType,
-        size: artworkBytes.byteLength,
-        signedUrl: artworkUrl,
-      },
+      artworks: artworkLinks,
       mockups: mockupUrls,
     }),
     user.email,

@@ -109,6 +109,128 @@ const tshirtBack = {
   highlight: [...teeHighlights, { d: "M 398 134 C 436 150 564 150 602 134", o: 0.35, w: 2.5, sharp: true }],
 };
 
+// ---------------------------------------------------------------- LONG SLEEVE TEE (Gildan 5400: rib cuffs)
+// Same crew body as the tee; long sleeves ≈0.37× body width once LS_FIT narrows the view.
+const LS_BODY = `
+  C 662 128 718 142 772 160
+  C 880 210 950 560 962 960
+  L 966 1052 L 812 1068 L 806 970
+  C 800 700 780 520 742 376
+  C 734 600 740 850 748 1086
+  C 580 1104 420 1104 252 1086
+  C 260 850 266 600 258 376
+  C 220 520 200 700 194 970
+  L 188 1068 L 34 1052 L 38 960
+  C 50 560 120 210 228 160
+  C 282 142 338 128 392 112`;
+const lsShared = [
+  ...sym("seam", "M 772 160 C 760 240 750 310 742 376"),
+  ...sym("rib", "M 962 960 L 966 1052 L 812 1068 L 806 970 Z", { o: 0.12 }),
+  ...sym("seam", "M 962 960 L 806 970"),
+  ...sym("fold", "M 842 300 C 890 420 918 560 930 720", { o: 0.12, w: 18 }),
+  ...sym("crease", "M 810 880 C 860 866 912 868 958 880", { o: 0.13 }),
+  ...sym("crease", "M 808 920 C 858 908 912 910 960 920", { o: 0.11 }),
+  ...sym("fold", "M 744 394 C 700 424 662 456 628 506", { o: 0.16 }),
+  { kind: "stitch", d: "M 256 1064 C 420 1082 580 1082 744 1064" },
+  { kind: "stitch", d: "M 255 1052 C 420 1070 580 1070 745 1052", o: 0.2 },
+  { kind: "tone", d: "M 560 600 C 600 700 590 900 620 1060 L 680 1060 C 660 880 650 700 600 580 Z", o: 0.05 },
+  { kind: "fold", d: "M 300 1046 C 360 1026 420 1060 470 1038", o: 0.1, w: 10 },
+];
+const lsHighlights = [
+  ...both("M 812 210 C 880 300 920 460 940 640", { o: 0.4, w: 22 }),
+  { d: "M 640 300 C 620 420 620 620 636 900", o: 0.14, w: 90 },
+  { d: "M 360 320 C 380 430 380 650 364 900", o: 0.12, w: 90 },
+  { d: "M 258 1074 C 420 1092 580 1092 742 1074", o: 0.3, w: 2.5, sharp: true },
+];
+const longsleeveFront = {
+  width: 1000,
+  height: 1200,
+  silhouette: `M 392 112 C 430 96 570 96 608 112 ${LS_BODY} Z`,
+  zones: { body: null },
+  shade: [
+    { kind: "inner", d: "M 406 112 C 436 168 564 168 594 112 C 560 102 440 102 406 112 Z", o: 0.4 },
+    { kind: "rib", d: "M 392 112 C 420 192 580 192 608 112 L 594 110 C 566 166 434 166 406 110 Z", o: 0.12 },
+    { kind: "seam", d: "M 392 112 C 420 192 580 192 608 112" },
+    { kind: "stitch", d: "M 388 120 C 416 204 584 204 612 120" },
+    ...lsShared,
+  ],
+  highlight: [...lsHighlights, { d: "M 396 118 C 424 198 576 198 604 118", o: 0.35, w: 2.5, sharp: true }],
+};
+const longsleeveBack = {
+  width: 1000,
+  height: 1200,
+  silhouette: `M 392 112 C 432 128 568 128 608 112 ${LS_BODY} Z`,
+  zones: { body: null },
+  shade: [
+    { kind: "rib", d: "M 392 112 C 432 128 568 128 608 112 L 604 130 C 566 146 434 146 396 130 Z", o: 0.12 },
+    { kind: "seam", d: "M 396 130 C 434 146 566 146 604 130" },
+    { kind: "fold", d: "M 330 300 C 420 334 580 334 670 300", o: 0.07, w: 34 },
+    ...lsShared,
+  ],
+  highlight: [...lsHighlights, { d: "M 398 134 C 436 150 564 150 602 134", o: 0.35, w: 2.5, sharp: true }],
+};
+
+// ---------------------------------------------------------------- SLEEVE VIEWS (left / right, laid flat)
+// One sleeve, shoulder at the top, cuff at the bottom: where sleeve prints go. `right` is the
+// wearer's right sleeve; `left` is its mirror. Zone = the color the sleeve takes on the garment.
+function sleeveView({ zone, path, cuff, shade = [], highlight = [] }) {
+  return {
+    width: 1000,
+    height: 1200,
+    silhouette: path,
+    zones: { [zone]: null },
+    shade: [
+      ...(cuff
+        ? [
+            { kind: "rib", d: cuff, o: 0.12 },
+            { kind: "seam", d: cuff.split(" L ")[0] + " L " + cuff.split(" L ")[1] },
+          ]
+        : []),
+      { kind: "fold", d: "M 330 300 C 350 560 380 800 410 1000", o: 0.08, w: 40 },
+      { kind: "fold", d: "M 680 300 C 660 560 630 800 600 1000", o: 0.1, w: 40 },
+      ...shade,
+    ],
+    highlight: [{ d: "M 520 180 C 520 500 512 800 504 1020", o: 0.22, w: 120 }, ...highlight],
+  };
+}
+const mirrorView = (v) => ({
+  ...v,
+  silhouette: mirror(v.silhouette),
+  zones: Object.fromEntries(Object.entries(v.zones).map(([k, d]) => [k, d && mirror(d)])),
+  shade: v.shade.map((e) => (e.d ? { ...e, d: mirror(e.d) } : e)),
+  highlight: v.highlight.map((e) => ({ ...e, d: mirror(e.d) })),
+});
+const LONG_SLEEVE_PATH =
+  "M 290 160 C 380 104 620 104 710 160 C 692 470 652 800 618 1040 L 620 1140 L 380 1140 L 382 1040 C 348 800 308 470 290 160 Z";
+const LONG_CUFF = "M 618 1040 L 382 1040 L 380 1140 L 620 1140 Z";
+const longSleeveRight = sleeveView({
+  zone: "body",
+  path: LONG_SLEEVE_PATH,
+  cuff: LONG_CUFF,
+  shade: [
+    { kind: "seam", d: "M 290 160 C 380 104 620 104 710 160", o: 0.35 },
+    { kind: "crease", d: "M 400 980 C 460 968 540 968 604 980", o: 0.13 },
+    { kind: "crease", d: "M 396 1012 C 460 1000 540 1000 608 1012", o: 0.11 },
+  ],
+});
+const hoodieSleeveRight = sleeveView({
+  zone: "body",
+  path: "M 270 160 C 370 100 630 100 730 160 C 712 470 668 800 630 1030 L 634 1150 L 366 1150 L 370 1030 C 332 800 288 470 270 160 Z",
+  cuff: "M 630 1030 L 370 1030 L 366 1150 L 634 1150 Z",
+  shade: [
+    { kind: "seam", d: "M 270 160 C 370 100 630 100 730 160", o: 0.35 },
+    { kind: "crease", d: "M 390 960 C 460 946 540 946 616 960", o: 0.14 },
+    { kind: "crease", d: "M 386 996 C 460 982 540 982 620 996", o: 0.12 },
+  ],
+});
+// 3/4 raglan sleeve: the slanted raglan seam runs up toward the neck.
+const raglanSleeveRight = sleeveView({
+  zone: "sleeves",
+  path: "M 290 300 L 640 110 C 690 120 720 160 724 210 C 708 470 676 690 646 860 L 648 940 L 382 940 L 384 860 C 346 690 312 500 290 300 Z",
+  cuff: "M 646 860 L 384 860 L 382 940 L 648 940 Z",
+  shade: [{ kind: "seam", d: "M 290 300 L 640 110", o: 0.35 }],
+});
+
 // ---------------------------------------------------------------- POLO (tee body + knit collar, placket, rib cuffs)
 const poloCuffs = [
   ...sym("rib", "M 918 352 L 812 424 L 794 396 L 898 326 Z", { o: 0.12 }),
@@ -165,18 +287,18 @@ const poloBack = {
 };
 
 // ---------------------------------------------------------------- RAGLAN (3/4 sleeve baseball tee)
-const RAGLAN_RIGHT = `C 660 178 740 200 800 232 C 870 330 925 470 962 636 L 872 690 C 840 560 805 470 772 424
-  C 766 640 770 850 776 1012 C 600 1030 400 1030 224 1012 C 230 850 234 640 228 424
-  C 195 470 160 560 128 690 L 38 636 C 75 470 130 330 200 232 C 260 200 340 178 420 160`;
+const RAGLAN_RIGHT = `C 660 178 760 196 840 226 C 930 330 990 480 1012 660 L 862 724 C 836 600 806 500 772 454
+  C 766 640 770 850 776 1012 C 600 1030 400 1030 224 1012 C 230 850 234 640 228 454
+  C 194 500 164 600 138 724 L -12 660 C 10 480 70 330 160 226 C 240 196 340 178 420 160`;
 const raglanSleeve = (neckStart) =>
-  `M ${neckStart} C 640 260 720 350 772 424 C 805 470 840 560 872 690 L 962 636 C 925 470 870 330 800 232 C 740 200 660 178 580 160 Z`;
+  `M ${neckStart} C 640 270 720 370 772 454 C 806 500 836 600 862 724 L 1012 660 C 990 480 930 330 840 226 C 760 196 660 178 580 160 Z`;
 const raglanShared = [
-  ...sym("rib", "M 962 636 L 872 690 L 860 658 L 950 604 Z", { o: 0.12 }),
-  ...sym("seam", "M 950 604 L 860 658"),
-  ...sym("fold", "M 812 470 C 840 520 860 580 874 640", { o: 0.11, w: 12 }),
-  ...sym("fold", "M 790 300 C 830 360 860 420 880 470", { o: 0.1, w: 14 }),
-  ...sym("crease", "M 846 560 C 880 552 910 560 930 574", { o: 0.12 }),
-  ...sym("fold", "M 772 440 C 730 470 700 500 680 540", { o: 0.14 }),
+  ...sym("rib", "M 1012 660 L 862 724 L 854 690 L 1004 626 Z", { o: 0.12 }),
+  ...sym("seam", "M 1004 626 L 854 690"),
+  ...sym("fold", "M 830 500 C 860 560 884 620 898 690", { o: 0.11, w: 16 }),
+  ...sym("fold", "M 820 300 C 880 370 924 450 950 530", { o: 0.1, w: 18 }),
+  ...sym("crease", "M 860 600 C 910 584 960 586 996 600", { o: 0.12 }),
+  ...sym("fold", "M 772 470 C 730 500 700 530 680 570", { o: 0.14 }),
   { kind: "stitch", d: "M 228 992 C 400 1010 600 1010 772 992" },
   { kind: "fold", d: "M 300 1000 C 360 982 420 1010 470 992", o: 0.1, w: 10 },
 ];
@@ -198,16 +320,16 @@ const raglanFront = {
     { kind: "inner", d: "M 434 160 C 460 206 540 206 566 160 C 540 150 460 150 434 160 Z", o: 0.4 },
     { kind: "rib", d: "M 420 160 C 448 230 552 230 580 160 L 566 158 C 540 206 460 206 434 158 Z", o: 0.12 },
     { kind: "seam", d: "M 420 160 C 448 230 552 230 580 160" },
-    ...sym("seam", "M 568 178 C 640 260 720 350 772 424"),
-    ...sym("stitch", "M 578 190 C 648 268 726 356 776 428", { o: 0.25 }),
+    ...sym("seam", "M 568 178 C 640 270 720 370 772 454"),
+    ...sym("stitch", "M 578 190 C 648 278 726 376 776 458", { o: 0.25 }),
     ...raglanShared,
   ],
   highlight: [
-    ...both("M 806 250 C 860 330 900 440 926 560", { o: 0.4, w: 16 }),
+    ...both("M 850 250 C 920 340 968 460 990 590", { o: 0.4, w: 20 }),
     { d: "M 640 330 C 620 450 620 650 636 900", o: 0.13, w: 90 },
     { d: "M 360 340 C 380 450 380 650 364 900", o: 0.11, w: 90 },
     { d: "M 428 166 C 452 222 548 222 572 166", o: 0.35, w: 2.5, sharp: true },
-    ...both("M 562 184 C 634 266 714 356 766 430", { o: 0.3, w: 2.5, sharp: true }),
+    ...both("M 562 184 C 634 276 714 376 766 460", { o: 0.3, w: 2.5, sharp: true }),
   ],
 };
 const raglanBack = {
@@ -225,15 +347,15 @@ const raglanBack = {
   shade: [
     { kind: "rib", d: "M 420 160 C 455 176 545 176 580 160 L 578 180 C 545 196 455 196 422 180 Z", o: 0.12 },
     { kind: "seam", d: "M 422 180 C 455 196 545 196 578 180" },
-    ...sym("seam", "M 566 170 C 640 260 720 350 772 424"),
-    ...sym("stitch", "M 576 182 C 648 268 726 356 776 428", { o: 0.25 }),
+    ...sym("seam", "M 566 170 C 640 270 720 370 772 454"),
+    ...sym("stitch", "M 576 182 C 648 278 726 376 776 458", { o: 0.25 }),
     { kind: "fold", d: "M 340 330 C 420 360 580 360 660 330", o: 0.07, w: 34 },
     ...raglanShared,
   ],
   highlight: [
-    ...both("M 806 250 C 860 330 900 440 926 560", { o: 0.4, w: 16 }),
+    ...both("M 850 250 C 920 340 968 460 990 590", { o: 0.4, w: 20 }),
     { d: "M 640 330 C 620 450 620 650 636 900", o: 0.13, w: 90 },
-    ...both("M 560 176 C 634 266 714 356 766 430", { o: 0.3, w: 2.5, sharp: true }),
+    ...both("M 560 176 C 634 276 714 376 766 460", { o: 0.3, w: 2.5, sharp: true }),
   ],
 };
 
@@ -283,35 +405,39 @@ const tankBack = {
 };
 
 // ---------------------------------------------------------------- HOODIE (pullover)
-const HOODIE_RIGHT_BODY = `C 700 276 735 288 770 300 C 860 420 910 700 935 900 L 948 992 L 878 1002 L 862 910
-  C 850 700 810 520 772 470 C 768 700 766 900 765 1040 L 758 1112 C 600 1120 400 1120 242 1112 L 235 1040
-  C 234 900 232 700 228 470 C 190 520 150 700 138 910 L 122 1002 L 52 992 L 65 900
-  C 90 700 140 420 230 300 C 265 288 300 276 336 262`;
+// Drawn wide on purpose: hoodieFront/back are narrowed by HOODIE_FIT (sx 0.84) in `garments` below,
+// which brings the body to ~440 px and leaves the sleeves at a realistic ~0.4× body width.
+const HOODIE_RIGHT_BODY = `C 700 276 735 288 770 300 C 905 340 985 620 998 905 L 1004 1002 L 846 1022 L 842 920
+  C 834 760 812 620 772 520 C 768 700 766 900 765 1040 L 758 1112 C 600 1120 400 1120 242 1112 L 235 1040
+  C 234 900 232 700 228 520 C 188 620 166 760 158 920 L 154 1022 L -4 1002 L 2 905
+  C 15 620 95 340 230 300 C 265 288 300 276 336 262`;
+const HOODIE_DRAWCORDS =
+  "M 470 372 C 466 460 462 550 456 650 L 468 652 C 474 550 478 460 482 372 Z M 530 372 C 534 460 538 550 544 650 L 532 652 C 526 550 522 460 518 372 Z";
 const HOOD_OPENING =
   "M 500 420 C 430 380 372 296 380 198 C 390 128 450 100 500 100 C 550 100 610 128 620 198 C 628 296 570 380 500 420 Z";
 const hoodieShared = [
   { kind: "rib", d: "M 235 1040 L 765 1040 L 758 1112 C 600 1120 400 1120 242 1112 Z", o: 0.12 },
   { kind: "seam", d: "M 235 1040 L 765 1040" },
-  ...sym("rib", "M 935 900 L 948 992 L 878 1002 L 862 910 Z", { o: 0.12 }),
-  ...sym("seam", "M 935 900 L 862 910"),
-  ...sym("seam", "M 770 300 C 760 360 766 420 772 470"), // drop-shoulder seam
-  ...sym("fold", "M 868 520 C 890 600 905 700 914 800", { o: 0.12, w: 14 }),
-  ...sym("crease", "M 872 820 C 896 812 918 818 930 830", { o: 0.14 }),
-  ...sym("crease", "M 868 860 C 892 852 914 858 932 868", { o: 0.12 }),
-  ...sym("fold", "M 772 490 C 730 520 700 560 680 610", { o: 0.14 }),
+  ...sym("rib", "M 998 905 L 1004 1002 L 846 1022 L 842 920 Z", { o: 0.12 }),
+  ...sym("seam", "M 998 905 L 842 920"),
+  ...sym("seam", "M 770 300 C 760 380 766 450 772 520"), // drop-shoulder seam
+  ...sym("fold", "M 880 470 C 905 580 916 700 920 820", { o: 0.12, w: 18 }), // sleeve drape
+  ...sym("fold", "M 820 560 C 838 640 850 720 856 800", { o: 0.08, w: 14 }),
+  ...sym("crease", "M 852 850 C 900 836 950 840 990 852", { o: 0.14 }), // bunching above the cuff
+  ...sym("crease", "M 848 884 C 896 872 946 874 994 884", { o: 0.12 }),
+  ...sym("fold", "M 772 540 C 730 570 700 600 680 640", { o: 0.14 }),
   { kind: "fold", d: "M 330 1020 C 400 1000 460 1030 520 1010", o: 0.08, w: 12 },
 ];
 const hoodieFront = {
   width: 1000,
   height: 1200,
   silhouette: `M 500 58 C 600 58 668 150 664 262 ${HOODIE_RIGHT_BODY} C 332 150 400 58 500 58 Z`,
-  zones: {
-    body: null,
-    lining: HOOD_OPENING,
-    drawstrings:
-      "M 470 372 C 466 460 462 550 456 650 L 468 652 C 474 550 478 460 482 372 Z M 530 372 C 534 460 538 550 544 650 L 532 652 C 526 550 522 460 518 372 Z",
-  },
+  // Real blanks (Gildan 18500) have a self-color hood lining and color-matched drawcords, so the
+  // hoodie is one color zone; the drawcords are drawn in the shading only.
+  zones: { body: null },
   shade: [
+    { kind: "seam", d: HOODIE_DRAWCORDS, o: 0.35, w: 2 },
+    { kind: "tone", d: HOODIE_DRAWCORDS, o: 0.18 },
     // inside of the hood: darker toward the top (the hood's crown), plus the cross-over at the V
     {
       kind: "tone",
@@ -341,7 +467,7 @@ const hoodieFront = {
   ],
   highlight: [
     { d: "M 620 120 C 650 170 660 220 656 260", o: 0.35, w: 20 },
-    ...both("M 800 340 C 860 460 896 620 918 780", { o: 0.35, w: 18 }),
+    ...both("M 820 340 C 900 440 948 620 962 800", { o: 0.35, w: 22 }),
     { d: "M 640 500 C 620 600 620 760 640 900", o: 0.12, w: 90 },
     { d: "M 360 500 C 380 600 380 760 360 900", o: 0.1, w: 90 },
     { d: "M 360 736 L 640 736", o: 0.3, w: 2.5, sharp: true },
@@ -365,7 +491,7 @@ const hoodieBack = {
   highlight: [
     { d: "M 600 110 C 640 160 652 220 648 270", o: 0.35, w: 22 },
     { d: "M 400 110 C 360 160 348 220 352 270", o: 0.3, w: 22 },
-    ...both("M 800 340 C 860 460 896 620 918 780", { o: 0.35, w: 18 }),
+    ...both("M 820 340 C 900 440 948 620 962 800", { o: 0.35, w: 22 }),
     { d: "M 640 500 C 620 600 620 760 640 900", o: 0.12, w: 90 },
   ],
 };
@@ -382,6 +508,7 @@ const hatMeshSide =
 const hatFront = {
   width: 1000,
   height: 800,
+  texture: false, // the front panels already carry a twill pattern
   silhouette: `${HAT_CROWN} ${HAT_BRIM}`,
   zones: {
     front: null,
@@ -420,11 +547,30 @@ const hatFront = {
 
 // Real flat tees are ~0.7 as wide as they are long: widen the drawing and center it vertically.
 const TEE_FIT = { sx: 1.12, sy: 0.88, ty: 72 };
+const LS_FIT = { sx: 0.95, sy: 0.88, ty: 72 };
+const HOODIE_FIT = { sx: 0.84 };
+const RAGLAN_FIT = { sx: 0.84, sy: 1.02, ty: 10 };
 
 export const garments = {
   tshirt: { front: scaleView(tshirtFront, TEE_FIT), back: scaleView(tshirtBack, TEE_FIT) },
-  raglan: { front: raglanFront, back: raglanBack },
-  hoodie: { front: hoodieFront, back: hoodieBack },
+  raglan: {
+    front: scaleView(raglanFront, RAGLAN_FIT),
+    back: scaleView(raglanBack, RAGLAN_FIT),
+    left: mirrorView(raglanSleeveRight),
+    right: raglanSleeveRight,
+  },
+  hoodie: {
+    front: scaleView(hoodieFront, HOODIE_FIT),
+    back: scaleView(hoodieBack, HOODIE_FIT),
+    left: mirrorView(hoodieSleeveRight),
+    right: hoodieSleeveRight,
+  },
+  longsleeve: {
+    front: scaleView(longsleeveFront, LS_FIT),
+    back: scaleView(longsleeveBack, LS_FIT),
+    left: mirrorView(longSleeveRight),
+    right: longSleeveRight,
+  },
   hat: { front: hatFront },
   polo: { front: scaleView(poloFront, TEE_FIT), back: scaleView(poloBack, TEE_FIT) },
   tank: { front: tankFront, back: tankBack },

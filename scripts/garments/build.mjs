@@ -1,8 +1,8 @@
 // Build garment template layers for the mockup builder.
 //   node scripts/garments/build.mjs            → public/garments/{garment}/{view}/*.png
 //   node scripts/garments/build.mjs --preview  → also writes recolored previews to tmp/garment-previews/
-// Layers per view: shading.png (multiply), highlight.png (screen), mask-<zone>.png, base.png (white garment).
-import { mkdirSync } from "node:fs";
+// Layers per view: shading.webp (multiply), highlight.webp (screen), mask-<zone>.png, base.webp (white garment).
+import { mkdirSync, readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
 import sharp from "sharp";
@@ -14,6 +14,7 @@ const OUT = "public/garments";
 const preview = process.argv.includes("--preview");
 const only = process.argv.find((a) => a.startsWith("--only="))?.slice(7);
 
+const WEBP = { quality: 82, alphaQuality: 90, effort: 5 };
 const png = (svgString) => sharp(Buffer.from(svgString)).png({ compressionLevel: 9, palette: false });
 
 /** Same rule the builder uses (src/lib/garments.ts highlightOpacity): darker colors get more highlight. */
@@ -43,14 +44,14 @@ export async function composite(dir, view, colors, hiOpacity = highlightOpacity(
     .composite(layers)
     .png()
     .toBuffer();
-  const hi = await sharp(join(dir, "highlight.png"))
+  const hi = await sharp(join(dir, "highlight.webp"))
     .ensureAlpha(1)
     .linear([1, 1, 1, hiOpacity], [0, 0, 0, 0])
     .png()
     .toBuffer();
   const shaded = await sharp(colored)
     .composite([
-      { input: join(dir, "shading.png"), blend: "multiply" },
+      { input: join(dir, "shading.webp"), blend: "multiply" },
       { input: hi, blend: "screen" },
     ])
     .png()
@@ -58,7 +59,7 @@ export async function composite(dir, view, colors, hiOpacity = highlightOpacity(
   // keep only the garment (silhouette + outline): cut with the shading layer's alpha
   return sharp(shaded)
     .ensureAlpha()
-    .composite([{ input: join(dir, "shading.png"), blend: "dest-in" }])
+    .composite([{ input: join(dir, "shading.webp"), blend: "dest-in" }])
     .png()
     .toBuffer();
 }
@@ -92,10 +93,21 @@ for (const [garment, views] of Object.entries(garments)) {
   for (const [viewName, view] of Object.entries(views)) {
     const dir = join(OUT, garment, viewName);
     mkdirSync(dir, { recursive: true });
-    await png(shadingSvg(view)).toFile(join(dir, "shading.png"));
-    await png(highlightSvg(view)).toFile(join(dir, "highlight.png"));
+    for (const f of readdirSync(dir))
+      if (f.startsWith("mask-") && !(f.slice(5, -4) in view.zones)) rmSync(join(dir, f));
+    // Shading carries the knit texture (noise compresses badly as PNG), so the soft layers are
+    // lossy WebP (~10× smaller); masks stay lossless PNG so zone edges are exact.
+    for (const stale of ["shading.png", "highlight.png", "base.png"]) rmSync(join(dir, stale), { force: true });
+    await sharp(await png(shadingSvg(view)).toBuffer())
+      .webp(WEBP)
+      .toFile(join(dir, "shading.webp"));
+    await sharp(await png(highlightSvg(view)).toBuffer())
+      .webp(WEBP)
+      .toFile(join(dir, "highlight.webp"));
     for (const [zone, s] of Object.entries(maskSvgs(view))) await png(s).toFile(join(dir, `mask-${zone}.png`));
-    await sharp(await composite(dir, view, { body: "#ffffff" })).toFile(join(dir, "base.png"));
+    await sharp(await composite(dir, view, { body: "#ffffff" }))
+      .webp(WEBP)
+      .toFile(join(dir, "base.webp"));
     console.log(`${garment}/${viewName}: ${Object.keys(view.zones).join(", ")}`);
 
     if (preview) {

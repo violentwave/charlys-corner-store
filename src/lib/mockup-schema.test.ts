@@ -4,7 +4,7 @@ import { effectiveDpi, mockupPayloadSchema } from "./mockup-schema";
 
 const base = {
   garment: "raglan",
-  colors: { body: "#ffffff", sleeves: "#263147" },
+  colors: { body: "#ffffff", sleeves: "#1e2a44" }, // Bella+Canvas 3200 "White / Navy"
   views: [
     {
       view: "front",
@@ -42,7 +42,7 @@ describe("mockupPayloadSchema", () => {
   });
 
   it("rejects views and print areas the garment doesn't have", () => {
-    const hat = { ...base, garment: "hat", colors: { front: "#f4f4f4", mesh: "#1b1b1f", brim: "#1b1b1f" } };
+    const hat = { ...base, garment: "hat", colors: { front: "#1c1c1e", mesh: "#f4f4f4", brim: "#1c1c1e" } }; // "Black / White"
     expect(issues({ ...hat, views: [{ ...base.views[0], view: "back" }] })).toContain("views.0.view");
     expect(issues({ ...hat, views: [{ ...base.views[0], printArea: "full-front" }] })).toContain("views.0.printArea");
     expect(issues({ ...hat, views: [{ ...base.views[0], printArea: "hat-front" }], sizes: { OSFA: 3 } })).toEqual([]);

@@ -36,6 +36,7 @@ export async function GET(_request: Request, ctx: { params: Promise<{ id: string
       views: schema.mockups.views,
       sizes: schema.mockups.sizes,
       artworkKey: schema.mockups.artworkKey,
+      artworks: schema.mockups.artworks,
     })
     .from(schema.mockups)
     .where(eq(schema.mockups.id, id));
@@ -49,10 +50,12 @@ export async function GET(_request: Request, ctx: { params: Promise<{ id: string
   });
   if (!garment.success || views.length === 0) return fail("We couldn't load that design.", 404);
 
-  const url = await getStorage()
-    .signedUrl(row.artworkKey, 60 * 60)
-    .catch(() => null);
-  if (!url) return fail("We couldn't reach that design's artwork. Please try again.", 502);
+  // Rows from before per-view files have only artwork_key (= artwork 0).
+  const keys = row.artworks.length > 0 ? row.artworks.map((a) => a.key) : [row.artworkKey];
+  const storage = getStorage();
+  const urls = await Promise.all(keys.map((key) => storage.signedUrl(key, 60 * 60).catch(() => null)));
+  if (urls.some((u) => !u)) return fail("We couldn't reach that design's artwork. Please try again.", 502);
+  const artworks = urls.map((url) => ({ url: url! }));
 
   return NextResponse.json({
     ok: true,
@@ -62,6 +65,8 @@ export async function GET(_request: Request, ctx: { params: Promise<{ id: string
       views,
       sizes: row.sizes,
     },
-    artwork: { url },
+    // views[].artwork indexes `artworks`; `artwork` (= artworks[0]) stays for older clients.
+    artworks,
+    artwork: artworks[0],
   });
 }

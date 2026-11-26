@@ -18,10 +18,21 @@
  * Print-area rects are in template pixels (each view's `width` x `height`).
  */
 
-import { GILDAN_18500, GILDAN_5000, sortByHue } from "./gildan-colors";
+import { HAT_COMBOS, RAGLAN_COMBOS, type ColorCombo } from "./blank-combos";
+import { GILDAN_18500, GILDAN_5000, GILDAN_5400, sortByHue } from "./gildan-colors";
 
-export type GarmentId = "tshirt" | "raglan" | "hoodie" | "hat" | "polo" | "tank";
-export type ViewId = "front" | "back";
+export type { ColorCombo } from "./blank-combos";
+
+export type GarmentId = "tshirt" | "longsleeve" | "raglan" | "hoodie" | "hat" | "polo" | "tank";
+/** front/back, plus left/right sleeve views on long-sleeve garments (wearer's left/right). */
+export type ViewId = "front" | "back" | "left" | "right";
+export const VIEW_IDS = ["front", "back", "left", "right"] as const satisfies readonly ViewId[];
+export const VIEW_LABELS: Record<ViewId, string> = {
+  front: "Front",
+  back: "Back",
+  left: "Left sleeve",
+  right: "Right sleeve",
+};
 
 export type GarmentColor = {
   name: string;
@@ -59,13 +70,24 @@ export type GarmentConfig = {
   id: GarmentId;
   name: string;
   description: string;
+  /** Blank style the colors come from (owner confirms, Brief §6). */
+  blank: string;
   colorZones: ColorZone[];
-  /** Default color per zone (hex). */
+  /** Default color per zone (hex). For combo garments this is the first combo. */
   defaultColors: Record<string, string>;
+  /**
+   * One color for the whole garment, from the blank's real color list (single-zone garments).
+   * Empty for combo garments.
+   */
   palette: GarmentColor[];
   /**
+   * Multi-zone blanks (raglan, trucker hat) come only in fixed combos: the customer picks one
+   * combo and it sets every zone. Empty for single-color garments.
+   */
+  combos: ColorCombo[];
+  /**
    * Free hex entry. Off for every garment since 2026-11-25: customers pick from the real
-   * blank colors only (the color strip), and the server rejects anything else.
+   * blank colors only, and the server rejects anything else.
    */
   allowCustomHex: boolean;
   views: GarmentView[];
@@ -74,21 +96,12 @@ export type GarmentConfig = {
 
 // Every Gildan blank color for the style, sorted by hue for the color strip (src/lib/gildan-colors.ts).
 const SHIRT_PALETTE: GarmentColor[] = sortByHue(GILDAN_5000);
+const LONGSLEEVE_PALETTE: GarmentColor[] = sortByHue(GILDAN_5400);
 const HOODIE_PALETTE: GarmentColor[] = sortByHue(GILDAN_18500);
 
-// TODO(content): owner to confirm hat colors.
-const HAT_PALETTE: GarmentColor[] = [
-  { name: "White", hex: "#f4f4f4" },
-  { name: "Black", hex: "#1b1b1f" },
-  { name: "Charcoal", hex: "#4a4c50" },
-  { name: "Navy", hex: "#1f2a44" },
-  { name: "Royal", hex: "#2453a6" },
-  { name: "Red", hex: "#c62828" },
-  { name: "Khaki", hex: "#c8b48a" },
-  { name: "Forest Green", hex: "#1f4a32" },
-];
-
 const APPAREL_SIZES = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL", "5XL"];
+const LONGSLEEVE_SIZES = ["S", "M", "L", "XL", "2XL", "3XL", "4XL", "5XL"];
+const RAGLAN_SIZES = ["XS", "S", "M", "L", "XL", "2XL"];
 
 const TOP_W = 1000;
 const TOP_H = 1200;
@@ -96,9 +109,9 @@ const TOP_H = 1200;
 function layers(garment: GarmentId, view: ViewId, zones: string[]) {
   const dir = `/garments/${garment}/${view}`;
   return {
-    base: `${dir}/base.png`,
-    shading: `${dir}/shading.png`,
-    highlight: `${dir}/highlight.png`,
+    base: `${dir}/base.webp`,
+    shading: `${dir}/shading.webp`,
+    highlight: `${dir}/highlight.webp`,
     mask: Object.fromEntries(zones.map((z) => [z, `${dir}/mask-${z}.png`])),
   };
 }
@@ -110,193 +123,195 @@ function view(
   printAreas: PrintArea[],
   size: { width: number; height: number } = { width: TOP_W, height: TOP_H },
 ): GarmentView {
+  return { id, label: VIEW_LABELS[id], ...size, zones, layers: layers(garment, id, zones), printAreas };
+}
+
+const area = (id: string, label: string, [x, y, w, h]: number[], [iw, ih]: number[]): PrintArea => ({
+  id,
+  label,
+  rect: { x: x!, y: y!, w: w!, h: h! },
+  maxInches: { w: iw!, h: ih! },
+});
+
+// Short-sleeve tops (about 26 template px per inch). Left chest is the wearer's left = viewer's right.
+const FULL_FRONT = area("full-front", "Full Front", [344, 292, 312, 364], [12, 14]);
+const FRONT_CHEST = area("front-chest", "Front Chest", [370, 292, 260, 130], [10, 5]);
+const LEFT_CHEST = area("left-chest", "Left Chest", [586, 300, 104, 104], [4, 4]);
+const FULL_BACK = area("full-back", "Full Back", [344, 262, 312, 364], [12, 14]);
+
+// Sleeve views (about 43 template px per inch), centered on the sleeve.
+const UPPER_SLEEVE = area("upper-sleeve", "Upper Sleeve", [425, 230, 150, 150], [3.5, 3.5]);
+const FULL_SLEEVE = area("full-sleeve", "Full Sleeve", [425, 230, 150, 643], [3.5, 15]);
+const RAGLAN_UPPER_SLEEVE = area("upper-sleeve", "Upper Sleeve", [425, 330, 150, 150], [3.5, 3.5]);
+const RAGLAN_FULL_SLEEVE = area("full-sleeve", "Full Sleeve", [425, 330, 150, 429], [3.5, 10]);
+
+const sleeveViews = (garment: GarmentId, zone: string, areas: PrintArea[]) => [
+  view(garment, "left", [zone], areas),
+  view(garment, "right", [zone], areas),
+];
+
+function single(
+  config: Omit<GarmentConfig, "combos" | "allowCustomHex" | "defaultColors" | "colorZones"> & {
+    zoneLabel: string;
+    defaultName: string;
+  },
+): GarmentConfig {
+  const { zoneLabel, defaultName, ...rest } = config;
+  const hex = rest.palette.find((c) => c.name === defaultName)?.hex;
+  if (!hex) throw new Error(`${rest.id}: default color ${defaultName} is not in the palette`);
   return {
-    id,
-    label: id === "front" ? "Front" : "Back",
-    ...size,
-    zones,
-    layers: layers(garment, id, zones),
-    printAreas,
+    ...rest,
+    colorZones: [{ id: "body", label: zoneLabel }],
+    defaultColors: { body: hex },
+    combos: [],
+    allowCustomHex: false,
   };
 }
 
-// Shared print areas for the short-sleeve tops (about 26 template px per inch).
-const FULL_FRONT: PrintArea = {
-  id: "full-front",
-  label: "Full Front",
-  rect: { x: 344, y: 292, w: 312, h: 364 },
-  maxInches: { w: 12, h: 14 },
-};
-const FRONT_CHEST: PrintArea = {
-  id: "front-chest",
-  label: "Front Chest",
-  rect: { x: 370, y: 292, w: 260, h: 130 },
-  maxInches: { w: 10, h: 5 },
-};
-// Left chest is the wearer's left, which is the viewer's right.
-const LEFT_CHEST: PrintArea = {
-  id: "left-chest",
-  label: "Left Chest",
-  rect: { x: 586, y: 300, w: 104, h: 104 },
-  maxInches: { w: 4, h: 4 },
-};
-const FULL_BACK: PrintArea = {
-  id: "full-back",
-  label: "Full Back",
-  rect: { x: 344, y: 262, w: 312, h: 364 },
-  maxInches: { w: 12, h: 14 },
-};
+function combo(
+  config: Omit<GarmentConfig, "palette" | "allowCustomHex" | "defaultColors"> & { combos: ColorCombo[] },
+): GarmentConfig {
+  return { ...config, palette: [], defaultColors: { ...config.combos[0]!.colors }, allowCustomHex: false };
+}
 
 export const GARMENTS: GarmentConfig[] = [
-  {
+  single({
     id: "tshirt",
     name: "T-Shirt",
     description: "Classic short-sleeve tee.",
-    colorZones: [{ id: "body", label: "Shirt" }],
-    defaultColors: { body: "#ffffff" },
+    blank: "Gildan 5000",
+    zoneLabel: "Shirt",
+    defaultName: "White",
     palette: SHIRT_PALETTE,
-    allowCustomHex: false,
     views: [
       view("tshirt", "front", ["body"], [FRONT_CHEST, LEFT_CHEST, FULL_FRONT]),
       view("tshirt", "back", ["body"], [FULL_BACK]),
     ],
     sizes: APPAREL_SIZES,
-  },
-  {
+  }),
+  single({
+    id: "longsleeve",
+    name: "Long Sleeve Tee",
+    description: "Heavy cotton long sleeve with rib cuffs.",
+    blank: "Gildan 5400",
+    zoneLabel: "Shirt",
+    defaultName: "White",
+    palette: LONGSLEEVE_PALETTE,
+    views: [
+      view(
+        "longsleeve",
+        "front",
+        ["body"],
+        [
+          area("front-chest", "Front Chest", [375, 290, 250, 125], [10, 5]),
+          area("left-chest", "Left Chest", [570, 300, 100, 100], [4, 4]),
+          area("full-front", "Full Front", [350, 290, 300, 350], [12, 14]),
+        ],
+      ),
+      view("longsleeve", "back", ["body"], [area("full-back", "Full Back", [350, 270, 300, 350], [12, 14])]),
+      ...sleeveViews("longsleeve", "body", [UPPER_SLEEVE, FULL_SLEEVE]),
+    ],
+    sizes: LONGSLEEVE_SIZES,
+  }),
+  combo({
     id: "raglan",
     name: "Baseball Tee",
     description: "3/4-sleeve raglan with contrast sleeves.",
+    blank: "Bella+Canvas 3200",
     colorZones: [
       { id: "body", label: "Body" },
       { id: "sleeves", label: "Sleeves & collar" },
     ],
-    defaultColors: { body: "#ffffff", sleeves: "#263147" },
-    palette: SHIRT_PALETTE,
-    allowCustomHex: false,
+    combos: RAGLAN_COMBOS,
     views: [
-      view("raglan", "front", ["body", "sleeves"], [FRONT_CHEST, LEFT_CHEST, FULL_FRONT]),
-      view("raglan", "back", ["body", "sleeves"], [{ ...FULL_BACK, rect: { ...FULL_BACK.rect, y: 276 } }]),
+      view(
+        "raglan",
+        "front",
+        ["body", "sleeves"],
+        [
+          area("front-chest", "Front Chest", [375, 330, 250, 125], [10, 5]),
+          area("left-chest", "Left Chest", [552, 330, 96, 96], [4, 4]),
+          area("full-front", "Full Front", [356, 330, 288, 336], [12, 14]),
+        ],
+      ),
+      view("raglan", "back", ["body", "sleeves"], [area("full-back", "Full Back", [356, 310, 288, 336], [12, 14])]),
+      ...sleeveViews("raglan", "sleeves", [RAGLAN_UPPER_SLEEVE, RAGLAN_FULL_SLEEVE]),
     ],
-    sizes: APPAREL_SIZES,
-  },
-  {
+    sizes: RAGLAN_SIZES,
+  }),
+  single({
     id: "hoodie",
     name: "Hoodie",
-    description: "Pullover hoodie with kangaroo pocket.",
-    colorZones: [
-      { id: "body", label: "Body" },
-      { id: "lining", label: "Hood lining" },
-      { id: "drawstrings", label: "Drawstrings" },
-    ],
-    defaultColors: { body: "#97999b", lining: "#97999b", drawstrings: "#ffffff" },
+    description: "Pullover hoodie with kangaroo pocket. Hood lining and drawcords match the body.",
+    blank: "Gildan 18500",
+    zoneLabel: "Hoodie",
+    defaultName: "Sport Grey",
     palette: HOODIE_PALETTE,
-    allowCustomHex: false,
     views: [
       view(
         "hoodie",
         "front",
-        ["body", "lining", "drawstrings"],
+        ["body"],
         [
-          {
-            id: "left-chest",
-            label: "Left Chest",
-            rect: { x: 580, y: 466, w: 104, h: 104 },
-            maxInches: { w: 4, h: 4 },
-          },
-          {
-            id: "full-front",
-            label: "Full Front (above pocket)",
-            rect: { x: 344, y: 460, w: 312, h: 260 },
-            maxInches: { w: 12, h: 10 },
-          },
+          area("left-chest", "Left Chest", [572, 470, 96, 96], [4, 4]),
+          area("full-front", "Full Front (above pocket)", [356, 470, 288, 240], [12, 10]),
         ],
       ),
-      view("hoodie", "back", ["body"], [{ ...FULL_BACK, rect: { ...FULL_BACK.rect, y: 340 } }]),
+      view("hoodie", "back", ["body"], [area("full-back", "Full Back", [350, 340, 300, 350], [12, 14])]),
+      ...sleeveViews("hoodie", "body", [UPPER_SLEEVE, FULL_SLEEVE]),
     ],
     sizes: APPAREL_SIZES,
-  },
-  {
+  }),
+  combo({
     id: "hat",
     name: "Trucker Hat",
     description: "Structured front, mesh back, curved brim.",
+    blank: "Richardson 112",
     colorZones: [
       { id: "front", label: "Front panels" },
       { id: "mesh", label: "Mesh" },
       { id: "brim", label: "Brim" },
     ],
-    defaultColors: { front: "#f4f4f4", mesh: "#1b1b1f", brim: "#1b1b1f" },
-    palette: HAT_PALETTE,
-    allowCustomHex: false,
+    combos: HAT_COMBOS,
     views: [
       view(
         "hat",
         "front",
         ["front", "mesh", "brim"],
-        [
-          {
-            id: "hat-front",
-            label: "Hat Front",
-            rect: { x: 340, y: 330, w: 320, h: 180 },
-            maxInches: { w: 4, h: 2.25 },
-          },
-        ],
+        [area("hat-front", "Hat Front", [340, 330, 320, 180], [4, 2.25])],
         { width: 1000, height: 800 },
       ),
     ],
     sizes: ["OSFA"],
-  },
-  {
+  }),
+  single({
     id: "polo",
     name: "Polo",
     description: "Short-sleeve polo with a three-button placket.",
-    colorZones: [{ id: "body", label: "Shirt" }],
-    defaultColors: { body: "#ffffff" },
-    palette: SHIRT_PALETTE,
-    allowCustomHex: false,
+    blank: "Gildan 8800",
+    zoneLabel: "Shirt",
+    defaultName: "White",
+    palette: SHIRT_PALETTE, // TODO(content): the 8800 color list once the owner confirms the polo style
     views: [
       view("polo", "front", ["body"], [{ ...LEFT_CHEST, rect: { ...LEFT_CHEST.rect, x: 576, y: 304 } }]),
       view("polo", "back", ["body"], [FULL_BACK]),
     ],
     sizes: APPAREL_SIZES,
-  },
-  {
+  }),
+  single({
     id: "tank",
     name: "Tank Top",
     description: "Sleeveless tank.",
-    colorZones: [{ id: "body", label: "Shirt" }],
-    defaultColors: { body: "#ffffff" },
-    palette: SHIRT_PALETTE,
-    allowCustomHex: false,
+    blank: "Gildan 2200",
+    zoneLabel: "Shirt",
+    defaultName: "White",
+    palette: SHIRT_PALETTE, // TODO(content): the 2200 color list once the owner confirms the tank style
     views: [
-      view(
-        "tank",
-        "front",
-        ["body"],
-        [
-          {
-            id: "full-front",
-            label: "Full Front",
-            rect: { x: 357, y: 340, w: 286, h: 364 },
-            maxInches: { w: 11, h: 14 },
-          },
-        ],
-      ),
-      view(
-        "tank",
-        "back",
-        ["body"],
-        [
-          {
-            id: "full-back",
-            label: "Full Back",
-            rect: { x: 357, y: 290, w: 286, h: 364 },
-            maxInches: { w: 11, h: 14 },
-          },
-        ],
-      ),
+      view("tank", "front", ["body"], [area("full-front", "Full Front", [357, 340, 286, 364], [11, 14])]),
+      view("tank", "back", ["body"], [area("full-back", "Full Back", [357, 290, 286, 364], [11, 14])]),
     ],
     sizes: APPAREL_SIZES,
-  },
+  }),
 ];
 
 export const GARMENT_IDS = GARMENTS.map((g) => g.id) as GarmentId[];
@@ -309,14 +324,29 @@ export function getGarment(id: GarmentId): GarmentConfig {
 
 const HEX = /^#[0-9a-f]{6}$/i;
 
+const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+
 /** True when `hex` is one of the garment's palette colors (case-insensitive). */
 export function isPaletteColor(garment: GarmentConfig, hex: string): boolean {
-  return garment.palette.some((c) => c.hex.toLowerCase() === hex.toLowerCase());
+  return garment.palette.some((c) => same(c.hex, hex));
+}
+
+/** The combo whose colors exactly match `colors` (every zone), if any. */
+export function findCombo(garment: GarmentConfig, colors: Record<string, string>): ColorCombo | undefined {
+  return garment.combos.find((c) =>
+    garment.colorZones.every((z) => !!colors[z.id] && same(c.colors[z.id]!, colors[z.id]!)),
+  );
+}
+
+/** True when `colors` is something the blank actually comes in (a palette color or a combo). */
+export function isRealBlank(garment: GarmentConfig, colors: Record<string, string>): boolean {
+  if (garment.combos.length > 0) return !!findCombo(garment, colors);
+  return garment.colorZones.every((z) => !!colors[z.id] && isPaletteColor(garment, colors[z.id]!));
 }
 
 /** Palette name for a hex ("Navy"), or "Custom #rrggbb" when it isn't a listed blank color. */
 export function colorName(garment: GarmentConfig, hex: string): string {
-  const match = garment.palette.find((c) => c.hex.toLowerCase() === hex.toLowerCase());
+  const match = garment.palette.find((c) => same(c.hex, hex));
   return match ? match.name : `Custom ${hex.toLowerCase()}`;
 }
 

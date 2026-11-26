@@ -3,13 +3,51 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
-import { GARMENTS, getGarment, highlightOpacity, isHexColor, luma, printedInches } from "./garments";
+import {
+  findCombo,
+  GARMENTS,
+  getGarment,
+  highlightOpacity,
+  isHexColor,
+  isRealBlank,
+  luma,
+  printedInches,
+} from "./garments";
 
 const pub = (p: string) => join(process.cwd(), "public", p);
 
 describe("garment config", () => {
-  it("covers all six garments from the spec", () => {
-    expect(GARMENTS.map((g) => g.id).sort()).toEqual(["hat", "hoodie", "polo", "raglan", "tank", "tshirt"].sort());
+  it("covers the spec's garments plus the long sleeve tee", () => {
+    expect(GARMENTS.map((g) => g.id).sort()).toEqual(
+      ["hat", "hoodie", "longsleeve", "polo", "raglan", "tank", "tshirt"].sort(),
+    );
+  });
+
+  it("colors are real blanks: one palette color, or a fixed combo for multi-part blanks", () => {
+    for (const g of GARMENTS) {
+      expect(isRealBlank(g, g.defaultColors), g.id).toBe(true);
+      if (g.combos.length > 0) {
+        expect(g.palette).toEqual([]);
+        for (const c of g.combos)
+          expect(Object.keys(c.colors).sort(), `${g.id} ${c.name}`).toEqual(g.colorZones.map((z) => z.id).sort());
+      } else {
+        expect(g.colorZones.map((z) => z.id)).toEqual(["body"]);
+        expect(g.palette.length).toBeGreaterThan(10);
+      }
+    }
+    // Hoodie lining and drawcords follow the body (no separate parts).
+    expect(getGarment("hoodie").colorZones).toHaveLength(1);
+    expect(isRealBlank(getGarment("raglan"), { body: "#ffffff", sleeves: "#d50032" })).toBe(false);
+    expect(findCombo(getGarment("raglan"), { body: "#FFFFFF", sleeves: "#1e2a44" })?.name).toBe("White / Navy");
+  });
+
+  it("long-sleeve garments have left and right sleeve views; short-sleeve ones don't", () => {
+    for (const id of ["longsleeve", "hoodie", "raglan"] as const) {
+      expect(getGarment(id).views.map((v) => v.id)).toEqual(["front", "back", "left", "right"]);
+    }
+    for (const id of ["tshirt", "polo", "tank", "hat"] as const) {
+      expect(getGarment(id).views.some((v) => v.id === "left" || v.id === "right")).toBe(false);
+    }
   });
 
   it.each(GARMENTS)("$id: zones, colors and layer files are consistent", (g) => {
