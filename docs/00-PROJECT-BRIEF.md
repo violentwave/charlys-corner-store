@@ -67,3 +67,4 @@ Track answers here. They block specific roadmap items. ✅ = answered (2026-11-2
 9. ✅ One inbox for all notifications: **CHARLYSCORNERSTORE@GMAIL.COM**.
 10. ◐ **Hosting:** owner is fine with a small monthly fee and already owns his domain ✅ (relayed by Logan). Planned host: Render, about $13/month. Still open: who has the login for his domain registrar/DNS, and does he approve opening the hosting account in his own name with his card? (Account email = his; add Logan as a team member if the plan allows.)
 11. ☐ OK to show client work (logos on past jobs) in the online portfolio?
+12. ☐ **Max print sizes** per location (the builder assumes Full Front/Back 12″ × 14″, hoodie front 12″ × 10″ above the pocket, Front Chest 10″ × 5″, Left Chest 4″ × 4″, sleeves 3.5″ wide, hat front 4″ × 2.25″). Can the press do bigger (oversized/jumbo prints, e.g. 14″ × 16″ or more)? Logan, 2026-11-25: the print box feels small.

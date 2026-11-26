@@ -19,12 +19,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-import {
-  fitTransform,
-  type BuilderImageLayer,
-  type BuilderTextLayer,
-  type BuilderTransform,
-} from "./use-builder-state";
+import { centerInRect, fitIntoRect, resizeAroundCenter, setRotationAroundCenter } from "./geometry";
+import type { BuilderImageLayer, BuilderTextLayer, BuilderTransform } from "./use-builder-state";
 
 /**
  * A number field with a local draft: typing "1." or clearing the box doesn't snap the value;
@@ -180,11 +176,8 @@ export function LayerControls({
     onTransform({ ...transform, [axis]: degToSkew(deg) }, key(axis));
   };
 
-  /** Contain-fit into the print area, keeping the box's shape; rotation and skew reset. */
-  const fitToArea = () => {
-    const fitted = fitTransform(area.rect, transform.width, transform.height);
-    onTransform({ ...fitted, flipX: transform.flipX });
-  };
+  /** Scales the layer (shape, rotation and skew kept) so all of it fits the print area, centered. */
+  const fitToArea = () => onTransform(fitIntoRect(transform, area.rect));
 
   const setSizeInches = (axis: "w" | "h", inches: number) => {
     const clamped = Math.max(0.25, inches);
@@ -199,16 +192,8 @@ export function LayerControls({
       if (axis === "w") height = width / ratio;
       else width = height * ratio;
     }
-    // Resize around the box's center so the layer doesn't jump.
-    const w = Math.min(5000, Math.max(1, width));
-    const h = Math.min(5000, Math.max(1, height));
-    onTransform({
-      ...transform,
-      x: transform.x + (transform.width - w) / 2,
-      y: transform.y + (transform.height - h) / 2,
-      width: w,
-      height: h,
-    });
+    // Resize around the box's (rotated) center so the layer doesn't jump.
+    onTransform(resizeAroundCenter(transform, width, height));
   };
 
   return (
@@ -400,7 +385,7 @@ export function LayerControls({
           step={1}
           value={Math.round(transform.rotation)}
           aria-valuetext={`${Math.round(transform.rotation)} degrees`}
-          onChange={(e) => onTransform({ ...transform, rotation: Number(e.target.value) }, key("rotate"))}
+          onChange={(e) => onTransform(setRotationAroundCenter(transform, Number(e.target.value)), key("rotate"))}
           className="w-full accent-[var(--neon-cyan)]"
           data-testid="layer-rotate"
         />
@@ -410,7 +395,7 @@ export function LayerControls({
           value={transform.rotation}
           format={(v) => String(Math.round(v))}
           aria-label="Rotation in degrees"
-          onCommit={(v) => onTransform({ ...transform, rotation: Math.max(-180, Math.min(180, v)) })}
+          onCommit={(v) => onTransform(setRotationAroundCenter(transform, Math.max(-180, Math.min(180, v))))}
           className="h-9 w-16 text-sm"
         />
         <span aria-hidden="true" className="text-text-3 text-xs">
@@ -436,13 +421,7 @@ export function LayerControls({
           type="button"
           variant="secondary"
           size="sm"
-          onClick={() =>
-            onTransform({
-              ...transform,
-              x: area.rect.x + (area.rect.w - transform.width) / 2,
-              y: area.rect.y + (area.rect.h - transform.height) / 2,
-            })
-          }
+          onClick={() => onTransform(centerInRect(transform, area.rect))}
         >
           Center
         </Button>

@@ -15,22 +15,26 @@
  * and before export, so the canvas never shows a fallback font.
  */
 import Konva from "konva";
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { forwardRef, Fragment, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { Group, Image as KonvaImage, Layer, Rect, Stage, Text, Transformer } from "react-konva";
 
-import { getTextFont, type TextFontId } from "@/lib/text-fonts";
+import { getTextFont } from "@/lib/text-fonts";
 import type { GarmentView, ViewId } from "@/lib/garments";
 import type { MockupColors } from "@/lib/mockup-schema";
 import { Button } from "@/components/ui/button";
 
 import { composeArtworkLayer, composeGarment, type TemplateImages } from "./compositor";
-import { centerToTopLeft, nudgeTransform, rotateAroundCenter, scaleAroundCenter, SKEW_LIMIT } from "./geometry";
+import {
+  centerToTopLeft,
+  nudgeTransform,
+  rotateAroundCenter,
+  scaleAroundCenter,
+  SKEW_LIMIT,
+  topLeftToCenter,
+} from "./geometry";
 import { SideArtworkChooser } from "./side-artwork-chooser";
+import { measureText, TEXT_BASE_FONT_SIZE } from "./text-measure";
 import type { BuilderLayer, BuilderTransform } from "./use-builder-state";
-
-/** Base font size (template px) text layers render at before being scaled into their box. */
-const TEXT_BASE_FONT_SIZE = 100;
-const TEXT_LINE_HEIGHT = 1;
 
 /** The builder-side images the canvas draws with, keyed by file index. */
 export type StageImages = Partial<Record<number, HTMLImageElement>>;
@@ -84,22 +88,6 @@ function loadTemplate(src: string) {
 /** loadTextFont never rejects; wrapped so Promise.all stays simple. */
 const loadTextFontSafe = (id: string) => import("./load-text-font").then((m) => m.loadTextFont(id));
 
-/**
- * Measures a text layer at the base font size (width/height in template px before the
- * transform's scale). Uses a standalone Konva.Text, so no stage is needed.
- */
-function measureText(text: string, font: TextFontId, letterSpacing: number): { width: number; height: number } {
-  const f = getTextFont(font);
-  const node = new Konva.Text({
-    text,
-    fontSize: TEXT_BASE_FONT_SIZE,
-    fontFamily: f?.family ?? "sans-serif",
-    fontStyle: f ? `${f.weight}` : "normal",
-    letterSpacing,
-  });
-  return { width: Math.max(node.width(), 1), height: TEXT_BASE_FONT_SIZE * TEXT_LINE_HEIGHT };
-}
-
 export interface GarmentStageHandle {
   /** The id of the view the stage is currently showing (exportViewPng waits for it). */
   getView(): ViewId;
@@ -135,6 +123,9 @@ export interface GarmentStageProps {
   onUndo?: () => void;
   onRedo?: () => void;
 }
+
+/** Konva name of the faded, unclipped (interactive) copy of each layer; hidden in exports. */
+const GHOST_NAME = "layer-ghost";
 
 const raf = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
@@ -205,6 +196,23 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage>(null);
   const nodeRefs = useRef(new Map<string, Konva.Node>());
+  /** The clipped, non-interactive copy of each layer (what prints). */
+  const copyRefs = useRef(new Map<string, Konva.Node>());
+  /** Keeps the clipped copy on the interactive node while it's dragged / transformed / pinched. */
+  const syncCopy = (layerId: string) => {
+    const node = nodeRefs.current.get(layerId);
+    const copy = copyRefs.current.get(layerId);
+    if (!node || !copy) return;
+    copy.setAttrs({
+      x: node.x(),
+      y: node.y(),
+      rotation: node.rotation(),
+      scaleX: node.scaleX(),
+      scaleY: node.scaleY(),
+      skewX: node.skewX(),
+      skewY: node.skewY(),
+    });
+  };
   const transformerRef = useRef<Konva.Transformer>(null);
   const guideRef = useRef<Konva.Rect>(null);
   const layerRef = useRef<Konva.Layer>(null);
@@ -329,6 +337,7 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
     node.scaleX(node.scaleX() * factor);
     node.scaleY(node.scaleY() * factor);
     node.rotation(node.rotation() + (angle - last.angle));
+    syncCopy(layer.id);
     pinchRef.current = { dist, angle };
     node.getLayer()?.batchDraw();
   };
@@ -426,6 +435,8 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
       await Promise.all(layers.filter((l) => l.type === "text").map((l) => loadTextFontSafe(l.font)));
       // Guides and transformer handles never appear in the export.
       const selectedNodes = transformerRef.current?.nodes() ?? [];
+      const ghosts = stage.find(`.${GHOST_NAME}`);
+      ghosts.forEach((g) => g.visible(false));
       guideRef.current?.visible(false);
       transformerRef.current?.visible(false);
       transformerRef.current?.nodes([]);
@@ -436,6 +447,7 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
       const blob = await new Promise<Blob | null>((resolve) =>
         stage.toBlob({ callback: resolve, mimeType: "image/png", pixelRatio }),
       );
+      ghosts.forEach((g) => g.visible(true));
       guideRef.current?.visible(true);
       transformerRef.current?.visible(true);
       transformerRef.current?.nodes(selectedNodes);
@@ -504,6 +516,10 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
                 if (node) nodeRefs.current.set(layer.id, node);
                 else nodeRefs.current.delete(layer.id);
               };
+              const attachCopyRef = (node: Konva.Node | null) => {
+                if (node) copyRefs.current.set(layer.id, node);
+                else copyRefs.current.delete(layer.id);
+              };
               const layerHandlers = {
                 draggable: true,
                 onClick: () => {
@@ -514,6 +530,8 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
                   selectThisView();
                   onSelectLayer(layer.id);
                 },
+                onDragMove: () => syncCopy(layer.id),
+                onTransform: () => syncCopy(layer.id),
                 onDragEnd: () => {
                   selectThisView();
                   const node = nodeRefs.current.get(layer.id);
@@ -535,26 +553,23 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
                   if (stage) stage.container().style.cursor = "";
                 },
               };
+              // x/y is the box's top-left corner as rotated (geometry.ts): place the node at its center.
+              const center = topLeftToCenter(layer.transform);
               const position = {
-                x: layer.transform.x + layer.transform.width / 2,
-                y: layer.transform.y + layer.transform.height / 2,
+                x: center.cx,
+                y: center.cy,
                 rotation: layer.transform.rotation,
                 skewX: layer.transform.skewX,
                 skewY: layer.transform.skewY,
               };
-              return (
-                <Group
-                  key={layer.id}
-                  clip={{
-                    x: activeArea.rect.x,
-                    y: activeArea.rect.y,
-                    width: activeArea.rect.w,
-                    height: activeArea.rect.h,
-                  }}
-                >
-                  {layer.type === "image" ? (
+              /** The layer's node; drawn twice (see below), only the interactive one gets handlers. */
+              const node = (interactive: boolean) => {
+                const extra = interactive
+                  ? { ref: attachRef, ...layerHandlers }
+                  : { ref: attachCopyRef, listening: false };
+                if (layer.type === "image") {
+                  return (
                     <KonvaImage
-                      ref={attachRef}
                       image={artworkCanvas(layer)}
                       {...position}
                       offsetX={layer.transform.width / 2}
@@ -562,38 +577,55 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
                       width={layer.transform.width}
                       height={layer.transform.height}
                       scaleX={layer.transform.flipX ? -1 : 1}
-                      {...layerHandlers}
+                      {...extra}
                     />
-                  ) : (
-                    (() => {
-                      const natural = measureText(layer.text, layer.font, layer.letterSpacing);
-                      const font = getTextFont(layer.font);
-                      const sx = layer.transform.width / natural.width;
-                      const sy = layer.transform.height / natural.height;
-                      return (
-                        <Text
-                          ref={attachRef}
-                          text={layer.text}
-                          fontSize={TEXT_BASE_FONT_SIZE}
-                          fontFamily={font?.family ?? "sans-serif"}
-                          fontStyle={font ? `${font.weight}` : "normal"}
-                          letterSpacing={layer.letterSpacing}
-                          align={layer.align}
-                          fill={layer.color}
-                          stroke={layer.outline.width > 0 ? layer.outline.color : undefined}
-                          strokeWidth={textStrokeWidth(layer.outline.width, sx, sy)}
-                          fillAfterStrokeEnabled
-                          {...position}
-                          offsetX={natural.width / 2}
-                          offsetY={natural.height / 2}
-                          scaleX={sx * (layer.transform.flipX ? -1 : 1)}
-                          scaleY={sy}
-                          {...layerHandlers}
-                        />
-                      );
-                    })()
-                  )}
-                </Group>
+                  );
+                }
+                const natural = measureText(layer.text, layer.font, layer.letterSpacing);
+                const font = getTextFont(layer.font);
+                const sx = layer.transform.width / natural.width;
+                const sy = layer.transform.height / natural.height;
+                return (
+                  <Text
+                    text={layer.text}
+                    fontSize={TEXT_BASE_FONT_SIZE}
+                    fontFamily={font?.family ?? "sans-serif"}
+                    fontStyle={font ? `${font.weight}` : "normal"}
+                    letterSpacing={layer.letterSpacing}
+                    align={layer.align}
+                    fill={layer.color}
+                    stroke={layer.outline.width > 0 ? layer.outline.color : undefined}
+                    strokeWidth={textStrokeWidth(layer.outline.width, sx, sy)}
+                    fillAfterStrokeEnabled
+                    {...position}
+                    offsetX={natural.width / 2}
+                    offsetY={natural.height / 2}
+                    scaleX={sx * (layer.transform.flipX ? -1 : 1)}
+                    scaleY={sy}
+                    {...extra}
+                  />
+                );
+              };
+              // Two copies: the interactive one is drawn faded and unclipped, so a design that
+              // runs past the print area is still visible and easy to grab; a clipped copy on top
+              // shows exactly what prints. The export hides the faded one (exportPng).
+              return (
+                <Fragment key={layer.id}>
+                  <Group name={GHOST_NAME} opacity={0.3}>
+                    {node(true)}
+                  </Group>
+                  <Group
+                    listening={false}
+                    clip={{
+                      x: activeArea.rect.x,
+                      y: activeArea.rect.y,
+                      width: activeArea.rect.w,
+                      height: activeArea.rect.h,
+                    }}
+                  >
+                    {node(false)}
+                  </Group>
+                </Fragment>
               );
             })}
             <Transformer

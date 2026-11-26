@@ -126,6 +126,7 @@ function view(
   return { id, label: VIEW_LABELS[id], ...size, zones, layers: layers(garment, id, zones), printAreas };
 }
 
+/** Each view lists its largest print area first: that is the default placement (2026-11-25). */
 const area = (id: string, label: string, [x, y, w, h]: number[], [iw, ih]: number[]): PrintArea => ({
   id,
   label,
@@ -184,7 +185,7 @@ export const GARMENTS: GarmentConfig[] = [
     defaultName: "White",
     palette: SHIRT_PALETTE,
     views: [
-      view("tshirt", "front", ["body"], [FRONT_CHEST, LEFT_CHEST, FULL_FRONT]),
+      view("tshirt", "front", ["body"], [FULL_FRONT, FRONT_CHEST, LEFT_CHEST]),
       view("tshirt", "back", ["body"], [FULL_BACK]),
     ],
     sizes: APPAREL_SIZES,
@@ -203,13 +204,13 @@ export const GARMENTS: GarmentConfig[] = [
         "front",
         ["body"],
         [
+          area("full-front", "Full Front", [350, 290, 300, 350], [12, 14]),
           area("front-chest", "Front Chest", [375, 290, 250, 125], [10, 5]),
           area("left-chest", "Left Chest", [570, 300, 100, 100], [4, 4]),
-          area("full-front", "Full Front", [350, 290, 300, 350], [12, 14]),
         ],
       ),
       view("longsleeve", "back", ["body"], [area("full-back", "Full Back", [350, 270, 300, 350], [12, 14])]),
-      ...sleeveViews("longsleeve", "body", [UPPER_SLEEVE, FULL_SLEEVE]),
+      ...sleeveViews("longsleeve", "body", [FULL_SLEEVE, UPPER_SLEEVE]),
     ],
     sizes: LONGSLEEVE_SIZES,
   }),
@@ -229,13 +230,13 @@ export const GARMENTS: GarmentConfig[] = [
         "front",
         ["body", "sleeves"],
         [
+          area("full-front", "Full Front", [356, 330, 288, 336], [12, 14]),
           area("front-chest", "Front Chest", [375, 330, 250, 125], [10, 5]),
           area("left-chest", "Left Chest", [552, 330, 96, 96], [4, 4]),
-          area("full-front", "Full Front", [356, 330, 288, 336], [12, 14]),
         ],
       ),
       view("raglan", "back", ["body", "sleeves"], [area("full-back", "Full Back", [356, 310, 288, 336], [12, 14])]),
-      ...sleeveViews("raglan", "sleeves", [RAGLAN_UPPER_SLEEVE, RAGLAN_FULL_SLEEVE]),
+      ...sleeveViews("raglan", "sleeves", [RAGLAN_FULL_SLEEVE, RAGLAN_UPPER_SLEEVE]),
     ],
     sizes: RAGLAN_SIZES,
   }),
@@ -253,12 +254,12 @@ export const GARMENTS: GarmentConfig[] = [
         "front",
         ["body"],
         [
-          area("left-chest", "Left Chest", [572, 470, 96, 96], [4, 4]),
           area("full-front", "Full Front (above pocket)", [356, 470, 288, 240], [12, 10]),
+          area("left-chest", "Left Chest", [572, 470, 96, 96], [4, 4]),
         ],
       ),
       view("hoodie", "back", ["body"], [area("full-back", "Full Back", [350, 340, 300, 350], [12, 14])]),
-      ...sleeveViews("hoodie", "body", [UPPER_SLEEVE, FULL_SLEEVE]),
+      ...sleeveViews("hoodie", "body", [FULL_SLEEVE, UPPER_SLEEVE]),
     ],
     sizes: APPAREL_SIZES,
   }),
