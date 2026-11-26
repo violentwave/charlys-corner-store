@@ -1,9 +1,10 @@
 "use client";
 /**
  * Step 4: "Send it or order it" (docs/04 §5 v2). Two clearly separate paths, each its own
- * card with one sentence and one button. Identity comes from the verified account — the
- * old email/name/phone/Turnstile gate is gone. The email path keeps the marketing opt-in
- * (unchecked by default); the order path carries the sizes/quantities grid, notes and the
+ * card with one sentence and one button. Notes for Charly's sit above both cards (P48-2)
+ * and ride along with either path. Identity comes from the verified account — the old
+ * email/name/phone/Turnstile gate is gone. The email path keeps the marketing opt-in
+ * (unchecked by default); the order path carries the sizes/quantities grid and the
  * referral question (old-site parity).
  */
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,7 +14,7 @@ import { useForm, type Resolver } from "react-hook-form";
 import { ReferralFields } from "@/components/forms/referral-fields";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Field } from "@/components/ui/field";
+import { Field, fieldControlProps } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { GarmentConfig } from "@/lib/garments";
@@ -120,6 +121,27 @@ export function SendStep({
         </p>
       ) : null}
 
+      {/* Notes: one field above both cards (P48-2) — it rides along with whichever path
+          you take. Same `design.notes` field and payload as before; the server sends it
+          to the owner only. */}
+      <Field
+        label="Notes for Charly's"
+        hint={`Optional — ${design.notes.length}/2000. Anything we should know? Different brand, your own garment, placement details…`}
+        controlId="builder-notes"
+      >
+        <Textarea
+          name="builder-notes"
+          value={design.notes}
+          maxLength={2000}
+          rows={3}
+          onChange={(e) => onNotes(e.target.value)}
+          data-testid="builder-notes"
+          {...fieldControlProps("builder-notes", {
+            hint: `Optional — ${design.notes.length}/2000. Anything we should know? Different brand, your own garment, placement details…`,
+          })}
+        />
+      </Field>
+
       <div className="grid gap-4 sm:grid-cols-2">
         {/* Path 1: the free mockup + coupon. */}
         <section
@@ -197,22 +219,6 @@ export function SendStep({
               ))}
             </div>
           </fieldset>
-
-          <Field
-            label="Notes for Charly's"
-            hint={`Optional — ${design.notes.length}/2000 characters. Different brand or your own garment? Say so here.`}
-            controlId="builder-notes"
-          >
-            <Textarea
-              id="builder-notes"
-              name="builder-notes"
-              value={design.notes}
-              maxLength={2000}
-              rows={3}
-              onChange={(e) => onNotes(e.target.value)}
-              data-testid="builder-notes"
-            />
-          </Field>
 
           <ReferralFields control={referralForm.control} />
 

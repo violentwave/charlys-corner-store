@@ -1,14 +1,18 @@
 "use client";
 /**
- * Step 3: the design inspector (docs/04 §3 v4). One calm panel: Side, Add, Layers,
- * Selected item — grouped with one-line hints, no stacked bordered boxes, one primary
- * action per area. Desktop: this panel sits right of the canvas; at 360px the sections
- * stack below it.
+ * Step 3: the design inspector (docs/04 §3, simple-panel pass 2026-11-26). The everyday
+ * controls are visible — Side (segmented control + print location on one row), Add, the
+ * Selected item (text/font/ink, one action row, printed size) — and everything else is a
+ * tap away: the layers list only appears at 2+ layers, and the advanced controls fold
+ * into disclosures inside the selected-item panel. One divider between sections, no
+ * nested bordered boxes; the warnings keep their bordered look (they must stand out).
+ * "Signed in as" is a quiet line at the bottom. Desktop: this panel sits right of the
+ * canvas; at 360px the sections stack below it.
  */
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { GarmentView, ViewId } from "@/lib/garments";
-import { effectiveDpi, MAX_LAYERS_PER_VIEW } from "@/lib/mockup-schema";
+import { effectiveDpi } from "@/lib/mockup-schema";
 import { printedInches } from "@/lib/garments";
 
 import { isOutsideArea } from "./geometry";
@@ -96,11 +100,6 @@ export function DesignInspector({
         if (file) onDropFile(file);
       }}
     >
-      {accountEmail ? (
-        <p className="text-text-3 text-xs" data-testid="signed-in-as">
-          Signed in as <span className="text-text-2">{accountEmail}</span>
-        </p>
-      ) : null}
       {fileError ? (
         <p role="alert" aria-live="polite" className="text-danger flex items-center gap-1.5 text-xs">
           <span aria-hidden="true">⚠</span>
@@ -108,47 +107,50 @@ export function DesignInspector({
         </p>
       ) : null}
 
+      {/* Side: the segmented control and the print location share one row on desktop. */}
       <InspectorSection label="Side" divider={false}>
-        <div role="group" aria-label="Side" className="flex flex-wrap gap-1.5">
-          {views.map((v) => (
-            <button
-              key={v.id}
-              type="button"
-              aria-pressed={v.id === view.id}
-              data-testid={`view-${v.id}`}
-              onClick={() => onViewChange(v.id)}
-              className="border-border bg-bg-3 text-text-1 focus-visible:ring-neon-cyan hover:border-border-strong aria-pressed:border-neon-cyan aria-pressed:text-neon-cyan relative flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
-            >
-              {v.label}
-              {artByView[v.id] ? (
-                <>
-                  <span aria-hidden="true" className="bg-neon-pink h-1.5 w-1.5 rounded-full" />
-                  <span className="sr-only">(has a design)</span>
-                </>
-              ) : null}
-            </button>
-          ))}
-        </div>
-        <div className="mt-3">
-          <label htmlFor="print-location" className="text-text-2 mb-1 block text-xs">
-            Print location
-          </label>
-          <Select value={viewState.printArea} onValueChange={(areaId) => onSetPrintArea(view.id, areaId)}>
-            <SelectTrigger id="print-location" data-testid="print-location" className="h-11 w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {view.printAreas.map((a) => (
-                <SelectItem key={a.id} value={a.id}>
-                  {a.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div role="group" aria-label="Side" className="flex flex-wrap gap-1.5">
+            {views.map((v) => (
+              <button
+                key={v.id}
+                type="button"
+                aria-pressed={v.id === view.id}
+                data-testid={`view-${v.id}`}
+                onClick={() => onViewChange(v.id)}
+                className="border-border bg-bg-3 text-text-1 focus-visible:ring-neon-cyan hover:border-border-strong aria-pressed:border-neon-cyan aria-pressed:text-neon-cyan relative flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
+              >
+                {v.label}
+                {artByView[v.id] ? (
+                  <>
+                    <span aria-hidden="true" className="bg-neon-pink h-1.5 w-1.5 rounded-full" />
+                    <span className="sr-only">(has a design)</span>
+                  </>
+                ) : null}
+              </button>
+            ))}
+          </div>
+          <div className="sm:w-52 sm:shrink-0">
+            <label htmlFor="print-location" className="text-text-2 mb-1 block text-xs">
+              Print location
+            </label>
+            <Select value={viewState.printArea} onValueChange={(areaId) => onSetPrintArea(view.id, areaId)}>
+              <SelectTrigger id="print-location" data-testid="print-location" className="h-11 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {view.printAreas.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </InspectorSection>
 
-      <InspectorSection label="Add" hint={`${viewState.layers.length}/${MAX_LAYERS_PER_VIEW} on this side`}>
+      <InspectorSection label="Add">
         <div className="grid grid-cols-2 gap-2">
           <Button type="button" onClick={onUploadClick} disabled={capReached} data-testid="upload-image">
             Upload image
@@ -161,21 +163,23 @@ export function DesignInspector({
           <p className="text-text-3 text-xs" role="note" data-testid="layers-cap">
             This side holds 8 designs — remove one to add another.
           </p>
-        ) : (
-          <p className="text-text-3 text-xs">Each side gets its own stack. Transparent PNGs print best.</p>
-        )}
+        ) : null}
       </InspectorSection>
 
-      <InspectorSection label="Layers" hint="Top prints last">
-        <LayersPanel
-          rows={rows}
-          selectedId={viewState.selectedLayerId}
-          onSelect={onSelectLayer}
-          onMove={onMoveLayer}
-          onDuplicate={onDuplicateLayer}
-          onRemove={onRemoveLayer}
-        />
-      </InspectorSection>
+      {/* The list earns its place at 2 layers: at 0 the canvas guides, at 1 the
+          selected-item panel covers it (P48-2). */}
+      {viewState.layers.length >= 2 ? (
+        <InspectorSection label={`Layers (${viewState.layers.length})`}>
+          <LayersPanel
+            rows={rows}
+            selectedId={viewState.selectedLayerId}
+            onSelect={onSelectLayer}
+            onMove={onMoveLayer}
+            onDuplicate={onDuplicateLayer}
+            onRemove={onRemoveLayer}
+          />
+        </InspectorSection>
+      ) : null}
 
       {selected ? (
         <InspectorSection label={selected.type === "text" ? "Selected text" : "Selected image"}>
@@ -204,32 +208,42 @@ export function DesignInspector({
             onTransform={(transform, mergeKey) => onTransform(selected.id, transform, mergeKey)}
             onTextChange={(patch, mergeKey) => onTextChange(selected.id, patch, mergeKey)}
             onOutlineChange={(outline, mergeKey) => onOutlineChange(selected.id, outline, mergeKey)}
+            onDuplicate={() => onDuplicateLayer(selected.id)}
+            onRemove={() => onRemoveLayer(selected.id)}
           />
-          {selected.type === "image" && selectedFileReady
-            ? (() => {
-                const printed = printedInches(area, { w: selected.transform.width, h: selected.transform.height });
-                const lowDpi = effectiveDpi(selected.naturalWidth, printed.w) < 150;
-                return lowDpi ? (
+          {(() => {
+            const printed = printedInches(area, { w: selected.transform.width, h: selected.transform.height });
+            return (
+              <>
+                <p className="text-text-3 text-xs" data-testid="printed-size">
+                  Printed size: about{" "}
+                  <span className="text-neon-yellow font-mono">
+                    {printed.w.toFixed(1)}″ × {printed.h.toFixed(1)}″
+                  </span>
+                </p>
+                {selected.type === "image" &&
+                selectedFileReady &&
+                effectiveDpi(selected.naturalWidth, printed.w) < 150 ? (
                   <p
                     role="status"
                     data-testid="dpi-warning"
-                    className="border-border bg-bg-2/60 text-text-2 mt-2 flex items-start gap-1.5 rounded-md border p-2 text-xs"
+                    className="border-border bg-bg-2/60 text-text-2 flex items-start gap-1.5 rounded-md border p-2 text-xs"
                   >
                     <span aria-hidden="true">⚠</span>
                     Low resolution: about {Math.round(effectiveDpi(selected.naturalWidth, printed.w))} DPI at this size
                     — 150 DPI or more prints crisp. A larger image will look better.
                   </p>
-                ) : (
-                  <p className="text-text-3 text-xs" data-testid="printed-size">
-                    Printed size: about{" "}
-                    <span className="text-neon-yellow font-mono">
-                      {printed.w.toFixed(1)}″ × {printed.h.toFixed(1)}″
-                    </span>
-                  </p>
-                );
-              })()
-            : null}
+                ) : null}
+              </>
+            );
+          })()}
         </InspectorSection>
+      ) : null}
+
+      {accountEmail ? (
+        <p className="text-text-3 text-xs" data-testid="signed-in-as">
+          Signed in as <span className="text-text-2">{accountEmail}</span>
+        </p>
       ) : null}
     </div>
   );

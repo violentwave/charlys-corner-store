@@ -50,10 +50,13 @@ describe("SendStep (step 4: two paths)", () => {
     expect(orderPath).toHaveTextContent("Order this design");
     expect(orderPath).toHaveTextContent(/confirm the price and send you an invoice/i);
     expect(orderPath).toHaveTextContent(/Nothing is charged now/i);
-    // Old-site parity: sizes, notes and the referral question live in the order card.
+    // Old-site parity: sizes and the referral question live in the order card...
     expect(orderPath).toHaveTextContent("Sizes and quantities");
-    expect(screen.getByTestId("builder-notes")).toBeInTheDocument();
     expect(screen.getByLabelText(/How did you hear about us\?/i)).toBeInTheDocument();
+    // ...but the notes sit above both cards so they ride along with either path (P48-2).
+    expect(screen.getByTestId("builder-notes")).toBeInTheDocument();
+    expect(orderPath.contains(screen.getByTestId("builder-notes"))).toBe(false);
+    expect(screen.getByTestId("builder-notes")).toHaveAccessibleDescription(/Anything we should know\?/i);
   });
 
   it("the email path sends intent 'email' and the marketing opt-in stays unchecked by default", async () => {
