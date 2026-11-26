@@ -102,7 +102,7 @@ Each page prompt is shipped by the agent (Ship section); Claude reviews every me
 ## Phase 5: Shop and checkout (Square, decided 2026-11-26)
 
 - [x] Payments provider decision: Square, hosted payment links (see `02` decision log)
-- [ ] Square foundation (Claude): env config, plain-fetch client, sandbox; quote → payment link from the owner's order email; webhook (signature-checked) → paid status + coupon unlock; tests against the sandbox
+- [x] Square foundation (Claude): env config, plain-fetch client, sandbox; quote → payment link from the owner's order email; webhook (signature-checked) → paid status + coupon unlock; tests against the sandbox
 - [ ] Saved cards (Claude): Web Payments SDK "Add a card" (consent), Cards API, pay with a saved card; remove card
 - [ ] Billing UI (opencode): Pay now in order tracking, guest pay page from the email, saved cards in Account, receipts
 - [ ] Catalog import of the 9 current products + variants (Square catalog)

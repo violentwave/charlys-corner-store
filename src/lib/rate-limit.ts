@@ -76,6 +76,8 @@ export const LIMITS = {
   securityChange: { limit: 20, windowSeconds: 60 * 60 },
   /** Member perks (2026-11-26): owner order links per IP; re-sends, drafts, brand kit, size sets per user. */
   ownerStage: { limit: 60, windowSeconds: 60 * 60 },
+  ownerQuote: { limit: 60, windowSeconds: 60 * 60 },
+  pay: { limit: 30, windowSeconds: 60 * 60 },
   mockupResend: { limit: 3, windowSeconds: 24 * 60 * 60 },
   drafts: { limit: 60, windowSeconds: 60 * 60 },
   brandKit: { limit: 30, windowSeconds: 60 * 60 },

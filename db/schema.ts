@@ -25,6 +25,8 @@ import { REFERRAL_SOURCES } from "../src/lib/schemas";
 export const referralSource = pgEnum("referral_source", REFERRAL_SOURCES);
 export const couponStatus = pgEnum("coupon_status", ["issued", "eligible", "redeemed", "expired"]);
 export const mockupKind = pgEnum("mockup_kind", ["mockup", "order"]);
+export const orderPaymentMethod = pgEnum("order_payment_method", ["payment_link", "card_on_file"]);
+export const orderPaymentStatus = pgEnum("order_payment_status", ["pending", "paid", "failed", "canceled"]);
 /**
  * Where an order request stands, as the customer sees it in "My designs" (2026-11-26). The
  * owner moves it on with one-click links in his order email (src/lib/order-stage.ts).
@@ -208,6 +210,12 @@ export const mockups = pgTable(
     /** Order requests only: progress shown to the customer (null on rows from before 2026-11-26 = received). */
     orderStage: orderStage("order_stage"),
     orderStageAt: timestamp("order_stage_at", { withTimezone: true }),
+    /** Owner-set quote for an order request (P51-3): dollars → cents, optional note. */
+    quoteCents: integer("quote_cents"),
+    quoteNote: text("quote_note"),
+    quotedAt: timestamp("quoted_at", { withTimezone: true }),
+    /** Set when the customer pays (Square webhook). */
+    paidAt: timestamp("paid_at", { withTimezone: true }),
     /** "Order again": the order request this one repeats (same design and files). */
     reorderOf: uuid("reorder_of"),
     /** Every original file, untouched, for production; image layers' `artwork` indexes this list. */
@@ -347,3 +355,43 @@ export const sizeSets = pgTable(
   },
   (t) => [index("size_sets_user_idx").on(t.userId)],
 );
+
+/** Square payment link for an order request (P51-3): hosted checkout, no card data stored. */
+export const orderPayments = pgTable(
+  "order_payments",
+  {
+    id: id(),
+    mockupId: uuid("mockup_id")
+      .notNull()
+      .references(() => mockups.id, { onDelete: "cascade" }),
+    leadId: uuid("lead_id")
+      .notNull()
+      .references(() => leads.id),
+    amountCents: integer("amount_cents").notNull(),
+    subtotalCents: integer("subtotal_cents").notNull(),
+    discountCents: integer("discount_cents").notNull().default(0),
+    couponId: uuid("coupon_id").references(() => coupons.id),
+    method: orderPaymentMethod("method").notNull().default("payment_link"),
+    status: orderPaymentStatus("status").notNull().default("pending"),
+    idempotencyKey: text("idempotency_key").notNull(),
+    squarePaymentLinkId: text("square_payment_link_id"),
+    squareOrderId: text("square_order_id"),
+    squarePaymentId: text("square_payment_id"),
+    url: text("url").notNull(),
+    createdAt: createdAt(),
+    paidAt: timestamp("paid_at", { withTimezone: true }),
+  },
+  (t) => [
+    index("order_payments_mockup_idx").on(t.mockupId),
+    uniqueIndex("order_payments_idempotency_unique").on(t.idempotencyKey),
+    uniqueIndex("order_payments_square_order_unique").on(t.squareOrderId),
+    uniqueIndex("order_payments_square_payment_unique").on(t.squarePaymentId),
+  ],
+);
+
+/** Square webhook dedupe (P51-3): event_id is the primary key; retries are no-ops. */
+export const webhookEvents = pgTable("webhook_events", {
+  eventId: text("event_id").primaryKey(),
+  type: text("type").notNull(),
+  receivedAt: createdAt(),
+});

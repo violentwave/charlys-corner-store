@@ -36,7 +36,8 @@ export const ORDER_STAGE_DESCRIPTIONS: Record<OrderStage, string> = {
 /** The stages the owner's email offers as next steps from `current`. */
 export function nextStages(current: OrderStage): OrderStage[] {
   if (current === "completed" || current === "cancelled") return [];
-  const order: OrderStage[] = ["quoted", "in_production", "ready", "completed"];
+  // "quoted" is now set via the signed owner quote page (P51-3), not a one-click stage link.
+  const order: OrderStage[] = ["in_production", "ready", "completed"];
   const after = order.slice(order.indexOf(current as OrderStage) + 1);
   return [...(current === "received" ? order : after), "cancelled"];
 }
@@ -69,6 +70,54 @@ export function checkOwnerStageLink(
   const expected = Buffer.from(signature(mockupId, to as OrderStage, expires));
   const given = Buffer.from(sig);
   return expected.length === given.length && timingSafeEqual(expected, given) ? (to as OrderStage) : null;
+}
+
+export const OWNER_QUOTE_DAYS = 120;
+export const PAY_TOKEN_DAYS = 30;
+
+function signatureQuote(mockupId: string, expires: number): string {
+  return createHmac("sha256", derivedKey("owner-quote")).update(`${mockupId}.${expires}`).digest("base64url");
+}
+
+export function ownerQuoteUrl(mockupId: string, now = Date.now()): string {
+  const expires = Math.floor(now / 1000) + OWNER_QUOTE_DAYS * 24 * 60 * 60;
+  const params = new URLSearchParams({ exp: String(expires), sig: signatureQuote(mockupId, expires) });
+  return `${site.url.replace(/\/$/, "")}/owner/quote/${mockupId}?${params.toString()}`;
+}
+
+export function checkOwnerQuoteLink(
+  mockupId: string,
+  exp: string | null,
+  sig: string | null,
+  now = Date.now(),
+): boolean {
+  if (!exp || !sig) return false;
+  const expires = Number(exp);
+  if (!Number.isInteger(expires) || expires * 1000 < now) return false;
+  const expected = Buffer.from(signatureQuote(mockupId, expires));
+  const given = Buffer.from(sig);
+  return expected.length === given.length && timingSafeEqual(expected, given);
+}
+
+function signaturePay(mockupId: string, expires: number): string {
+  return createHmac("sha256", derivedKey("pay")).update(`${mockupId}.${expires}`).digest("base64url");
+}
+
+export function payToken(mockupId: string, now = Date.now()): string {
+  const expires = Math.floor(now / 1000) + PAY_TOKEN_DAYS * 24 * 60 * 60;
+  return `${expires}.${signaturePay(mockupId, expires)}`;
+}
+
+export function checkPayToken(mockupId: string, token: string | null, now = Date.now()): boolean {
+  if (!token) return false;
+  const parts = token.split(".");
+  if (parts.length !== 2) return false;
+  const [exp, sig] = parts;
+  const expires = Number(exp);
+  if (!Number.isInteger(expires) || expires * 1000 < now) return false;
+  const expected = Buffer.from(signaturePay(mockupId, expires));
+  const given = Buffer.from(sig ?? "");
+  return expected.length === given.length && timingSafeEqual(expected, given);
 }
 
 /** Owner email links: every next stage from `current`. */

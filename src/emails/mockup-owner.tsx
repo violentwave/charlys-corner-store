@@ -25,6 +25,8 @@ export interface MockupOwnerEmailProps {
   filesKeptDays?: number;
   /** Order requests: one-click links to move the order on (src/lib/order-stage.ts). */
   stageLinks?: { label: string; url: string }[];
+  /** Order requests: the signed "Set the price" link (P51-3). */
+  quoteUrl?: string;
   /** "Order again": this repeats an earlier order request. */
   reorderOf?: string;
 }
@@ -100,6 +102,11 @@ export function MockupOwnerEmail(p: MockupOwnerEmailProps) {
                   <Link href={link.url}>Mark as {link.label}</Link>
                 </React.Fragment>
               ))}
+            </Text>
+          ) : null}
+          {p.quoteUrl ? (
+            <Text>
+              <Link href={p.quoteUrl}>Set the price</Link> (opens a form: price + optional note to the customer)
             </Text>
           ) : null}
           {p.filesKeptDays ? (
