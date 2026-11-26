@@ -25,6 +25,18 @@ import { REFERRAL_SOURCES } from "../src/lib/schemas";
 export const referralSource = pgEnum("referral_source", REFERRAL_SOURCES);
 export const couponStatus = pgEnum("coupon_status", ["issued", "eligible", "redeemed", "expired"]);
 export const mockupKind = pgEnum("mockup_kind", ["mockup", "order"]);
+/**
+ * Where an order request stands, as the customer sees it in "My designs" (2026-11-26). The
+ * owner moves it on with one-click links in his order email (src/lib/order-stage.ts).
+ */
+export const orderStage = pgEnum("order_stage", [
+  "received",
+  "quoted",
+  "in_production",
+  "ready",
+  "completed",
+  "cancelled",
+]);
 export const authTokenPurpose = pgEnum("auth_token_purpose", [
   "verify_email",
   "reset_password",
@@ -193,6 +205,11 @@ export const mockups = pgTable(
      * deleted (the owner still needs them); emailed mockups are deleted outright instead.
      */
     hiddenByUserAt: timestamp("hidden_by_user_at", { withTimezone: true }),
+    /** Order requests only: progress shown to the customer (null on rows from before 2026-11-26 = received). */
+    orderStage: orderStage("order_stage"),
+    orderStageAt: timestamp("order_stage_at", { withTimezone: true }),
+    /** "Order again": the order request this one repeats (same design and files). */
+    reorderOf: uuid("reorder_of"),
     /** Every original file, untouched, for production; image layers' `artwork` indexes this list. */
     artworks: jsonb("artworks").$type<MockupArtworkRecord[]>().notNull().default([]),
     /**
@@ -278,4 +295,55 @@ export const authTokens = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index("auth_tokens_user_idx").on(t.userId, t.purpose), index("auth_tokens_hash_idx").on(t.tokenHash)],
+);
+
+/**
+ * Saved drafts (2026-11-26): an unfinished builder design kept on the account. Uploaded images
+ * live under `mockups/drafts/…`, so the 30-day bucket rule deletes them like mockup files.
+ */
+export const drafts = pgTable(
+  "drafts",
+  {
+    id: id(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    /** Builder design: garment, colors, views (layers), sizes, notes (src/lib/member-schemas.ts draftDesignSchema). */
+    design: jsonb("design").$type<Record<string, unknown>>().notNull(),
+    artworks: jsonb("artworks").$type<MockupArtworkRecord[]>().notNull().default([]),
+    createdAt: createdAt(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("drafts_user_idx").on(t.userId, t.updatedAt)],
+);
+
+/** Brand kit (2026-11-26): ink colors, fonts and a logo the builder offers first. One per member. */
+export const brandKits = pgTable("brand_kits", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  inkColors: jsonb("ink_colors").$type<string[]>().notNull().default([]),
+  fonts: jsonb("fonts").$type<string[]>().notNull().default([]),
+  /** Stored under `brand/…` (kept: not covered by the 30-day rule). */
+  logo: jsonb("logo").$type<MockupArtworkRecord | null>(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Saved sizes / team rosters (2026-11-26) for quick reorders. */
+export const sizeSets = pgTable(
+  "size_sets",
+  {
+    id: id(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    sizes: jsonb("sizes").$type<MockupSizes>().notNull().default({}),
+    /** Optional per-person list (team orders): name, size, and an optional number. */
+    roster: jsonb("roster").$type<{ name: string; size: string; number?: string }[]>().notNull().default([]),
+    createdAt: createdAt(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("size_sets_user_idx").on(t.userId)],
 );

@@ -6,6 +6,7 @@ import { currentUser } from "@/lib/auth/session";
 import { getDb, schema } from "@/lib/db";
 import type { GarmentId } from "@/lib/garments";
 import { mockupSummary } from "@/lib/mockup-summary";
+import { ORDER_STAGE_DESCRIPTIONS, ORDER_STAGE_LABELS, type OrderStage } from "@/lib/order-stage";
 import { MOCKUP_FILES_RETENTION_DAYS, mockupFilesExpired } from "@/lib/retention";
 import { getStorage } from "@/lib/storage";
 
@@ -25,6 +26,12 @@ export type AccountMockup = {
   filesExpireAt: string | null;
   /** What the member's "Delete" does: emailed mockups are deleted, orders only hidden. */
   removal: "delete" | "hide";
+  /** Order requests: where it stands (owner updates it), with a one-line explanation. */
+  orderStage: { stage: OrderStage; label: string; description: string; updatedAt: string | null } | null;
+  /** Emailed mockups whose files still exist can be re-sent (POST …/[id]/resend). */
+  canResend: boolean;
+  /** Order requests can be ordered again (POST /api/account/orders/[id]/reorder). */
+  canReorder: boolean;
   /** Reopen in the builder: /design?mockup=<id> */
   restorePath: string;
 };
@@ -79,6 +86,17 @@ export async function GET() {
             ? null
             : new Date(m.createdAt.getTime() + MOCKUP_FILES_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString(),
         removal: m.kind === "order" ? "hide" : "delete",
+        orderStage:
+          m.kind === "order"
+            ? {
+                stage: (m.orderStage ?? "received") as OrderStage,
+                label: ORDER_STAGE_LABELS[(m.orderStage ?? "received") as OrderStage],
+                description: ORDER_STAGE_DESCRIPTIONS[(m.orderStage ?? "received") as OrderStage],
+                updatedAt: (m.orderStageAt ?? m.createdAt).toISOString(),
+              }
+            : null,
+        canResend: m.kind === "mockup" && !mockupFilesExpired(m.kind, m.createdAt),
+        canReorder: m.kind === "order",
         restorePath: `/design?mockup=${m.id}`,
       };
     }),
