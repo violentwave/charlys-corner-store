@@ -53,7 +53,8 @@ export async function removeMemberDesign(
 }
 
 /**
- * Deletes the account: emailed mockups (rows + files), sessions and codes (cascade), the user
+ * Deletes the account: emailed mockups (rows + files), drafts, brand kit and size sets (rows +
+ * files), sessions and codes (cascade), the user
  * row. Order requests stay for the owner, detached from the account (user_id → null). The
  * lead (email + coupon) stays as the shop's customer record; full erasure is by email request
  * (privacy page).
@@ -63,12 +64,16 @@ export async function deleteMemberAccount(db: Db, storage: StorageDriver, userId
     .select()
     .from(schema.mockups)
     .where(and(eq(schema.mockups.userId, userId), eq(schema.mockups.kind, "mockup")));
+  // Drafts, brand kit and size sets go with the user row (ON DELETE CASCADE); their files here.
+  const drafts = await db.select().from(schema.drafts).where(eq(schema.drafts.userId, userId));
+  const [brandKit] = await db.select().from(schema.brandKits).where(eq(schema.brandKits.userId, userId));
   await db.transaction(async (tx) => {
     await tx.delete(schema.mockups).where(and(eq(schema.mockups.userId, userId), eq(schema.mockups.kind, "mockup")));
     await tx.delete(schema.users).where(eq(schema.users.id, userId));
   });
-  await deleteFiles(
-    storage,
-    mockups.flatMap((m) => mockupFileKeys(m)),
-  );
+  await deleteFiles(storage, [
+    ...mockups.flatMap((m) => mockupFileKeys(m)),
+    ...drafts.flatMap((d) => d.artworks.map((a) => a.key)),
+    ...(brandKit?.logo ? [brandKit.logo.key] : []),
+  ]);
 }

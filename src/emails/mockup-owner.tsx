@@ -23,6 +23,10 @@ export interface MockupOwnerEmailProps {
   mockups: { view: string; signedUrl: string }[];
   /** Emailed mockups: files are auto-deleted after this many days (src/lib/retention.ts). Orders: kept. */
   filesKeptDays?: number;
+  /** Order requests: one-click links to move the order on (src/lib/order-stage.ts). */
+  stageLinks?: { label: string; url: string }[];
+  /** "Order again": this repeats an earlier order request. */
+  reorderOf?: string;
 }
 
 /** Owner notification for a mockup lead or order request. Free text (name, notes) is clipped by the route before render. */
@@ -85,6 +89,18 @@ export function MockupOwnerEmail(p: MockupOwnerEmailProps) {
               <Link href={a.signedUrl}>{a.signedUrl}</Link>
             </Text>
           ))}
+          {p.reorderOf ? <Text>Order again: same design as order {p.reorderOf}.</Text> : null}
+          {p.stageLinks && p.stageLinks.length > 0 ? (
+            <Text>
+              Update the customer (opens a confirm page):
+              {p.stageLinks.map((link) => (
+                <React.Fragment key={link.url}>
+                  <br />
+                  <Link href={link.url}>Mark as {link.label}</Link>
+                </React.Fragment>
+              ))}
+            </Text>
+          ) : null}
           {p.filesKeptDays ? (
             <Text>
               Heads up: these files are deleted automatically after {p.filesKeptDays} days. Download anything you want
