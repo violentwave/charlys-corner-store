@@ -401,7 +401,7 @@ export function MyDesigns({ email }: { email: string }) {
       </p>
 
       <Tabs defaultValue="mockups">
-        <TabsList aria-label="Your designs">
+        <TabsList aria-label="Your designs" className="flex-wrap overflow-visible">
           <TabsTrigger value="mockups">Saved mockups ({mockups.length})</TabsTrigger>
           <TabsTrigger value="orders">Order requests ({orders.length})</TabsTrigger>
         </TabsList>
