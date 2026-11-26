@@ -1,6 +1,8 @@
 import { connection } from "next/server";
 import { NextResponse } from "next/server";
 
+import { testHooksEnabled } from "@/lib/test-hooks";
+
 import { _outbox } from "@/lib/email";
 
 /**
@@ -9,13 +11,14 @@ import { _outbox } from "@/lib/email";
  * reset links. Doubly gated — it must never exist in production:
  * - EMAIL_DRIVER=console (dev/CI driver; 404 under Resend)
  * - ENABLE_TEST_HOOKS=1 (set only in the CI e2e job and playwright.config.ts webServer)
+ * - DATABASE_URL on localhost (see src/lib/test-hooks.ts)
  * NODE_ENV is "production" under `pnpm start` in CI, so it can't be the guard.
  * connection() keeps the route at request time — reading env at build time would
  * prerender (and freeze) the guard's answer.
  */
 export async function GET(request: Request) {
   await connection();
-  if (process.env.EMAIL_DRIVER !== "console" || process.env.ENABLE_TEST_HOOKS !== "1") {
+  if (!testHooksEnabled()) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
   const to = new URL(request.url).searchParams.get("to")?.trim().toLowerCase();

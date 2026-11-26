@@ -122,6 +122,14 @@ describe.skipIf(!hasTestDb)("POST /api/mockups (real Postgres)", () => {
     expect(_memoryKeys()).toHaveLength(0);
   });
 
+  it("refuses cross-site POSTs before anything else (CSRF)", async () => {
+    const req = buildRequest();
+    const crossSite = new Request(req, { headers: { origin: "https://evil.example", host: "test" } });
+    const res = await postMockup(crossSite);
+    expect(res.status).toBe(403);
+    expect(_memoryKeys()).toHaveLength(0);
+  });
+
   it("requires a verified email: unverified is 403", async () => {
     // Same shape as a fresh signup: a user whose email hasn't been confirmed yet.
     const leadId = await upsertLead(db, { email: "unverified@example.com", name: "Charly" });
