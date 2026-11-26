@@ -123,10 +123,17 @@ const LS_BODY = `
   L 188 1068 L 34 1052 L 38 960
   C 50 560 120 210 228 160
   C 282 142 338 128 392 112`;
-const lsShared = [
-  ...sym("seam", "M 772 160 C 760 240 750 310 742 376"),
+// Rib-knit cuffs (5400). The Performance long sleeve (42400) has hemmed cuffs instead.
+const LS_RIB_CUFFS = [
   ...sym("rib", "M 962 960 L 966 1052 L 812 1068 L 806 970 Z", { o: 0.12 }),
   ...sym("seam", "M 962 960 L 806 970"),
+];
+const LS_HEMMED_CUFFS = [
+  ...sym("stitch", "M 964 1034 L 811 1050"),
+  ...sym("stitch", "M 964 1024 L 810 1040", { o: 0.2 }),
+];
+const lsShared = [
+  ...sym("seam", "M 772 160 C 760 240 750 310 742 376"),
   ...sym("fold", "M 842 300 C 890 420 918 560 930 720", { o: 0.12, w: 18 }),
   ...sym("crease", "M 810 880 C 860 866 912 868 958 880", { o: 0.13 }),
   ...sym("crease", "M 808 920 C 858 908 912 910 960 920", { o: 0.11 }),
@@ -153,6 +160,7 @@ const longsleeveFront = {
     { kind: "seam", d: "M 392 112 C 420 192 580 192 608 112" },
     { kind: "stitch", d: "M 388 120 C 416 204 584 204 612 120" },
     ...lsShared,
+    ...LS_RIB_CUFFS,
   ],
   highlight: [...lsHighlights, { d: "M 396 118 C 424 198 576 198 604 118", o: 0.35, w: 2.5, sharp: true }],
 };
@@ -166,6 +174,7 @@ const longsleeveBack = {
     { kind: "seam", d: "M 396 130 C 434 146 566 146 604 130" },
     { kind: "fold", d: "M 330 300 C 420 334 580 334 670 300", o: 0.07, w: 34 },
     ...lsShared,
+    ...LS_RIB_CUFFS,
   ],
   highlight: [...lsHighlights, { d: "M 398 134 C 436 150 564 150 602 134", o: 0.35, w: 2.5, sharp: true }],
 };
@@ -545,6 +554,34 @@ const hatFront = {
   ],
 };
 
+// ---------------------------------------------------------------- PERFORMANCE (Gildan 42000 / 42400)
+// 100% polyester jersey: same cut as the cotton tee / long sleeve, smoother and shinier.
+// Softer folds (lighter fabric drapes flat), stronger broad highlights (poly sheen);
+// the long sleeve swaps the rib cuffs for a hemmed cuff.
+const isCuffRib = (e) => LS_RIB_CUFFS.some((c) => c.d === e.d && c.kind === e.kind);
+function polyester(v, { hemmedCuffs = false } = {}) {
+  return {
+    ...v,
+    shade: [
+      ...v.shade
+        .filter((e) => !(hemmedCuffs && isCuffRib(e)))
+        .map((e) => (e.kind === "fold" || e.kind === "crease" ? { ...e, o: (e.o ?? 0.1) * 0.75 } : e)),
+      ...(hemmedCuffs ? LS_HEMMED_CUFFS : []),
+    ],
+    highlight: v.highlight.map((e) => (e.sharp ? e : { ...e, o: Math.min(0.6, e.o * 1.3) })),
+  };
+}
+const PERF_CUFF_SLEEVE = sleeveView({
+  zone: "body",
+  path: LONG_SLEEVE_PATH,
+  shade: [
+    { kind: "seam", d: "M 290 160 C 380 104 620 104 710 160", o: 0.35 },
+    { kind: "stitch", d: "M 381 1122 L 619 1122" },
+    { kind: "stitch", d: "M 382 1110 L 618 1110", o: 0.2 },
+    { kind: "crease", d: "M 400 980 C 460 968 540 968 604 980", o: 0.1 },
+  ],
+});
+
 // Real flat tees are ~0.7 as wide as they are long: widen the drawing and center it vertically.
 const TEE_FIT = { sx: 1.12, sy: 0.88, ty: 72 };
 const LS_FIT = { sx: 0.95, sy: 0.88, ty: 72 };
@@ -570,6 +607,16 @@ export const garments = {
     back: scaleView(longsleeveBack, LS_FIT),
     left: mirrorView(longSleeveRight),
     right: longSleeveRight,
+  },
+  perftee: {
+    front: scaleView(polyester(tshirtFront), TEE_FIT),
+    back: scaleView(polyester(tshirtBack), TEE_FIT),
+  },
+  perflongsleeve: {
+    front: scaleView(polyester(longsleeveFront, { hemmedCuffs: true }), LS_FIT),
+    back: scaleView(polyester(longsleeveBack, { hemmedCuffs: true }), LS_FIT),
+    left: mirrorView(polyester(PERF_CUFF_SLEEVE)),
+    right: polyester(PERF_CUFF_SLEEVE),
   },
   hat: { front: hatFront },
   polo: { front: scaleView(poloFront, TEE_FIT), back: scaleView(poloBack, TEE_FIT) },

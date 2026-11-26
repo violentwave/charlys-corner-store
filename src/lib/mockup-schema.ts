@@ -18,6 +18,7 @@ import { z } from "zod";
 
 import { findCombo, GARMENT_IDS, getGarment, isHexColor, isPaletteColor, VIEW_IDS, type GarmentId } from "./garments";
 import { REFERRAL_SOURCES } from "./schemas";
+import { methodBlocker, PRINT_METHOD_CHOICES } from "./print-methods";
 import { TEXT_FONT_IDS } from "./text-fonts";
 
 /** Formats the builder can draw on a canvas (a subset of src/lib/artwork.ts kinds). */
@@ -108,6 +109,8 @@ export const mockupViewSchema = z.preprocess(
   z.object({
     view: z.enum(VIEW_IDS),
     printArea: z.string().min(1).max(40),
+    /** Print method for this side (src/lib/print-methods.ts); older payloads mean "recommend". */
+    method: z.enum(PRINT_METHOD_CHOICES).default("recommend"),
     layers: z.array(layerSchema).min(1, "Add something to this side").max(MAX_LAYERS_PER_VIEW),
   }),
 );
@@ -160,8 +163,12 @@ export const mockupPayloadSchema = z
       }
       if (seen.has(entry.view)) ctx.addIssue({ code: "custom", path: ["views", i, "view"], message: "Duplicate view" });
       seen.add(entry.view);
-      if (!view.printAreas.some((a) => a.id === entry.printArea)) {
+      const printArea = view.printAreas.find((a) => a.id === entry.printArea);
+      if (!printArea) {
         ctx.addIssue({ code: "custom", path: ["views", i, "printArea"], message: "Unknown print location" });
+      } else if (entry.method !== "recommend") {
+        const blocker = hexOk ? methodBlocker(entry.method, g, v.colors, printArea) : null;
+        if (blocker) ctx.addIssue({ code: "custom", path: ["views", i, "method"], message: blocker });
       }
     });
     // Artwork indexes must be dense (0..n-1) so every uploaded file is used.
@@ -189,7 +196,8 @@ export type MockupTextLayer = z.infer<typeof textLayerSchema>;
  * storage key. Older rows hold { transform, artwork? } instead of layers; read them through
  * mockupViewSchema, which normalizes both.
  */
-export type MockupViewRecord = MockupView & { mockupKey: string };
+/** Rows saved before print methods (2026-11-26) have no `method`: read it as "recommend". */
+export type MockupViewRecord = Omit<MockupView, "method"> & Partial<Pick<MockupView, "method">> & { mockupKey: string };
 /** One stored original file (mockups.artworks). */
 export type MockupArtworkRecord = { key: string; name: string; contentType: string; size: number };
 

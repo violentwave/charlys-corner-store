@@ -19,7 +19,7 @@ const pub = (p: string) => join(process.cwd(), "public", p);
 describe("garment config", () => {
   it("covers the spec's garments plus the long sleeve tee", () => {
     expect(GARMENTS.map((g) => g.id).sort()).toEqual(
-      ["hat", "hoodie", "longsleeve", "polo", "raglan", "tank", "tshirt"].sort(),
+      ["hat", "hoodie", "longsleeve", "perflongsleeve", "perftee", "polo", "raglan", "tank", "tshirt"].sort(),
     );
   });
 
@@ -32,7 +32,8 @@ describe("garment config", () => {
           expect(Object.keys(c.colors).sort(), `${g.id} ${c.name}`).toEqual(g.colorZones.map((z) => z.id).sort());
       } else {
         expect(g.colorZones.map((z) => z.id)).toEqual(["body"]);
-        expect(g.palette.length).toBeGreaterThan(10);
+        // Gildan 42400 (Performance long sleeve) comes in 8 colors; the rest in 10+.
+        expect(g.palette.length).toBeGreaterThanOrEqual(8);
       }
     }
     // Hoodie lining and drawcords follow the body (no separate parts).

@@ -20,13 +20,17 @@ A single page with a stepper (mobile: bottom-sheet steps; desktop: canvas left, 
 |---|---|---|
 | **T-shirt** (Gildan 5000) | Front, Back | Front Chest, Left Chest, Full Front, Full Back |
 | **Long sleeve tee** (Gildan 5400, added 2026-11-25) | Front, Back, Left sleeve, Right sleeve | Front Chest, Left Chest, Full Front, Full Back, Upper Sleeve, Full Sleeve |
+| **Performance Tee** (Gildan 42000, 100% polyester, added 2026-11-26) | Front, Back | Front Chest, Left Chest, Full Front, Full Back |
+| **Performance Long Sleeve** (Gildan 42400, 100% polyester, hemmed cuffs, added 2026-11-26) | Front, Back, Left sleeve, Right sleeve | Front Chest, Left Chest, Full Front, Full Back, Upper Sleeve, Full Sleeve |
 | **Baseball tee (3/4 raglan)** (Bella+Canvas 3200) | Front, Back, Left sleeve, Right sleeve | Front Chest, Left Chest, Full Front, Full Back, Upper Sleeve, Full Sleeve |
 | **Hoodie** (Gildan 18500) | Front, Back, Left sleeve, Right sleeve | Left Chest, Full Front (above pocket), Full Back, Upper Sleeve, Full Sleeve |
 | **Hat** (Richardson 112) | Front | Hat Front |
 | **Polo** | Front, Back | Left Chest, Full Back |
 | **Tank** | Front, Back | Full Front, Full Back |
 
-All six garments are required (confirmed 2026-11-23); the long sleeve tee was added 2026-11-25 (Logan). **Sleeve printing is offered on long-sleeve garments only** (long sleeve tee, hoodie, baseball tee), each sleeve as its own view.
+All six garments are required (confirmed 2026-11-23); the long sleeve tee was added 2026-11-25 (Logan). The two Performance shirts were added 2026-11-26 (Logan); no UV/UPF claim until the owner confirms (Brief Q13).
+
+**Print method per side (2026-11-26):** under Print location, a "Print method" picker lists every method the shop runs (screen printing, DTF, DTG, embroidery, sublimation, heat-transfer vinyl) plus the default "Recommend one for me". Methods that don't fit are shown disabled with a one-line reason: DTG needs cotton or a cotton blend (no polyester, no hats); embroidery isn't offered on the thin Performance polyester or on areas over 12″ on a side; sublimation needs a Performance (polyester) shirt in a light color. A pick that stops fitting (color or print area changed) falls back to "recommend". On the wire: `views[].method` (default `"recommend"`), validated by the same rules on the server (`src/lib/print-methods.ts`). The method shows in the owner and customer emails. **Sleeve printing is offered on long-sleeve garments only** (long sleeve tee, hoodie, baseball tee), each sleeve as its own view.
 
 **Artwork per side (2026-11-25):** an upload goes on the side being edited (front by default), never on every side. Each other side (back, left sleeve, right sleeve) can get the same file or a different one. On the wire every view carries an `artwork` index into the uploaded files `artwork-0…3` (≤ 30 MB total); the server stores each original once.
 

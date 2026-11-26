@@ -12,7 +12,7 @@ export interface MockupCustomerEmailProps {
   garmentName: string;
   /** Zone label ("Sleeves & collar") + palette name ("Navy" or "Custom #rrggbb"). */
   colors: { label: string; hex: string; name: string }[];
-  views: { view: string; area: string }[];
+  views: { view: string; area: string; method?: string }[];
   coupon: { code: string; expiresAt: Date; isNew: boolean };
   /** Rendered mockups, inlined via 7-day signed storage URLs (the PNGs are also attached, so they outlive the links). */
   mockups: { view: string; signedUrl: string }[];
@@ -54,7 +54,8 @@ export function MockupCustomerEmail(p: MockupCustomerEmailProps) {
               : p.colors.length > 1
                 ? ` (${p.colors.map((c) => `${c.label.toLowerCase()}: ${c.name}`).join(", ")})`
                 : ""}{" "}
-            · print on {p.views.map((v) => `${v.view.toLowerCase()} (${v.area})`).join(", ")}
+            · print on{" "}
+            {p.views.map((v) => `${v.view.toLowerCase()} (${v.area}${v.method ? `, ${v.method}` : ""})`).join(", ")}
           </Text>
           {p.mockups.map((m) => (
             <Img key={m.signedUrl} src={m.signedUrl} alt={`Your ${p.garmentName.toLowerCase()} mockup — ${m.view}`} />

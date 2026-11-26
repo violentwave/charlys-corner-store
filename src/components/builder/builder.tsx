@@ -12,6 +12,7 @@ import { z } from "zod";
 import { detectArtworkKind, ARTWORK_MAX_BYTES } from "@/lib/artwork";
 import type { AccountUser } from "@/lib/auth-schema";
 import { getGarment, GARMENTS, isHexColor, luma, VIEW_LABELS, type GarmentId, type ViewId } from "@/lib/garments";
+import { effectiveMethod, methodBlocker, PRINT_METHODS } from "@/lib/print-methods";
 import { MAX_LAYERS_PER_VIEW, MOCKUP_ARTWORK_KINDS, mockupViewSchema } from "@/lib/mockup-schema";
 import type { TextFontId } from "@/lib/text-fonts";
 import { track } from "@/lib/analytics";
@@ -739,6 +740,8 @@ export function Builder() {
     .filter(([, qty]) => qty > 0)
     .map(([size, qty]) => `${qty} × ${size}`);
 
+  const activeArea = activeView.printAreas.find((a) => a.id === activeViewState.printArea) ?? activeView.printAreas[0]!;
+
   return (
     <div className="mt-8 grid items-start gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
       <div className="flex min-w-0 flex-col gap-2 lg:sticky lg:top-24">
@@ -922,6 +925,12 @@ export function Builder() {
                   onSetPrintArea={(viewId, areaId) =>
                     dispatch({ type: "setPrintArea", view: viewId, printAreaId: areaId })
                   }
+                  method={effectiveMethod(activeViewState.method, garment, design.colors, activeArea)}
+                  methodOptions={PRINT_METHODS.map((m) => ({
+                    ...m,
+                    blocker: methodBlocker(m.id, garment, design.colors, activeArea),
+                  }))}
+                  onSetPrintMethod={(viewId, method) => dispatch({ type: "setPrintMethod", view: viewId, method })}
                   onSelectLayer={(layerId) => dispatch({ type: "selectLayer", view: activeViewId, layerId })}
                   onTransform={(layerId, transform, mergeKey) =>
                     dispatch({ type: "updateLayer", view: activeViewId, layerId, patch: { transform }, mergeKey })

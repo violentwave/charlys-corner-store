@@ -57,7 +57,7 @@ Replace the Weebly site with a **fully custom, fast, mobile-first website** that
 Track answers here. They block specific roadmap items. ✅ = answered (2026-11-23), ◐ = partial, ☐ = open.
 
 1. ◐ Contact: **email CHARLYSCORNERSTORE@GMAIL.COM** ✅. Phone, address (or "by appointment"), hours, and socials (IG/FB/TikTok) are still open.
-2. ☐ **Payments:** is the current Weebly store on **Square**? Keep Square (catalog plus payments) or move to Stripe?
+2. ◐ **Payments:** ✅ Square, his existing account (Logan, 2026-11-26). Still needed: a Square developer app under his account (access token + location ID), Apple Pay / Google Pay / Cash App Pay turned on for online checkout.
 3. ☐ Real pricing rules for custom orders: per-garment base price, per-print-location upcharge, quantity breaks, rush fee? Also pricing for cards, flyers, stickers, lanyards, and pillows.
 4. ◐ Blanks: **Gildan is always stocked** ✅, and they'll print on anything brought in or requested ✅. Still open: confirm the styles the builder now assumes (Gildan 5000 tee, 5400 long sleeve, 18500 hoodie, 2200 tank, 8800 polo; Bella+Canvas 3200 baseball tee; Richardson 112 trucker hat), which colors/combos he stocks of each, and the polo/tank color lists.
 5. ✅ **Polo and Tank stay in the new builder** (6 garments total).
@@ -68,3 +68,5 @@ Track answers here. They block specific roadmap items. ✅ = answered (2026-11-2
 10. ◐ **Hosting:** owner is fine with a small monthly fee and already owns his domain ✅ (relayed by Logan). Planned host: Render, about $13/month. Still open: who has the login for his domain registrar/DNS, and does he approve opening the hosting account in his own name with his card? (Account email = his; add Logan as a team member if the plan allows.)
 11. ☐ OK to show client work (logos on past jobs) in the online portfolio?
 12. ☐ **Max print sizes** per location (the builder assumes Full Front/Back 12″ × 14″, hoodie front 12″ × 10″ above the pocket, Front Chest 10″ × 5″, Left Chest 4″ × 4″, sleeves 3.5″ wide, hat front 4″ × 2.25″). Can the press do bigger (oversized/jumbo prints, e.g. 14″ × 16″ or more)? Logan, 2026-11-25: the print box feels small.
+13. ☐ **Performance shirts:** we use Gildan 42000 (tee) and 42400 (long sleeve), S–3XL. Gildan doesn't advertise a UPF rating for them: may the site say "UV protection"? If he stocks a UPF 50+ blank instead (or as well), which one? Youth/ladies versions wanted?
+14. ✅ **Print methods:** he runs all of them in house: screen printing, DTF, DTG, embroidery, sublimation, heat-transfer vinyl (Logan, 2026-11-26).

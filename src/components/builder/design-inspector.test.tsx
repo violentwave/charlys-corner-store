@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getGarment } from "@/lib/garments";
 import { MAX_LAYERS_PER_VIEW } from "@/lib/mockup-schema";
+import { PRINT_METHODS } from "@/lib/print-methods";
 
 import { DesignInspector } from "./design-inspector";
 import {
@@ -57,6 +58,9 @@ function setup(layers: BuilderLayer[], selectedLayerId: string | null = layers[0
     onAddText: vi.fn(),
     onViewChange: vi.fn(),
     onSetPrintArea: vi.fn(),
+    method: "recommend" as const,
+    methodOptions: PRINT_METHODS.map((m) => ({ ...m, blocker: m.id === "sublimation" ? "Needs polyester" : null })),
+    onSetPrintMethod: vi.fn(),
     onSelectLayer: vi.fn(),
     onTransform: vi.fn(),
     onTextChange: vi.fn(),
@@ -127,6 +131,12 @@ describe("DesignInspector (simple panel)", () => {
     expect(screen.getByTestId("print-location")).toBeVisible();
   });
 
+  it("shows the print method with its help line", () => {
+    setup([]);
+    expect(screen.getByTestId("print-method")).toHaveTextContent("Recommend");
+    expect(screen.getByTestId("print-method-help")).toHaveTextContent("We'll pick");
+  });
+
   it("'Add my logo' appears only when the brand kit has a logo", () => {
     const propsFor = (logo: { name: string; url: string | null } | null) => ({
       view,
@@ -145,6 +155,9 @@ describe("DesignInspector (simple panel)", () => {
       onAddText: vi.fn(),
       onViewChange: vi.fn(),
       onSetPrintArea: vi.fn(),
+      method: "recommend" as const,
+      methodOptions: [],
+      onSetPrintMethod: vi.fn(),
       onSelectLayer: vi.fn(),
       onTransform: vi.fn(),
       onTextChange: vi.fn(),
