@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "order_payments_one_card_in_flight" ON "order_payments" USING btree ("mockup_id") WHERE "order_payments"."method" = 'card_on_file' and "order_payments"."status" = 'pending';

@@ -392,6 +392,10 @@ export const orderPayments = pgTable(
     uniqueIndex("order_payments_idempotency_unique").on(t.idempotencyKey),
     uniqueIndex("order_payments_square_order_unique").on(t.squareOrderId),
     uniqueIndex("order_payments_square_payment_unique").on(t.squarePaymentId),
+    // One saved-card charge in flight per order: a double click can't charge twice.
+    uniqueIndex("order_payments_one_card_in_flight")
+      .on(t.mockupId)
+      .where(sql`${t.method} = 'card_on_file' and ${t.status} = 'pending'`),
   ],
 );
 

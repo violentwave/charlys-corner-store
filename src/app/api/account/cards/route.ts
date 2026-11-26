@@ -1,103 +1,78 @@
+import { randomBytes } from "node:crypto";
+
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { verifiedUser } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
-import { getOrCreateSquareCustomer, squareBaseUrl } from "@/lib/square";
-import { rateLimit, LIMITS } from "@/lib/rate-limit";
+import { LIMITS, rateLimit } from "@/lib/rate-limit";
+import {
+  createCard,
+  existingSquareCustomerId,
+  getOrCreateSquareCustomer,
+  listCards,
+  squareConfigured,
+  squareSdkConfig,
+} from "@/lib/square";
+
+/** Most saved cards per member ("a card or two on file", Logan 2026-11-26). */
+export const MAX_SAVED_CARDS = 3;
 
 const bodySchema = z.object({
-  sourceId: z.string().min(1),
-  verificationToken: z.string().optional(),
-  cardholderName: z.string().max(100).optional(),
-  postalCode: z.string().max(20).optional(),
+  sourceId: z.string().min(1).max(500),
+  verificationToken: z.string().max(2000).optional(),
+  cardholderName: z.string().trim().max(100).optional(),
+  postalCode: z.string().trim().max(12).optional(),
+  // Saving a card needs the member's explicit consent; checked here, not only in the dialog.
+  consent: z.literal(true),
 });
 
+/** The member's saved cards (empty until they save one: listing never creates a Square customer). */
 export async function GET() {
   const db = getDb();
   const v = await verifiedUser(db);
   if (!v.ok) return NextResponse.json({ error: v.error }, { status: v.status });
-  const user = v.user;
-  if (!process.env.SQUARE_ACCESS_TOKEN) return NextResponse.json({ cards: [] });
-
-  const customerId = await getOrCreateSquareCustomer({ id: user.id, email: user.email });
-  if (!customerId) return NextResponse.json({ cards: [] });
-
-  const r = await fetch(`${squareBaseUrl()}/v2/cards?customer_id=${encodeURIComponent(customerId)}`, {
-    headers: {
-      Authorization: `Bearer ${process.env.SQUARE_ACCESS_TOKEN}`,
-      "Square-Version": "2024-10-17",
-      "Content-Type": "application/json",
-    },
-  });
-  const json = (await r.json().catch(() => null)) as {
-    cards?: { id: string; card_brand: string; last_4: string; exp_month: number; exp_year: number; enabled: boolean }[];
-  } | null;
-  const cards = (json?.cards ?? [])
-    .filter((c) => c.enabled !== false)
-    .map((c) => ({ id: c.id, brand: c.card_brand, last4: c.last_4, expMonth: c.exp_month, expYear: c.exp_year }));
-  return NextResponse.json({ cards });
+  const sdk = squareSdkConfig();
+  if (!sdk) return NextResponse.json({ cards: [], sdk: null });
+  const customerId = await existingSquareCustomerId(v.user.id);
+  const cards = customerId ? await listCards(customerId).catch(() => []) : [];
+  return NextResponse.json({ cards, sdk });
 }
 
+/** Saves a card from a Web Payments SDK token (card data never reaches this server). */
 export async function POST(request: Request) {
   const db = getDb();
   const v = await verifiedUser(db);
   if (!v.ok) return NextResponse.json({ error: v.error }, { status: v.status });
-  const user = v.user;
-  const rl = await rateLimit(db, { key: `cards:${user.id}`, ...LIMITS.securityChange });
-  if (!rl.ok) return NextResponse.json({ error: "too many requests" }, { status: 429 });
+  if (!squareConfigured()) return NextResponse.json({ error: "Saved cards aren't switched on yet." }, { status: 503 });
+  const rl = await rateLimit(db, { key: `cards:${v.user.id}`, ...LIMITS.securityChange });
+  if (!rl.ok) return NextResponse.json({ error: "Too many tries. Please wait a few minutes." }, { status: 429 });
 
-  const body = await request.json().catch(() => ({}));
-  const parsed = bodySchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "invalid input" }, { status: 400 });
-
-  const customerId = await getOrCreateSquareCustomer({ id: user.id, email: user.email });
-  if (!customerId) return NextResponse.json({ error: "payments not enabled" }, { status: 503 });
-
-  const listRes = await fetch(`${squareBaseUrl()}/v2/cards?customer_id=${encodeURIComponent(customerId)}`, {
-    headers: {
-      Authorization: `Bearer ${process.env.SQUARE_ACCESS_TOKEN}`,
-      "Square-Version": "2024-10-17",
-      "Content-Type": "application/json",
-    },
-  });
-  const listJson = (await listRes.json().catch(() => null)) as { cards?: { enabled: boolean }[] } | null;
-  const count = (listJson?.cards ?? []).filter((c) => c.enabled !== false).length;
-  if (count >= 3) return NextResponse.json({ error: "card limit reached" }, { status: 409 });
-
-  const idempotencyKey = (await import("node:crypto")).randomBytes(16).toString("hex");
-  const res = await fetch(`${squareBaseUrl()}/v2/cards`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.SQUARE_ACCESS_TOKEN}`,
-      "Square-Version": "2024-10-17",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      idempotency_key: idempotencyKey,
-      source_id: parsed.data.sourceId,
-      verification_token: parsed.data.verificationToken,
-      card: {
-        customer_id: customerId,
-        billing_address: parsed.data.postalCode ? { postal_code: parsed.data.postalCode } : undefined,
-        cardholder_name: parsed.data.cardholderName,
-      },
-    }),
-  });
-  const json = (await res.json().catch(() => null)) as {
-    card?: { id: string; card_brand: string; last_4: string; exp_month: number; exp_year: number };
-    errors?: { detail?: string }[];
-  } | null;
-  if (!res.ok || !json?.card) {
-    return NextResponse.json({ error: json?.errors?.[0]?.detail ?? "Couldn't save the card." }, { status: 400 });
+  const parsed = bodySchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Tick the box to agree to saving the card." }, { status: 400 });
   }
-  return NextResponse.json({
-    card: {
-      id: json.card.id,
-      brand: json.card.card_brand,
-      last4: json.card.last_4,
-      expMonth: json.card.exp_month,
-      expYear: json.card.exp_year,
-    },
+
+  const customerId = await getOrCreateSquareCustomer({ id: v.user.id, email: v.user.email });
+  if (!customerId) return NextResponse.json({ error: "Square didn't answer. Please try again." }, { status: 502 });
+  const existing = await listCards(customerId).catch(() => null);
+  if (!existing) return NextResponse.json({ error: "Square didn't answer. Please try again." }, { status: 502 });
+  if (existing.length >= MAX_SAVED_CARDS) {
+    return NextResponse.json(
+      { error: `You can save up to ${MAX_SAVED_CARDS} cards. Remove one first.` },
+      { status: 409 },
+    );
+  }
+
+  const saved = await createCard({
+    idempotencyKey: randomBytes(16).toString("hex"),
+    sourceId: parsed.data.sourceId,
+    verificationToken: parsed.data.verificationToken,
+    customerId,
+    cardholderName: parsed.data.cardholderName,
+    postalCode: parsed.data.postalCode,
   });
+  if (!saved.ok)
+    return NextResponse.json({ error: "Square couldn't save that card. Check the details." }, { status: 400 });
+  return NextResponse.json({ card: saved.card });
 }

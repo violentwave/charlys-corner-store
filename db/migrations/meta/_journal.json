@@ -71,6 +71,13 @@
       "when": 1795731335810,
       "tag": "0009_empty_starfox",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1795733877032,
+      "tag": "0010_massive_loners",
+      "breakpoints": true
     }
   ]
 }

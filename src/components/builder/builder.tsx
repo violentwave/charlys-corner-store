@@ -816,7 +816,10 @@ export function Builder() {
                     : "bg-bg-2 text-text-2 focus-visible:ring-neon-cyan hover:text-text-1 flex h-9 items-center rounded-full px-3 text-xs focus-visible:ring-2 focus-visible:outline-none"
                 }
               >
-                {id}. {label}
+                {/* Phones: other steps show just their number so the row fits on one line and the
+                    tool panel keeps its room (the aria-label still names the step). */}
+                {id}
+                {step === id ? `. ${label}` : <span className="max-sm:hidden">. {label}</span>}
               </button>
               {id < STEPS.length ? (
                 <span aria-hidden="true" className="text-text-3 text-xs">
@@ -826,7 +829,7 @@ export function Builder() {
             </li>
           ))}
         </ol>
-        <p aria-hidden="true" className="text-text-3 shrink-0 font-mono text-xs">
+        <p aria-hidden="true" className={cn("text-text-3 shrink-0 font-mono text-xs", step === 3 && "max-sm:hidden")}>
           Step {step} of {STEPS.length}
         </p>
       </div>

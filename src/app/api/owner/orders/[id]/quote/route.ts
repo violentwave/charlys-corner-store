@@ -10,6 +10,7 @@ import { sendAccountEmail } from "@/lib/notify";
 import { checkOwnerQuoteLink, OWNER_QUOTE_DAYS, payToken } from "@/lib/order-stage";
 import { clientIp, LIMITS, rateLimit } from "@/lib/rate-limit";
 import { site } from "@/lib/site";
+import { cancelPendingPayments } from "@/lib/payments";
 import { squareConfigured } from "@/lib/square";
 
 const quoteSchema = z
@@ -121,15 +122,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const quoteCents = parsed.data.priceDollars;
   const note = parsed.data.note;
   const now = new Date();
+  // A new price retires any unpaid link for the old one.
+  await cancelPendingPayments(db, id);
   await db
     .update(schema.mockups)
     .set({ quoteCents, quoteNote: note, quotedAt: now, orderStage: "quoted", orderStageAt: now })
     .where(eq(schema.mockups.id, id));
 
   const garment = getGarment(row.mockup.garment as GarmentId).name;
-  const payUrl = squareConfigured() ? `/pay/${id}?t=${payToken(id)}` : null;
-  // Email the customer the price + Pay now link (guest token when not signed in).
-  const customerUrl = `${site.url.replace(/\/$/, "")}${payUrl ?? `/pay/${id}`}`;
+  // The signed token lets guests (and members on another device) open the pay page.
+  const customerUrl = squareConfigured() ? `${site.url.replace(/\/$/, "")}/pay/${id}?t=${payToken(id)}` : null;
   await sendAccountEmail(
     row.lead.email,
     `Your price is ready — ${garment} 🐾`,
