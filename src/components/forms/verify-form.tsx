@@ -14,7 +14,14 @@ import { NETWORK_ERROR, postJson } from "./auth-post";
 
 const RESEND_COOLDOWN_SECONDS = 30;
 
-export function VerifyForm({ next, email }: { next: string; email: string }) {
+export interface VerifyFormProps {
+  next: string;
+  email: string;
+  /** Inline mode (builder sign-in dialog): called instead of navigating. */
+  onDone?: () => void;
+}
+
+export function VerifyForm({ next, email, onDone }: VerifyFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [resent, setResent] = useState<string | null>(null);
@@ -44,6 +51,10 @@ export function VerifyForm({ next, email }: { next: string; email: string }) {
     setResent(null);
     const { data: res } = await postJson("/api/auth/verify", { code });
     if (res?.ok) {
+      if (onDone) {
+        onDone();
+        return;
+      }
       router.refresh();
       router.replace(next);
       return;

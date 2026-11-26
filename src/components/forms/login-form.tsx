@@ -13,7 +13,15 @@ import { FormStatus } from "./form-status";
 import { Input } from "@/components/ui/input";
 import { mapFieldErrors, NETWORK_ERROR, postJson } from "./auth-post";
 
-export function LoginForm({ next }: { next: string }) {
+export interface LoginFormProps {
+  next: string;
+  /** Inline mode (builder sign-in dialog): called instead of navigating. */
+  onDone?: (user: AccountUser) => void;
+  /** Inline mode: shows "Create an account" as a button that switches the dialog's tab. */
+  onSwitchToSignup?: () => void;
+}
+
+export function LoginForm({ next, onDone, onSwitchToSignup }: LoginFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
 
@@ -32,6 +40,10 @@ export function LoginForm({ next }: { next: string }) {
     const { data: res } = await postJson("/api/auth/login", data);
     if (res?.ok) {
       const user = res.user as AccountUser | undefined;
+      if (onDone && user) {
+        onDone(user);
+        return;
+      }
       router.refresh();
       router.replace(user?.verified ? next : `/verify?next=${encodeURIComponent(next)}`);
       return;
@@ -64,12 +76,22 @@ export function LoginForm({ next }: { next: string }) {
 
       <p className="text-text-2 text-sm">
         New here?{" "}
-        <Link
-          href={next === "/account" ? "/signup" : `/signup?next=${encodeURIComponent(next)}`}
-          className="text-neon-cyan underline-offset-4 hover:underline"
-        >
-          Create an account
-        </Link>
+        {onSwitchToSignup ? (
+          <button
+            type="button"
+            onClick={onSwitchToSignup}
+            className="text-neon-cyan focus-visible:ring-neon-cyan rounded-sm underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+          >
+            Create an account
+          </button>
+        ) : (
+          <Link
+            href={next === "/account" ? "/signup" : `/signup?next=${encodeURIComponent(next)}`}
+            className="text-neon-cyan underline-offset-4 hover:underline"
+          >
+            Create an account
+          </Link>
+        )}
       </p>
     </form>
   );

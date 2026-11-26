@@ -26,6 +26,9 @@ const variants: Record<Variant, { link: string; skeleton: string }> = {
  * cacheable; while it loads we render a neutral, aria-hidden placeholder — never the
  * wrong label (no flash of "Log in" for someone who's signed in).
  */
+/** Dispatched on window when the session changes without a page navigation. */
+export const AUTH_CHANGED_EVENT = "charly:auth-changed";
+
 export function AccountLink({ variant, onNavigate }: { variant: Variant; onNavigate?: () => void }) {
   const pathname = usePathname();
   // null until the first answer; `path` tags which route the answer belongs to, so navigating
@@ -34,16 +37,21 @@ export function AccountLink({ variant, onNavigate }: { variant: Variant; onNavig
 
   useEffect(() => {
     let alive = true;
-    fetch("/api/auth/me", { cache: "no-store" })
-      .then(async (res) => {
-        const data = await res.json().catch(() => null);
-        if (alive) setState({ path: pathname, user: (data?.user as AccountUser | null) ?? null });
-      })
-      .catch(() => {
-        if (alive) setState({ path: pathname, user: null });
-      });
+    const read = () =>
+      fetch("/api/auth/me", { cache: "no-store" })
+        .then(async (res) => {
+          const data = await res.json().catch(() => null);
+          if (alive) setState({ path: pathname, user: (data?.user as AccountUser | null) ?? null });
+        })
+        .catch(() => {
+          if (alive) setState({ path: pathname, user: null });
+        });
+    void read();
+    // Signing in without a navigation (the builder's sign-in dialog) announces itself.
+    window.addEventListener(AUTH_CHANGED_EVENT, read);
     return () => {
       alive = false;
+      window.removeEventListener(AUTH_CHANGED_EVENT, read);
     };
   }, [pathname]);
 

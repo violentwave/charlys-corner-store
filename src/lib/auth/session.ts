@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq, gt, lt } from "drizzle-orm";
+import { and, eq, gt, lt, sql } from "drizzle-orm";
 import { cookies } from "next/headers";
 
 import { schema, type Db } from "../db";
@@ -47,7 +47,8 @@ export async function userForSessionToken(db: Db, token: string | undefined): Pr
     })
     .from(schema.sessions)
     .innerJoin(schema.users, eq(schema.users.id, schema.sessions.userId))
-    .where(and(eq(schema.sessions.tokenHash, sha256(token)), gt(schema.sessions.expiresAt, new Date())));
+    // The database's clock, not new Date(): keeps prerendering deterministic (cacheComponents).
+    .where(and(eq(schema.sessions.tokenHash, sha256(token)), gt(schema.sessions.expiresAt, sql`now()`)));
   return row ?? null;
 }
 

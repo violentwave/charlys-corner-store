@@ -19,6 +19,8 @@ import { ArtworkControls } from "./artwork-controls";
 import { ColorPicker } from "./color-picker";
 import { GarmentPicker } from "./garment-picker";
 import { GarmentStage, loadTemplate, type GarmentStageHandle } from "./garment-stage";
+import { AUTH_CHANGED_EVENT } from "@/components/layout/account-link";
+
 import { SignInDialog, type SignInDialogMode } from "./sign-in-dialog";
 import {
   designFromRestore,
@@ -76,6 +78,9 @@ export function Builder() {
   // The verified account (GET /api/auth/me): gates uploads and personalizes step 4.
   const [account, setAccount] = useState<AccountUser | null | undefined>(undefined);
   const [signInDialog, setSignInDialog] = useState<SignInDialogMode>(null);
+  /** Why the dialog opened: to upload (then continue into the picker / dropped file) or to send. */
+  const dialogPurposeRef = useRef<"upload" | "send">("upload");
+  const pendingDropRef = useRef<File | null>(null);
 
   const [sending, setSending] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
@@ -97,6 +102,9 @@ export function Builder() {
       .then(async (res) => {
         const json = (await res.json().catch(() => null)) as { user: AccountUser | null } | null;
         setAccount(json?.user ?? null);
+        // Next keeps this page's state when the visitor navigates away and back (React
+        // Activity), so a dialog left open must not survive signing in elsewhere.
+        if (json?.user?.verified) setSignInDialog(null);
       })
       .catch(() => setAccount(null));
   };
@@ -277,6 +285,8 @@ export function Builder() {
       gate = "signedOut";
     }
     if (gate !== "allowed") {
+      dialogPurposeRef.current = "upload";
+      pendingDropRef.current = file ?? null;
       setSignInDialog(gate);
       return;
     }
@@ -351,6 +361,7 @@ export function Builder() {
         if (res.status === 401 || res.status === 403) {
           // Session expired mid-design: the gate dialog explains the way back in.
           refreshAccount();
+          dialogPurposeRef.current = "send";
           setSignInDialog(res.status === 401 ? "signedOut" : "unverified");
         }
         return;
@@ -591,7 +602,27 @@ export function Builder() {
         )}
       </div>
 
-      <SignInDialog mode={signInDialog} onClose={() => setSignInDialog(null)} />
+      <SignInDialog
+        mode={signInDialog}
+        email={account?.email}
+        onClose={() => {
+          pendingDropRef.current = null;
+          setSignInDialog(null);
+        }}
+        onAccount={(user) => {
+          setAccount((prev) => ({ ...user, name: user.name ?? prev?.name ?? null }));
+          window.dispatchEvent(new Event(AUTH_CHANGED_EVENT)); // header flips "Log in" → "My designs"
+        }}
+        onContinue={() => {
+          setSignInDialog(null);
+          setSendError(null);
+          if (dialogPurposeRef.current === "send") return; // the send buttons are right there again
+          const dropped = pendingDropRef.current;
+          pendingDropRef.current = null;
+          if (dropped) void handleFileSelected(dropped);
+          else fileInputRef.current?.click(); // still inside the "Add my design" click
+        }}
+      />
     </div>
   );
 }
