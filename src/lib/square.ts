@@ -1,6 +1,9 @@
 import "server-only";
 
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+
+import { eq } from "drizzle-orm";
+import { getDb, schema } from "@/lib/db";
 /**
  * Square client (plain fetch, no SDK). Hosted payment links + webhooks (P51-3).
  * Base URL pinned to the environment; every create call carries an idempotency key.
@@ -119,7 +122,54 @@ export type SquarePayment = {
   orderId?: string;
   amountMoney?: { amount: number; currency: string };
 };
+export async function getOrCreateSquareCustomer(user: { id: string; email: string }): Promise<string | null> {
+  if (!squareConfigured()) return null;
+  const db = getDb();
+  const [existing] = await db
+    .select({ id: schema.users.squareCustomerId })
+    .from(schema.users)
+    .where(eq(schema.users.id, user.id));
+  if (existing?.id) return existing.id;
 
+  // search by reference_id
+  try {
+    const res = await fetchImpl(`${squareBaseUrl()}/v2/customers/search`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ query: { filter: { reference_id: { exact: user.id } } } }),
+    });
+    const json = (await res.json().catch(() => null)) as { customers?: { id: string }[] } | null;
+    if (res.ok && json?.customers?.[0]?.id) {
+      const id = json.customers[0].id;
+      await db.update(schema.users).set({ squareCustomerId: id }).where(eq(schema.users.id, user.id));
+      return id;
+    }
+  } catch {
+    // fall through to create
+  }
+
+  // create
+  try {
+    const res = await fetchImpl(`${squareBaseUrl()}/v2/customers`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({
+        idempotency_key: randomBytes(16).toString("hex"),
+        email_address: user.email,
+        reference_id: user.id,
+      }),
+    });
+    const json = (await res.json().catch(() => null)) as { customer?: { id: string } } | null;
+    if (res.ok && json?.customer?.id) {
+      const id = json.customer.id;
+      await db.update(schema.users).set({ squareCustomerId: id }).where(eq(schema.users.id, user.id));
+      return id;
+    }
+  } catch {
+    // not configured / network
+  }
+  return null;
+}
 export async function retrievePayment(id: string): Promise<SquarePayment> {
   const res = await fetchImpl(`${squareBaseUrl()}/v2/payments/${encodeURIComponent(id)}`, {
     method: "GET",

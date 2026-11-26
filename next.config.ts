@@ -18,6 +18,31 @@ export const appRedirects = [
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
+  async headers() {
+    // Web Payments SDK (P51-4) is loaded only on these routes; Square's CSP doc lists
+    // the exact script/frame/connect hosts for sandbox + production.
+    const sandbox = process.env.SQUARE_ENVIRONMENT !== "production";
+    const scriptSrc = sandbox
+      ? "https://sandbox.web.squarecdn.com https://js.squareup.com"
+      : "https://web.squarecdn.com https://js.squareup.com";
+    const frameSrc = sandbox ? "https://sandbox.web.squarecdn.com" : "https://web.squarecdn.com";
+    const connectSrc = sandbox
+      ? "https://pci-connect.squareupsandbox.com https://connect.squareupsandbox.com"
+      : "https://pci-connect.squareup.com https://connect.squareup.com";
+    const csp = [
+      "default-src 'self'",
+      `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${scriptSrc} https://challenges.cloudflare.com`,
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob:",
+      "font-src 'self' data:",
+      `frame-src 'self' ${frameSrc} https://challenges.cloudflare.com`,
+      `connect-src 'self' ${connectSrc} https://challenges.cloudflare.com${process.env.NODE_ENV === "development" ? " ws://localhost:*" : ""}`,
+    ].join("; ");
+    return [
+      { source: "/account/:path*", headers: [{ key: "Content-Security-Policy", value: csp }] },
+      { source: "/pay/:path*", headers: [{ key: "Content-Security-Policy", value: csp }] },
+    ];
+  },
   async redirects() {
     return [...legacyRedirects, ...appRedirects].map((r) => ({ ...r, permanent: true }));
   },

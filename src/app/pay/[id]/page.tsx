@@ -9,8 +9,9 @@ import { getDb, schema } from "@/lib/db";
 import { getGarment, type GarmentId } from "@/lib/garments";
 import { checkCoupon } from "@/lib/coupons";
 import { checkPayToken } from "@/lib/order-stage";
-import { squareConfigured } from "@/lib/square";
+import { squareConfigured, getOrCreateSquareCustomer, squareBaseUrl } from "@/lib/square";
 import { eq } from "drizzle-orm";
+import { PayWithSavedCard } from "./pay-with-card";
 
 export const metadata: Metadata = { title: "Pay", robots: { index: false, follow: false } };
 
@@ -22,6 +23,8 @@ type LoadResult = {
   note: string | null;
   coupon: { code: string; status: string; expiresAt: Date } | null;
   couponCheck: ReturnType<typeof checkCoupon> | { ok: false; reason: "no_coupon" };
+  savedCards: { id: string; brand: string; last4: string; expMonth: number; expYear: number }[];
+  isOwner: boolean;
 };
 
 async function load(id: string, token: string | null): Promise<LoadResult | null> {
@@ -63,6 +66,34 @@ async function load(id: string, token: string | null): Promise<LoadResult | null
     couponCheck = { ok: false, reason: "no_coupon" as const };
   }
 
+  // Saved cards for members (server-side fetch from Square).
+  let savedCards: { id: string; brand: string; last4: string; expMonth: number; expYear: number }[] = [];
+  if (isOwner && user && process.env.SQUARE_ACCESS_TOKEN) {
+    const customerId = await getOrCreateSquareCustomer({ id: user.id, email: user.email });
+    if (customerId) {
+      const r = await fetch(`${squareBaseUrl()}/v2/cards?customer_id=${encodeURIComponent(customerId)}`, {
+        headers: {
+          Authorization: `Bearer ${process.env.SQUARE_ACCESS_TOKEN}`,
+          "Square-Version": "2024-10-17",
+          "Content-Type": "application/json",
+        },
+      });
+      const json = (await r.json().catch(() => null)) as {
+        cards?: {
+          id: string;
+          card_brand: string;
+          last_4: string;
+          exp_month: number;
+          exp_year: number;
+          enabled: boolean;
+        }[];
+      } | null;
+      savedCards = (json?.cards ?? [])
+        .filter((c) => c.enabled !== false)
+        .map((c) => ({ id: c.id, brand: c.card_brand, last4: c.last_4, expMonth: c.exp_month, expYear: c.exp_year }));
+    }
+  }
+
   return {
     id,
     token,
@@ -71,6 +102,8 @@ async function load(id: string, token: string | null): Promise<LoadResult | null
     note: row.mockup.quoteNote,
     coupon,
     couponCheck,
+    savedCards,
+    isOwner,
   };
 }
 
@@ -121,15 +154,22 @@ async function PayGate({ id, token }: { id: string; token: string | null }) {
       {!squareConfigured() ? (
         <p className="text-text-2 mt-6">Payments aren&apos;t enabled yet — we&apos;ll send payment details shortly.</p>
       ) : (
-        <form action={`/api/pay/${id}/checkout`} method="post" className="mt-6">
-          {data.token ? <input type="hidden" name="t" value={data.token} /> : null}
-          <button
-            type="submit"
-            className="bg-neon-pink text-bg-0 shadow-glow-pink rounded-full px-6 py-3 text-sm font-semibold"
-          >
-            Pay ${(total / 100).toFixed(2)} securely with Square
-          </button>
-        </form>
+        <>
+          {data.isOwner && data.savedCards.length > 0 ? (
+            <PayWithSavedCard id={id} total={total} cards={data.savedCards} token={data.token} />
+          ) : null}
+          <form action={`/api/pay/${id}/checkout`} method="post" className="mt-6">
+            {data.token ? <input type="hidden" name="t" value={data.token} /> : null}
+            <button
+              type="submit"
+              className="bg-neon-pink text-bg-0 shadow-glow-pink rounded-full px-6 py-3 text-sm font-semibold"
+            >
+              {data.isOwner && data.savedCards.length > 0
+                ? "Pay another way (hosted checkout)"
+                : `Pay $${(total / 100).toFixed(2)} securely with Square`}
+            </button>
+          </form>
+        </>
       )}
       <p className="text-text-3 mt-4 text-xs">Pay by card, Apple Pay, Google Pay, Cash App Pay or Afterpay.</p>
       <Link href="/" className="text-neon-cyan mt-6 inline-block text-sm">

@@ -62,6 +62,7 @@ export const accountNav = [
   { label: "My designs", hash: "designs" },
   { label: "Drafts", hash: "drafts" },
   { label: "Brand kit", hash: "brand" },
+  { label: "Payment methods", hash: "payments" },
   { label: "Sizes & rosters", hash: "sizes" },
   { label: "Settings", hash: "settings" },
   { label: "Security", hash: "security" },

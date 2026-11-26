@@ -12,6 +12,7 @@ import { SettingsTab } from "./settings-tab";
 import { SizeSets } from "./size-sets";
 import { Drafts } from "./drafts";
 import { BrandKitTab } from "./brand-kit-tab";
+import { PaymentMethods } from "./payment-methods";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const tabFromHash = (hash: string) => {
@@ -20,12 +21,15 @@ const tabFromHash = (hash: string) => {
   if (hash === "#settings") return "settings";
   if (hash === "#drafts") return "drafts";
   if (hash === "#brand") return "brand";
+  if (hash === "#payments") return "payments";
   return "designs";
 };
 
 export function AccountTabs({ email }: { email: string }) {
   // Start on the default tab for SSR, then sync with the URL hash on mount.
-  const [tab, setTab] = useState<"designs" | "drafts" | "brand" | "sizes" | "settings" | "security">("designs");
+  const [tab, setTab] = useState<"designs" | "drafts" | "brand" | "payments" | "sizes" | "settings" | "security">(
+    "designs",
+  );
 
   useEffect(() => {
     const sync = () => setTab(tabFromHash(window.location.hash));
@@ -38,7 +42,7 @@ export function AccountTabs({ email }: { email: string }) {
     <Tabs
       value={tab}
       onValueChange={(value) => {
-        setTab(value as "designs" | "drafts" | "brand" | "sizes" | "settings" | "security");
+        setTab(value as "designs" | "drafts" | "brand" | "payments" | "sizes" | "settings" | "security");
         history.replaceState(null, "", `#${value}`);
       }}
     >
@@ -47,6 +51,7 @@ export function AccountTabs({ email }: { email: string }) {
         <TabsTrigger value="designs">My designs</TabsTrigger>
         <TabsTrigger value="drafts">Drafts</TabsTrigger>
         <TabsTrigger value="brand">Brand kit</TabsTrigger>
+        <TabsTrigger value="payments">Payment methods</TabsTrigger>
         <TabsTrigger value="sizes">Sizes &amp; rosters</TabsTrigger>
         <TabsTrigger value="settings">Settings</TabsTrigger>
         <TabsTrigger value="security">Security</TabsTrigger>
@@ -62,6 +67,10 @@ export function AccountTabs({ email }: { email: string }) {
 
       <TabsContent value="brand">
         <BrandKitTab />
+      </TabsContent>
+
+      <TabsContent value="payments">
+        <PaymentMethods />
       </TabsContent>
 
       <TabsContent value="sizes">
