@@ -85,6 +85,7 @@ Each page prompt is shipped by the agent (Ship section); Claude reviews every me
 
 - [x] Foundation (Claude): delete a design (emailed mockup: row + files; order request: hidden, kept for the shop), download links, 30-day expiry dates in the list, delete account (orders kept, detached) (migration 0005)
 - [x] Foundation (Claude): Google sign-in/sign-up (OIDC + PKCE, no SDK; links by verified email); 2FA (authenticator app or email code, 10 backup codes) at every sign-in incl. Google and password reset; security routes (set up, turn off, new backup codes, unlink Google) (migration 0006)
+- [x] Members stay signed in: sliding 365-day sessions; 2FA only at sign-in after sign-out or a password reset/change (Logan)
 - [ ] Foundation (Claude): coupon wallet + order status (owner one-click status links), saved drafts, brand kit, order again
 - [ ] UI (opencode): account tabs (Designs, Drafts, Brand kit, Security), delete buttons with 30-day warnings, sign-in screens
 
