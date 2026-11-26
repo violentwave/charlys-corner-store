@@ -56,7 +56,8 @@ export function ColorPicker({ garment, colors, onZoneColor }: ColorPickerProps) 
         })
       )}
       <p className="text-text-3 text-xs" role="note">
-        {garment.blank} colors. What you see on screen is close to the real blank; we&apos;ll confirm before printing.
+        Real {garment.blank} blanks. What you see on screen is close to the real thing; we&apos;ll confirm before
+        printing.
       </p>
     </div>
   );
