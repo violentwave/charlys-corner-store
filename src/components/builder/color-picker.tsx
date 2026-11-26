@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
 
-import type { GarmentConfig } from "@/lib/garments";
+import { findCombo, type GarmentConfig } from "@/lib/garments";
 
 import { cn } from "@/lib/cn";
 
@@ -12,47 +12,83 @@ export interface ColorPickerProps {
   onZoneColor: (zone: string, hex: string) => void;
 }
 
+type StripItem = { key: string; name: string; swatch: string[] };
+
 /**
- * Step 2: "Choose its color". One horizontal color strip per zone — every Gildan blank
- * for the style (hue-sorted, src/lib/gildan-colors.ts), no free hex entry (docs/04 §2 v2).
- * Arrow keys move the selection, Home/End jump; each chip is a button with aria-label =
- * color name and aria-pressed.
+ * Step 2: "Choose its color". Only colors the real blank comes in (docs/04 §2):
+ * - single-color garments: one hue-sorted strip of every blank color for the style;
+ * - combo garments (raglan, trucker hat): one strip of the manufacturer's real combos, where a
+ *   pick sets every part at once (no mix-and-match).
+ * Arrow keys move the selection, Home/End jump; each chip is a button with aria-label = color
+ * name and aria-pressed.
  */
 export function ColorPicker({ garment, colors, onZoneColor }: ColorPickerProps) {
+  const zones = garment.colorZones.map((z) => z.id);
   return (
     <div className="flex flex-col gap-6">
-      {garment.colorZones.map((zone) => (
-        <ColorZoneStrip
-          key={zone.id}
-          zoneId={zone.id}
-          zoneLabel={zone.label}
-          garment={garment}
-          current={colors[zone.id] ?? garment.defaultColors[zone.id] ?? "#f4f4f4"}
-          onZoneColor={onZoneColor}
+      {garment.combos.length > 0 ? (
+        <ColorStrip
+          id="combo"
+          label="Color combo"
+          items={garment.combos.map((c) => ({ key: c.name, name: c.name, swatch: zones.map((z) => c.colors[z]!) }))}
+          selectedKey={(findCombo(garment, colors) ?? garment.combos[0]!).name}
+          countLabel={`${garment.combos.length} combos`}
+          onPick={(key) => {
+            const combo = garment.combos.find((c) => c.name === key)!;
+            for (const zone of zones) onZoneColor(zone, combo.colors[zone]!);
+          }}
         />
-      ))}
+      ) : (
+        garment.colorZones.map((zone) => {
+          const current = colors[zone.id] ?? garment.defaultColors[zone.id];
+          const selected = garment.palette.find((c) => c.hex === current) ?? garment.palette[0]!;
+          return (
+            <ColorStrip
+              key={zone.id}
+              id={zone.id}
+              label={`${zone.label} color`}
+              items={garment.palette.map((c) => ({ key: c.hex, name: c.name, swatch: [c.hex] }))}
+              selectedKey={selected.hex}
+              countLabel={`${garment.palette.length} colors`}
+              onPick={(hex) => onZoneColor(zone.id, hex)}
+            />
+          );
+        })
+      )}
       <p className="text-text-3 text-xs" role="note">
-        Colors shown on screen are close to the real blanks; we&apos;ll confirm before printing.
+        {garment.blank} colors. What you see on screen is close to the real blank; we&apos;ll confirm before printing.
       </p>
     </div>
   );
 }
 
-function ColorZoneStrip({
-  zoneId,
-  zoneLabel,
-  garment,
-  current,
-  onZoneColor,
+function swatchBackground(swatch: string[]): string {
+  if (swatch.length === 1) return swatch[0]!;
+  // Combos: one slice per part (body/sleeves, or front/mesh/brim).
+  const step = 100 / swatch.length;
+  return `linear-gradient(135deg, ${swatch.map((hex, i) => `${hex} ${i * step}% ${(i + 1) * step}%`).join(", ")})`;
+}
+
+function ColorStrip({
+  id,
+  label,
+  items,
+  selectedKey,
+  countLabel,
+  onPick,
 }: {
-  zoneId: string;
-  zoneLabel: string;
-  garment: GarmentConfig;
-  current: string;
-  onZoneColor: (zone: string, hex: string) => void;
+  id: string;
+  label: string;
+  items: StripItem[];
+  selectedKey: string;
+  countLabel: string;
+  onPick: (key: string) => void;
 }) {
-  const selected = garment.palette.find((c) => c.hex === current) ?? garment.palette[0]!;
-  const selectedIndex = garment.palette.indexOf(selected);
+  const selectedIndex = Math.max(
+    0,
+    items.findIndex((i) => i.key === selectedKey),
+  );
+  const selected = items[selectedIndex]!;
   const chipRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   // Keep the selected chip scrolled into view (first paint, garment switch, arrow keys).
@@ -61,70 +97,57 @@ function ColorZoneStrip({
     chipRefs.current[selectedIndex]?.scrollIntoView?.({ behavior: "smooth", inline: "center", block: "nearest" });
   }, [selectedIndex]);
 
-  // Keyboard events bubble here from the focused chip: arrows move the selection,
-  // Home/End jump to the ends (docs/04 §2 v2).
-  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    const last = garment.palette.length - 1;
-    switch (event.key) {
-      case "ArrowRight":
-        event.preventDefault();
-        moveTo(selectedIndex + 1);
-        break;
-      case "ArrowLeft":
-        event.preventDefault();
-        moveTo(selectedIndex - 1);
-        break;
-      case "Home":
-        event.preventDefault();
-        moveTo(0);
-        break;
-      case "End":
-        event.preventDefault();
-        moveTo(last);
-        break;
-      default:
-        break;
-    }
-  };
-
   const moveTo = (index: number) => {
-    const clamped = Math.max(0, Math.min(garment.palette.length - 1, index));
-    const color = garment.palette[clamped]!;
-    onZoneColor(zoneId, color.hex);
+    const clamped = Math.max(0, Math.min(items.length - 1, index));
+    onPick(items[clamped]!.key);
     chipRefs.current[clamped]?.focus();
   };
 
+  // Keyboard events bubble here from the focused chip.
+  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const moves: Record<string, number> = {
+      ArrowRight: selectedIndex + 1,
+      ArrowLeft: selectedIndex - 1,
+      Home: 0,
+      End: items.length - 1,
+    };
+    if (event.key in moves) {
+      event.preventDefault();
+      moveTo(moves[event.key]!);
+    }
+  };
+
   return (
-    <div role="group" aria-label={`${zoneLabel} color`} data-testid={`zone-${zoneId}`}>
+    <div role="group" aria-label={label} data-testid={`zone-${id}`}>
       <div className="mb-2 flex items-baseline justify-between gap-2">
-        <p className="text-text-1 text-sm font-medium" data-testid={`color-name-${zoneId}`} aria-live="polite">
+        <p className="text-text-1 text-sm font-medium" data-testid={`color-name-${id}`} aria-live="polite">
           {selected.name}
         </p>
-        <p className="text-text-3 text-xs">{garment.palette.length} colors</p>
+        <p className="text-text-3 text-xs">{countLabel}</p>
       </div>
       <div
         onKeyDown={onKeyDown}
         className="border-border -mx-1 flex [scrollbar-width:thin] gap-1.5 overflow-x-auto px-1 py-1"
-        data-testid={`color-strip-${zoneId}`}
+        data-testid={`color-strip-${id}`}
       >
-        {garment.palette.map((color, index) => {
-          const isSelected = color.hex === selected.hex;
+        {items.map((item, index) => {
+          const isSelected = index === selectedIndex;
           return (
             <button
-              key={color.hex}
+              key={item.key}
               ref={(el) => {
                 chipRefs.current[index] = el;
               }}
               type="button"
-              aria-label={color.name}
+              aria-label={item.name}
               aria-pressed={isSelected}
-              title={color.name}
-              onClick={() => onZoneColor(zoneId, color.hex)}
+              title={item.name}
+              onClick={() => onPick(item.key)}
               className={cn(
-                "focus-visible:ring-neon-cyan focus-visible:ring-offset-bg-0 relative h-9 w-9 shrink-0 snap-center rounded-full transition-transform focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+                "focus-visible:ring-neon-cyan focus-visible:ring-offset-bg-0 relative h-9 w-9 shrink-0 snap-center rounded-full border border-black/15 transition-transform focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
                 isSelected ? "ring-neon-cyan ring-offset-bg-0 z-10 ring-2 ring-offset-2" : "hover:scale-110",
               )}
-              style={{ backgroundColor: color.hex }}
+              style={{ background: swatchBackground(item.swatch) }}
             >
               {isSelected ? (
                 <span

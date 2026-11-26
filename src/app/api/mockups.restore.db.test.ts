@@ -108,11 +108,11 @@ describe.skipIf(!hasTestDb)("GET /api/mockups/[id] (real Postgres)", () => {
     };
 
     // Exact key set: nothing extra (mockupKey, mockupId, lead/coupon fields, …).
-    expect(Object.keys(json).sort()).toEqual(["artwork", "design", "ok"]);
+    expect(Object.keys(json).sort()).toEqual(["artwork", "artworks", "design", "ok"]);
     expect(Object.keys(json.design as object).sort()).toEqual(["colors", "garment", "sizes", "views"]);
     expect(Object.keys(json.artwork as object)).toEqual(["url"]);
     const views = json.design.views as Record<string, unknown>[];
-    expect(views.map((v) => Object.keys(v).sort())).toEqual([["printArea", "transform", "view"]]);
+    expect(views.map((v) => Object.keys(v).sort())).toEqual([["artwork", "printArea", "transform", "view"]]);
     // The design itself round-trips.
     expect(json.design).toMatchObject({
       garment: "tshirt",

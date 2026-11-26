@@ -19,7 +19,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-import type { MockupColors, MockupSizes, MockupViewRecord } from "../src/lib/mockup-schema";
+import type { MockupArtworkRecord, MockupColors, MockupSizes, MockupViewRecord } from "../src/lib/mockup-schema";
 import { REFERRAL_SOURCES } from "../src/lib/schemas";
 
 export const referralSource = pgEnum("referral_source", REFERRAL_SOURCES);
@@ -179,7 +179,9 @@ export const mockups = pgTable(
     kind: mockupKind("kind").notNull().default("mockup"),
     /** Account that made it (null for rows from before accounts existed). */
     userId: uuid("user_id").references(() => users.id),
-    /** Original artwork, untouched, for production. */
+    /** Every original file, untouched, for production; views[].artwork indexes this list. */
+    artworks: jsonb("artworks").$type<MockupArtworkRecord[]>().notNull().default([]),
+    /** First original artwork (= artworks[0]); kept for rows from before per-view files. */
     artworkKey: text("artwork_key").notNull(),
     artworkName: text("artwork_name").notNull(),
     artworkContentType: text("artwork_content_type").notNull(),

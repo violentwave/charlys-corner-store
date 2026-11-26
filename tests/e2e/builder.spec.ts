@@ -7,7 +7,7 @@ import { expect, test, type Page } from "@playwright/test";
  * /api/test/session helper (console driver + ENABLE_TEST_HOOKS=1, see the CI e2e job).
  */
 
-const GARMENT_IDS = ["tshirt", "raglan", "hoodie", "hat", "polo", "tank"];
+const GARMENT_IDS = ["tshirt", "longsleeve", "raglan", "hoodie", "hat", "polo", "tank"];
 
 const transformText = (page: Page) => page.getByTestId("builder-transform").textContent() ?? "";
 
@@ -142,18 +142,15 @@ test("the More disclosure holds Flip, Reset, Undo/Redo and the shortcut help", a
   await expect(page.getByTestId("builder-transform")).toContainText("flipped");
 });
 
-test("front/back toggle gives each side its own artwork", async ({ page }) => {
+test("an upload goes on the front only; the back starts empty", async ({ page }) => {
   await openBuilderSignedIn(page);
   await goToDesignStep(page);
   await uploadArtwork(page, "tests/e2e/fixtures/art.png");
 
   await page.getByTestId("view-back").click();
   await expect(page.getByTestId("view-back")).toHaveAttribute("aria-pressed", "true");
-  // The same file is offered on the back view too.
-  await expect(page.getByTestId("artwork-name")).toContainText("art.png");
-  await page.getByTestId("remove-artwork").click();
   await expect(page.getByTestId("artwork-name")).toHaveCount(0);
-  // Front keeps its copy.
+  // Front keeps its design.
   await page.getByTestId("view-front").click();
   await expect(page.getByTestId("artwork-name")).toContainText("art.png");
 });
@@ -161,15 +158,15 @@ test("front/back toggle gives each side its own artwork", async ({ page }) => {
 test("a refresh keeps the garment, colors and step", async ({ page }) => {
   await openBuilderSignedIn(page);
   await page.getByTestId("garment-hoodie").click(); // advances to Colors
-  const bodyGroup = page.getByRole("group", { name: "Body color" });
+  const bodyGroup = page.getByRole("group", { name: "Hoodie color" });
   await bodyGroup.getByRole("button", { name: "Black", exact: true }).click();
   await expect(bodyGroup.getByRole("button", { name: "Black", exact: true })).toHaveAttribute("aria-pressed", "true");
 
   await page.reload();
   // The step is persisted too: the builder reopens on Colors.
-  await expect(page.getByRole("group", { name: "Body color" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("group", { name: "Hoodie color" })).toBeVisible({ timeout: 30_000 });
   await expect(
-    page.getByRole("group", { name: "Body color" }).getByRole("button", { name: "Black", exact: true }),
+    page.getByRole("group", { name: "Hoodie color" }).getByRole("button", { name: "Black", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "Step 1: Garment" }).click();
   await expect(page.getByTestId("garment-hoodie")).toHaveAttribute("aria-pressed", "true");

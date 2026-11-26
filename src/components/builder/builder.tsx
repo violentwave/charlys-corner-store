@@ -35,8 +35,13 @@ import { SuccessScreen, type MockupResult } from "./success-screen";
 import { uploadGateFor } from "./upload-gate";
 
 const STEPS: { id: BuilderStep; label: string; headline: string; helper: string }[] = [
-  { id: 1, label: "Garment", headline: "Pick your shirt", helper: "Every blank is Gildan — always stocked." },
-  { id: 2, label: "Colors", headline: "Choose its color", helper: "Real blank colors — pick one per part." },
+  {
+    id: 1,
+    label: "Garment",
+    headline: "Pick your shirt",
+    helper: "Gildan tees, long sleeves and hoodies are always stocked.",
+  },
+  { id: 2, label: "Colors", headline: "Choose its color", helper: "Only colors the real blank comes in." },
   { id: 3, label: "Design", headline: "Add your design", helper: "Drag it, size it, done." },
   { id: 4, label: "Send", headline: "Send it or order it", helper: "Pick one — you can always do the other after." },
 ];
@@ -258,7 +263,8 @@ export function Builder() {
     setArtworkImg(img);
     dispatch({
       type: "placeArtwork",
-      views: garment.views.map((v) => v.id),
+      // Only the side being edited (front by default); other sides are added on purpose.
+      views: [activeViewId],
       meta: {
         name: selected.name,
         kind: builderKind,

@@ -64,18 +64,23 @@ const buildRequest = (
     website = "",
     artwork = blob(png),
     renderBytes = png,
+    artworkFields,
   }: {
     payload?: Record<string, unknown>;
     views?: string[];
     website?: string;
     artwork?: Blob;
     renderBytes?: Uint8Array;
+    /** Per-view files as artwork-<n> (replaces the single legacy "artwork" field). */
+    artworkFields?: Record<string, Blob>;
   } = { views: ["front", "back"] },
 ) => {
   const form = new FormData();
   form.append("payload", JSON.stringify({ ...basePayload, ...payload }));
   form.append("website", website);
-  form.append("artwork", artwork, "art.png");
+  if (artworkFields)
+    for (const [field, file] of Object.entries(artworkFields)) form.append(field, file, `${field}.png`);
+  else form.append("artwork", artwork, "art.png");
   for (const view of views) form.append(`mockup-${view}`, blob(renderBytes), `mockup-${view}.png`);
   return new Request("http://test/api/mockups", { method: "POST", body: form });
 };
@@ -350,5 +355,91 @@ describe.skipIf(!hasTestDb)("POST /api/mockups (real Postgres)", () => {
     await createVerifiedUser("charly@example.com");
     const res = await postMockup(buildRequest({ payload: { colors: { body: "#ff2e97" } } }));
     expect(res.status).toBe(400);
+  });
+
+  describe("separate artwork per side (artwork-<n>)", () => {
+    const sides = (front: number, back: number) => ({
+      views: [
+        { ...basePayload.views[0], artwork: front },
+        { ...basePayload.views[1], artwork: back },
+      ],
+    });
+
+    it("stores a different file for the back and records which side uses which", async () => {
+      await createVerifiedUser("sides@example.com");
+      const res = await postMockup(
+        buildRequest({ payload: sides(0, 1), artworkFields: { "artwork-0": blob(png), "artwork-1": blob(png) } }),
+      );
+      expect(res.status).toBe(200);
+      const [row] = await db.select().from(schema.mockups);
+      expect(row!.artworks).toHaveLength(2);
+      expect(row!.views.map((v) => v.artwork)).toEqual([0, 1]);
+      expect(row!.artworkKey).toBe(row!.artworks[0]!.key);
+      expect(_memoryKeys()).toHaveLength(2 + 2); // two originals + two renders
+      const owner = _outbox().find((m) => m.to !== "sides@example.com")!;
+      expect(owner.text).toContain("Original artwork (2 files)");
+    });
+
+    it("the same file on both sides is stored once", async () => {
+      await createVerifiedUser("same@example.com");
+      const res = await postMockup(buildRequest({ payload: sides(0, 0), artworkFields: { "artwork-0": blob(png) } }));
+      expect(res.status).toBe(200);
+      const [row] = await db.select().from(schema.mockups);
+      expect(row!.artworks).toHaveLength(1);
+    });
+
+    it("rejects missing, extra and gappy artwork files before storing anything", async () => {
+      await createVerifiedUser("gaps@example.com");
+      const missing = await postMockup(
+        buildRequest({ payload: sides(0, 1), artworkFields: { "artwork-0": blob(png) } }),
+      );
+      expect(missing.status).toBe(400);
+      const extra = await postMockup(
+        buildRequest({ payload: sides(0, 0), artworkFields: { "artwork-0": blob(png), "artwork-1": blob(png) } }),
+      );
+      expect(extra.status).toBe(400);
+      const gappy = await postMockup(
+        buildRequest({ payload: sides(0, 2), artworkFields: { "artwork-0": blob(png), "artwork-2": blob(png) } }),
+      );
+      expect(gappy.status).toBe(400);
+      expect(_memoryKeys()).toEqual([]);
+    });
+
+    it("sleeve views work on long-sleeve garments only", async () => {
+      await createVerifiedUser("sleeve@example.com");
+      const sleeve = {
+        view: "left",
+        printArea: "full-sleeve",
+        transform: { x: 425, y: 230, width: 150, height: 300, rotation: 0, flipX: false },
+      };
+      const ok = await postMockup(
+        buildRequest({
+          payload: { garment: "longsleeve", colors: { body: "#263147" }, views: [sleeve] },
+          views: ["left"],
+        }),
+      );
+      expect(ok.status).toBe(200);
+      const tee = await postMockup(buildRequest({ payload: { views: [sleeve] }, views: ["left"] }));
+      expect(tee.status).toBe(400);
+    });
+
+    it("combo blanks must be a real combo", async () => {
+      await createVerifiedUser("combo@example.com");
+      const front = { ...basePayload.views[0], printArea: "full-front" };
+      const mixed = await postMockup(
+        buildRequest({
+          payload: { garment: "raglan", colors: { body: "#ffffff", sleeves: "#263147" }, views: [front] },
+          views: ["front"],
+        }),
+      );
+      expect(mixed.status).toBe(400);
+      const real = await postMockup(
+        buildRequest({
+          payload: { garment: "raglan", colors: { body: "#ffffff", sleeves: "#1e2a44" }, views: [front] },
+          views: ["front"],
+        }),
+      );
+      expect(real.status).toBe(200);
+    });
   });
 });

@@ -22,7 +22,10 @@ import {
 import {
   GARMENTS,
   GARMENT_IDS,
+  findCombo,
   getGarment,
+  isPaletteColor,
+  type GarmentConfig,
   isHexColor,
   type GarmentId,
   type PrintArea,
@@ -142,6 +145,23 @@ function printAreaRect(design: BuilderDesign, viewId: ViewId): PrintArea["rect"]
   return area?.rect;
 }
 
+/**
+ * Colors for `garment` built from `wanted`, keeping only what the blank actually comes in:
+ * single-color garments keep a zone color that's in the palette; combo garments keep the colors
+ * only if they form one of the real combos. Everything else falls back to the garment default.
+ */
+export function realBlankColors(garment: GarmentConfig, wanted: MockupColors): MockupColors {
+  if (garment.combos.length > 0) {
+    return { ...(findCombo(garment, wanted)?.colors ?? garment.defaultColors) };
+  }
+  const colors: MockupColors = {};
+  for (const zone of garment.colorZones) {
+    const hex = wanted[zone.id];
+    colors[zone.id] = hex && isPaletteColor(garment, hex) ? hex : garment.defaultColors[zone.id]!;
+  }
+  return colors;
+}
+
 export function builderReducer(state: BuilderState, action: BuilderAction): BuilderState {
   switch (action.type) {
     case "setStep":
@@ -150,11 +170,8 @@ export function builderReducer(state: BuilderState, action: BuilderAction): Buil
     case "selectGarment": {
       const garment = getGarment(action.garmentId);
       if (garment.id === state.design.garment) return state;
-      // Carry over colors for zones the new garment also has; default the rest.
-      const colors: MockupColors = {};
-      for (const zone of garment.colorZones) {
-        colors[zone.id] = state.design.colors[zone.id] ?? garment.defaultColors[zone.id] ?? "#f4f4f4";
-      }
+      // Carry over colors only where the new blank really comes in them; default the rest.
+      const colors = realBlankColors(garment, state.design.colors);
       // Print areas and geometry differ per garment: rebuild views and drop artwork.
       const views = Object.fromEntries(
         garment.views.map((v) => [v.id, { printArea: v.printAreas[0]!.id, artwork: null }]),
@@ -326,10 +343,7 @@ function sanitizeDesign(parsed: z.infer<typeof persistedDesignSchema>): BuilderD
     views[view.id] = { printArea: area, artwork: saved?.artwork ?? null };
   }
   const sizes = Object.fromEntries(Object.entries(parsed.sizes).filter(([size]) => garment.sizes.includes(size)));
-  const colors: MockupColors = {};
-  for (const zone of garment.colorZones) {
-    colors[zone.id] = parsed.colors[zone.id] ?? garment.defaultColors[zone.id] ?? "#f4f4f4";
-  }
+  const colors = realBlankColors(garment, parsed.colors);
   return {
     garment: parsed.garment,
     colors,
@@ -454,6 +468,7 @@ export function toPayloadDesign(design: BuilderDesign): MockupPayloadDesign {
       view: view.id,
       printArea: saved.printArea,
       transform: saved.artwork.transform,
+      artwork: 0, // one shared file today; the builder UI picks per-view files (artwork-<n>)
     });
   }
   return {

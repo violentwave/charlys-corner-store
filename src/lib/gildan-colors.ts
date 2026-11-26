@@ -178,3 +178,36 @@ export function sortByHue(colors: GarmentColor[]): GarmentColor[] {
     return ka[0] - kb[0] || ka[1] - kb[1] || ka[2] - kb[2];
   });
 }
+
+/** Gildan 5400 Heavy Cotton long sleeve tee (names from the 5400 color list; hex shared with 5000). */
+export const GILDAN_5400: GarmentColor[] = [
+  "White",
+  "Ash",
+  "Sport Grey",
+  "Graphite Heather",
+  "Charcoal",
+  "Dark Heather",
+  "Black",
+  "Gold",
+  "Safety Orange",
+  "Orange",
+  "Light Pink",
+  "Red",
+  "Cardinal",
+  "Garnet",
+  "Maroon",
+  "Safety Green",
+  "Irish Green",
+  "Military Green",
+  "Forest Green",
+  "Light Blue",
+  "Carolina Blue",
+  "Indigo Blue",
+  "Royal",
+  "Navy",
+  "Purple",
+].map((name) => {
+  const c = GILDAN_5000.find((x) => x.name === name);
+  if (!c) throw new Error(`GILDAN_5400: no hex for ${name}`);
+  return c;
+});

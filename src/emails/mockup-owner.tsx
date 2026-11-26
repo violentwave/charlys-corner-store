@@ -16,7 +16,8 @@ export interface MockupOwnerEmailProps {
   couponCode: string;
   /** "order" = an order request (owner confirms price + invoices); "mockup" = a mockup lead. */
   kind?: "mockup" | "order";
-  artwork: { name: string; contentType: string; size: number; signedUrl: string };
+  /** Every original file, with the sides it's printed on (signed links). */
+  artworks: { name: string; contentType: string; size: number; signedUrl: string; usedOn: string[] }[];
   mockups: { view: string; signedUrl: string }[];
 }
 
@@ -59,10 +60,13 @@ export function MockupOwnerEmail(p: MockupOwnerEmailProps) {
           {p.sizes.length > 0 ? <Text>Sizes: {p.sizes.join(", ")}</Text> : null}
           {p.notes ? <Text>Notes: {p.notes}</Text> : null}
           <Text>Coupon code: {p.couponCode}</Text>
-          <Text>Original artwork: {p.artwork.name}</Text>
-          <Text>
-            {(p.artwork.size / 1024).toFixed(1)} KB, {p.artwork.contentType} — {p.artwork.signedUrl}
-          </Text>
+          <Text>Original artwork{p.artworks.length > 1 ? ` (${p.artworks.length} files)` : ""}:</Text>
+          {p.artworks.map((a) => (
+            <Text key={a.signedUrl}>
+              {a.name} ({a.usedOn.join(", ")}): {(a.size / 1024).toFixed(1)} KB, {a.contentType} —{" "}
+              <Link href={a.signedUrl}>{a.signedUrl}</Link>
+            </Text>
+          ))}
           <Text>Mockups:</Text>
           {p.mockups.map((m) => (
             <Text key={m.signedUrl}>

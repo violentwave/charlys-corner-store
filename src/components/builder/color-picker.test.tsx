@@ -50,11 +50,23 @@ describe("ColorPicker color strip", () => {
     expect(document.querySelectorAll("input[type=color]")).toHaveLength(0);
   });
 
-  it("labels the zone group with the config's zone label", () => {
+  it("hoodie: one body color (lining and drawcords match), no separate parts", () => {
     const hoodie = getGarment("hoodie");
     render(<ColorPicker garment={hoodie} colors={hoodie.defaultColors} onZoneColor={vi.fn()} />);
-    expect(screen.getByRole("group", { name: "Hood lining color" })).toBeInTheDocument();
-    expect(screen.getByRole("group", { name: "Drawstrings color" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Hoodie color" })).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: /lining|drawstring/i })).toBeNull();
+  });
+
+  it("combo blanks: one strip of real combos; a pick sets every part", async () => {
+    const user = userEvent.setup();
+    const raglan = getGarment("raglan");
+    const onZoneColor = vi.fn();
+    render(<ColorPicker garment={raglan} colors={raglan.defaultColors} onZoneColor={onZoneColor} />);
+    expect(screen.getByRole("group", { name: "Color combo" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "White / Black" })).toHaveAttribute("aria-pressed", "true");
+    await user.click(screen.getByRole("button", { name: "White / Navy" }));
+    expect(onZoneColor).toHaveBeenCalledWith("body", "#ffffff");
+    expect(onZoneColor).toHaveBeenCalledWith("sleeves", "#1e2a44");
   });
 
   it("arrow keys move the selection, Home and End jump to the ends", async () => {

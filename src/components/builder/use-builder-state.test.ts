@@ -112,9 +112,9 @@ describe("builderReducer — colors and garment switch", () => {
     state = builderReducer(state, { type: "selectGarment", garmentId: "raglan" });
 
     expect(state.design.garment).toBe("raglan");
-    expect(state.design.colors.body).toBe("#d50032"); // carried over
-    expect(state.design.colors.sleeves).toBe(getGarment("raglan").defaultColors.sleeves);
-    expect(Object.keys(state.design.views).sort()).toEqual(["back", "front"]);
+    // #d50032 isn't half of any real raglan combo, so the default combo is used.
+    expect(state.design.colors).toEqual(getGarment("raglan").defaultColors);
+    expect(Object.keys(state.design.views).sort()).toEqual(["back", "front", "left", "right"]);
     expect(state.design.views.front?.artwork).toBeNull(); // geometry differs per garment
     expect(state.design.views.front?.printArea).toBe("front-chest"); // raglan front's first area
     expect(state.design.sizes["2XL"]).toBe(4); // still a valid size for a raglan
@@ -233,7 +233,12 @@ describe("toPayloadDesign", () => {
     // The design portion alone must validate once the gate fields (P4-2) are added.
     expect(result.success).toBe(true);
     expect(result.success && result.data.views).toEqual([
-      { view: "front", printArea: "left-chest", transform: state.design.views.front!.artwork!.transform },
+      {
+        view: "front",
+        printArea: "left-chest",
+        transform: state.design.views.front!.artwork!.transform,
+        artwork: 0,
+      },
     ]);
     expect(result.success && result.data.notes).toBe("Gildan please");
   });
@@ -252,7 +257,7 @@ describe("designFromRestore (deep link)", () => {
     const design = designFromRestore(
       {
         garment: "tshirt",
-        colors: { body: "#2233aa" },
+        colors: { body: "#263147" },
         views: [
           {
             view: "front",
@@ -265,7 +270,7 @@ describe("designFromRestore (deep link)", () => {
       meta,
     );
     expect(design.garment).toBe("tshirt");
-    expect(design.colors.body).toBe("#2233aa");
+    expect(design.colors.body).toBe("#263147");
     expect(design.views.front?.printArea).toBe("full-front");
     expect(design.views.front?.artwork).toMatchObject({
       name: "art.png",

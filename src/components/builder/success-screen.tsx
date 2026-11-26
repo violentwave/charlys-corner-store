@@ -16,7 +16,7 @@ import { CouponTicket } from "@/components/neon/coupon-ticket";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import { track } from "@/lib/analytics";
-import type { GarmentId, ViewId } from "@/lib/garments";
+import { VIEW_LABELS, type GarmentId, type ViewId } from "@/lib/garments";
 
 export type MockupResult = {
   mockupId: string;
@@ -37,7 +37,7 @@ export interface SuccessScreenProps {
   onGoToOrder: () => void;
 }
 
-const VIEW_LABEL: Record<ViewId, string> = { front: "Front", back: "Back" };
+const VIEW_LABEL: Record<ViewId, string> = VIEW_LABELS;
 
 export function SuccessScreen({ garmentId, summary, result, urls, onDesignAnother, onGoToOrder }: SuccessScreenProps) {
   const download = (view: ViewId) => {
