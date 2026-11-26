@@ -7,6 +7,7 @@ export type AnalyticsEvent =
   | "builder_start"
   | "garment_selected"
   | "artwork_uploaded"
+  | "text_added"
   | "gate_viewed"
   | "gate_submitted"
   | "quote_requested"

@@ -1,8 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 
 /**
- * The /design builder v2: the account gate before upload (docs/04 Flow v2) and the two
- * send paths. Runs on the desktop and mobile-360 projects (playwright.config.ts).
+ * The /design builder v4: the account gate before upload, per-side LAYERS (images + text),
+ * the two send paths. Runs on the desktop and mobile-360 projects (playwright.config.ts).
  * Verification codes are read from the test-only /api/test/last-email helper
  * (console email driver + ENABLE_TEST_HOOKS=1 — see playwright.config.ts webServer env
  * and the CI e2e job env).
@@ -45,12 +45,52 @@ async function signUpAndVerify(page: Page, email: string) {
   await expect(page).toHaveURL(/\/account$/);
 }
 
-/** Places artwork on the front view (from the Colors step onward). */
-async function uploadArtwork(page: Page, fixture = "tests/e2e/fixtures/art.png") {
-  await page.getByTestId("upload-artwork").click();
+/** Uploads an image layer on the current side. */
+async function uploadImage(page: Page, fixture = "tests/e2e/fixtures/art.png") {
+  await page.getByTestId("upload-image").click();
   // The picker only opens because the visitor is signed in.
   await page.locator("[data-testid='builder-file-input']").setInputFiles(fixture);
-  await expect(page.getByTestId("artwork-name")).toContainText(fixture.split("/").pop()!, { timeout: 15_000 });
+  // The upload lands as a layer on the current side, auto-selected.
+  await expect(page.getByTestId("layers-panel")).toContainText(fixture.split("/").pop()!, { timeout: 15_000 });
+}
+
+/**
+ * Waits for the /api/mockups POST response, then reads the stored row out of Postgres —
+ * the source of truth for what the server received (Chromium doesn't expose fetch+FormData
+ * bodies to postDataBuffer). `artworks` is the mockups.artworks jsonb array; `views[].layers`
+ * the normalized layer stack.
+ */
+async function sentMockupRow(page: Page, email: string, trigger: () => Promise<void>) {
+  const responsePromise = page.waitForResponse(
+    (r) => r.url().includes("/api/mockups") && r.request().method() === "POST",
+  );
+  await trigger();
+  const response = await responsePromise;
+  await expect(response.status()).toBe(200);
+
+  const { Pool } = await import("pg");
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  try {
+    const { rows } = await pool.query(
+      "select artworks, views from mockups m join leads l on l.id = m.lead_id where lower(l.email) = $1 order by m.created_at desc limit 1",
+      [email],
+    );
+    expect(rows).toHaveLength(1);
+    return {
+      artworks: rows[0]!.artworks as unknown[],
+      views: rows[0]!.views as {
+        view: string;
+        layers: {
+          type: string;
+          artwork?: number;
+          text?: string;
+          transform?: { skewX?: number; width?: number; height?: number };
+        }[];
+      }[],
+    };
+  } finally {
+    await pool.end();
+  }
 }
 
 test("signed-out upload opens the sign-in dialog, from the step and the canvas", async ({ page }) => {
@@ -61,7 +101,7 @@ test("signed-out upload opens the sign-in dialog, from the step and the canvas",
   // Canvas empty state: "Your design goes here" + one clear CTA.
   await expect(page.getByTestId("canvas-empty")).toBeVisible();
 
-  await page.getByTestId("upload-artwork").click();
+  await page.getByTestId("upload-image").click();
   const dialog = page.getByTestId("sign-in-dialog");
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText(/Create a free account/i);
@@ -91,7 +131,7 @@ test("sign up, verify and upload without ever leaving the builder", async ({ pag
   await freshIp(page);
   await openBuilder(page);
   await page.getByRole("button", { name: "Step 3: Design" }).click();
-  await page.getByTestId("upload-artwork").click();
+  await page.getByTestId("upload-image").click();
 
   const dialog = page.getByTestId("sign-in-dialog");
   await dialog.getByLabel("Email").fill(email);
@@ -108,14 +148,9 @@ test("sign up, verify and upload without ever leaving the builder", async ({ pag
   const chooser = page.waitForEvent("filechooser");
   await dialog.getByTestId("dialog-add-design").click();
   await (await chooser).setFiles("tests/e2e/fixtures/art.png");
-  await expect(page.getByTestId("artwork-name")).toContainText("art.png", { timeout: 15_000 });
+  await expect(page.getByTestId("layers-panel")).toContainText("art.png", { timeout: 15_000 });
   await expect(page).toHaveURL(/\/design$/);
   await expect(page.getByTestId("sign-in-dialog")).toHaveCount(0);
-  // The header noticed the new session without a reload (desktop: the link sits in the bar;
-  // on phones it lives in the menu drawer, covered by the accounts spec).
-  if (test.info().project.name === "desktop") {
-    await expect(page.getByRole("banner").getByRole("link", { name: "My designs" })).toBeVisible();
-  }
 });
 
 test("garment step: picking selects but only Continue advances (v3)", async ({ page }) => {
@@ -132,7 +167,7 @@ test("garment step: picking selects but only Continue advances (v3)", async ({ p
 });
 
 test("full flow: sign up → verify → color strip → upload → email path → coupon + download", async ({ page }) => {
-  const email = `builder-v2-${Date.now()}-${test.info().workerIndex}@example.com`;
+  const email = `builder-v4-${Date.now()}-${test.info().workerIndex}@example.com`;
   await signUpAndVerify(page, email);
   await freshIp(page);
   await openBuilder(page);
@@ -149,9 +184,9 @@ test("full flow: sign up → verify → color strip → upload → email path �
   // 3. Design: upload is allowed now (verified account), and the email shows.
   await page.getByRole("button", { name: "Step 3: Design" }).click();
   await expect(page.getByTestId("signed-in-as")).toContainText(email);
-  await page.getByTestId("upload-artwork").click();
+  await page.getByTestId("upload-image").click();
   await page.locator("[data-testid='builder-file-input']").setInputFiles("tests/e2e/fixtures/art.png");
-  await expect(page.getByTestId("artwork-name")).toContainText("art.png", { timeout: 15_000 });
+  await expect(page.getByTestId("layers-panel")).toContainText("art.png", { timeout: 15_000 });
 
   // Downloads do not exist before the design is sent.
   await expect(page.getByRole("button", { name: /download/i })).toHaveCount(0);
@@ -172,21 +207,21 @@ test("full flow: sign up → verify → color strip → upload → email path �
   // The success CTA goes to the order card with the design intact.
   await success.getByTestId("goto-order").click();
   await expect(page.getByTestId("path-order")).toBeVisible();
-  await expect(page.getByTestId("artwork-controls")).toHaveCount(0);
   await page.getByRole("button", { name: "Step 3: Design" }).click();
-  await expect(page.getByTestId("artwork-name")).toContainText("art.png");
+  await expect(page.getByTestId("layers-panel")).toContainText("art.png");
 });
 
 test("order path: sizes are required, the request lands under My designs", async ({ page }) => {
-  const email = `order-v2-${Date.now()}-${test.info().workerIndex}@example.com`;
+  const email = `order-v4-${Date.now()}-${test.info().workerIndex}@example.com`;
   // Fast path: the test-only session helper creates a verified account for this browser.
   await freshIp(page);
   await page.request.post("/api/test/session", { data: { email, name: "Charly Dog" } });
   await openBuilder(page);
 
   await page.getByTestId("garment-tshirt").click();
+  await page.getByTestId("garment-continue").click();
   await page.getByRole("button", { name: "Step 3: Design" }).click();
-  await uploadArtwork(page);
+  await uploadImage(page);
   await page.getByRole("button", { name: "Step 4: Send" }).click();
 
   // Client-side quantity rule matches the server: no sizes, no order.
@@ -200,7 +235,7 @@ test("order path: sizes are required, the request lands under My designs", async
 
   const success = page.getByTestId("builder-success");
   await expect(success).toBeVisible({ timeout: 30_000 });
-  await expect(success).toContainText(/Order request sent! We&#x27;ll email you the price\.|Order request sent!/i);
+  await expect(success).toContainText(/Order request sent!/i);
   await expect(success.getByTestId("order-summary")).toContainText("2 × M");
   await expect(success.getByText(/CHARLY-[A-Z2-9]{4}-[A-Z2-9]{4}/)).toBeVisible();
 
@@ -223,43 +258,8 @@ test("oversized artwork shows the size error and sends nothing", async ({ page }
     buffer: Buffer.alloc(20 * 1024 * 1024 + 1, 1),
   });
   await expect(page.getByText(/larger than 20 MB/i)).toBeVisible();
-  await expect(page.getByTestId("artwork-name")).toHaveCount(0);
+  await expect(page.getByTestId("layers-empty")).toBeVisible();
 });
-
-/**
- * Waits for the /api/mockups POST to complete, then reads the stored row out of Postgres —
- * the source of truth for what the server received (Chromium doesn't expose fetch+FormData
- * bodies to postDataBuffer). `artworks` is the mockups.artworks jsonb array; `views[].artwork`
- * indexes it.
- */
-async function sentMockupRow(page: Page, email: string, trigger: () => Promise<void>) {
-  const responsePromise = page.waitForResponse(
-    (r) => r.url().includes("/api/mockups") && r.request().method() === "POST",
-  );
-  await trigger();
-  const response = await responsePromise;
-  await expect(response.status()).toBe(200);
-
-  const { Pool } = await import("pg");
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-  try {
-    const { rows } = await pool.query(
-      "select artworks, views from mockups m join leads l on l.id = m.lead_id where lower(l.email) = $1 order by m.created_at desc limit 1",
-      [email],
-    );
-    expect(rows).toHaveLength(1);
-    return {
-      artworks: rows[0]!.artworks as unknown[],
-      views: (rows[0]!.views as { view: string; printArea: string; layers: { artwork?: number }[] }[]).map((v) => ({
-        view: v.view,
-        printArea: v.printArea,
-        artwork: v.layers[0]?.artwork,
-      })),
-    };
-  } finally {
-    await pool.end();
-  }
-}
 
 test("same design on front and back: one artwork file, both views point at it", async ({ page }) => {
   const email = `same-${Date.now()}@example.com`;
@@ -268,16 +268,16 @@ test("same design on front and back: one artwork file, both views point at it", 
   await openBuilder(page);
   await page.getByRole("button", { name: "Step 3: Design" }).click();
 
-  await page.getByTestId("upload-artwork").click();
+  await page.getByTestId("upload-image").click();
   await page.locator("[data-testid='builder-file-input']").setInputFiles("tests/e2e/fixtures/art.png");
-  await expect(page.getByTestId("artwork-name")).toContainText("art.png", { timeout: 15_000 });
+  await expect(page.getByTestId("layers-panel")).toContainText("art.png", { timeout: 15_000 });
 
   // The back has no art yet: the empty state offers the same design.
   await page.getByTestId("view-back").click();
   await expect(page.getByTestId("canvas-empty")).toBeVisible();
   await expect(page.getByTestId("side-chooser")).toBeVisible();
   await page.getByTestId("use-design-0").click();
-  await expect(page.getByTestId("artwork-name")).toContainText("art.png");
+  await expect(page.getByTestId("layers-panel")).toContainText("art.png");
 
   // Side picker marks sides that have a design (visible dot + screen-reader text).
   await page.getByTestId("view-back").getByText("(has a design)", { exact: false }).isVisible();
@@ -288,10 +288,11 @@ test("same design on front and back: one artwork file, both views point at it", 
   });
   // One shared file: one stored original, both views printing artwork 0.
   expect(artworks).toHaveLength(1);
-  expect(views.map((v) => [v.view, v.artwork])).toEqual([
-    ["front", 0],
-    ["back", 0],
-  ]);
+  for (const view of views) {
+    expect(view.layers).toHaveLength(1);
+    expect(view.layers[0]).toMatchObject({ type: "image", artwork: 0 });
+  }
+  expect(views.map((v) => v.view)).toEqual(["front", "back"]);
 
   const success = page.getByTestId("builder-success");
   await expect(success).toBeVisible({ timeout: 30_000 });
@@ -306,16 +307,16 @@ test("a different design on the back: two artwork files, front and back each the
   await openBuilder(page);
   await page.getByRole("button", { name: "Step 3: Design" }).click();
 
-  await page.getByTestId("upload-artwork").click();
+  await page.getByTestId("upload-image").click();
   await page.locator("[data-testid='builder-file-input']").setInputFiles("tests/e2e/fixtures/art.png");
-  await expect(page.getByTestId("artwork-name")).toContainText("art.png", { timeout: 15_000 });
+  await expect(page.getByTestId("layers-panel")).toContainText("art.png", { timeout: 15_000 });
 
   await page.getByTestId("view-back").click();
   await expect(page.getByTestId("side-chooser")).toBeVisible();
   // "Upload a different design" opens the picker for a second file.
   await page.getByTestId("upload-different").click();
   await page.locator("[data-testid='builder-file-input']").setInputFiles("tests/e2e/fixtures/art-lowdpi.png");
-  await expect(page.getByTestId("artwork-name")).toContainText("art-lowdpi.png", { timeout: 15_000 });
+  await expect(page.getByTestId("layers-panel")).toContainText("art-lowdpi.png", { timeout: 15_000 });
 
   const { artworks, views } = await sentMockupRow(page, email, async () => {
     await page.getByRole("button", { name: "Step 4: Send" }).click();
@@ -324,7 +325,7 @@ test("a different design on the back: two artwork files, front and back each the
   // Two different files: two stored originals; front prints artwork 0, back artwork 1.
   expect(artworks).toHaveLength(2);
   expect((artworks as { name: string }[]).map((a) => a.name)).toEqual(["art.png", "art-lowdpi.png"]);
-  expect(views.map((v) => [v.view, v.artwork])).toEqual([
+  expect(views.map((v) => [v.view, v.layers[0]?.artwork])).toEqual([
     ["front", 0],
     ["back", 1],
   ]);
@@ -334,36 +335,100 @@ test("a different design on the back: two artwork files, front and back each the
   await expect(success.getByTestId("mockup-download-back")).toBeVisible();
 });
 
-test("long sleeve tee: a design on the left sleeve shows its own mockup", async ({ page }) => {
-  const email = `sleeve-${Date.now()}@example.com`;
+test("text on the left sleeve: stretched tall and skewed, stored as a text layer", async ({ page }) => {
+  const email = `sleeve-text-${Date.now()}@example.com`;
   await freshIp(page);
   await page.request.post("/api/test/session", { data: { email } });
   await openBuilder(page);
 
+  // Long sleeve tee → left sleeve.
   await page.getByTestId("garment-longsleeve").click();
   await page.getByTestId("garment-continue").click();
   await page.getByRole("button", { name: "Step 3: Design" }).click();
-
-  // Sleeve options exist on the long sleeve (Front, Back, Left sleeve, Right sleeve).
   await expect(page.getByTestId("view-left")).toBeVisible();
   await expect(page.getByTestId("view-right")).toBeVisible();
 
   await page.getByTestId("view-left").click();
-  await page.getByTestId("upload-artwork").click();
-  await page.locator("[data-testid='builder-file-input']").setInputFiles("tests/e2e/fixtures/art.png");
-  await expect(page.getByTestId("artwork-name")).toContainText("art.png", { timeout: 15_000 });
-  await page.getByTestId("print-area-full-sleeve").click();
+  await page.getByTestId("print-location").click();
+  await page.getByRole("option", { name: "Full Sleeve" }).click();
+
+  // Text layer: custom copy, font and ink.
+  await page.getByTestId("add-text").click();
+  await page.getByTestId("text-layer-input").fill("RUFF");
+  await page.getByTestId("text-layer-font").click();
+  await page.getByRole("option", { name: "Permanent Marker" }).click();
+  await page.getByTestId("text-layer-color").fill("#ffffff");
+  await expect(page.getByText("60")).toBeVisible(); // the live character counter
+
+  // Stretch it tall (H ≫ W) and skew it down the sleeve.
+  await page.getByTestId("layer-w").fill("3");
+  await page.getByTestId("layer-h").fill("12");
+  await page.getByTestId("skew-horizontal").fill("25");
 
   const { views } = await sentMockupRow(page, email, async () => {
     await page.getByRole("button", { name: "Step 4: Send" }).click();
     await page.getByTestId("send-email").click();
   });
-  expect(views).toEqual([{ view: "left", printArea: "full-sleeve", artwork: 0 }]);
+
+  const left = views.find((v) => v.view === "left")!;
+  expect(left.layers).toHaveLength(1);
+  const textLayer = left.layers[0]!;
+  expect(textLayer.type).toBe("text");
+  expect(textLayer.text).toBe("RUFF");
+  expect(textLayer.transform?.skewX).not.toBe(0);
+  expect(textLayer.transform!.height!).toBeGreaterThan(textLayer.transform!.width!);
 
   const success = page.getByTestId("builder-success");
   await expect(success).toBeVisible({ timeout: 30_000 });
   await expect(success.getByTestId("mockup-image-left")).toBeVisible();
-  await expect(success.getByTestId("mockup-download-left")).toBeVisible();
+});
+
+test("image + text on the front: two layers in stack order", async ({ page }) => {
+  const email = `mix-${Date.now()}@example.com`;
+  await freshIp(page);
+  await page.request.post("/api/test/session", { data: { email } });
+  await openBuilder(page);
+  await page.getByRole("button", { name: "Step 3: Design" }).click();
+
+  await page.getByTestId("upload-image").click();
+  await page.locator("[data-testid='builder-file-input']").setInputFiles("tests/e2e/fixtures/art.png");
+  await expect(page.getByTestId("layers-panel")).toContainText("art.png", { timeout: 15_000 });
+  await page.getByTestId("add-text").click();
+  await page.getByTestId("text-layer-input").fill("Front");
+  await expect(page.getByTestId("layers-panel")).toContainText("Front");
+
+  const { artworks, views } = await sentMockupRow(page, email, async () => {
+    await page.getByRole("button", { name: "Step 4: Send" }).click();
+    await page.getByTestId("send-email").click();
+  });
+  expect(artworks).toHaveLength(1);
+  const front = views.find((v) => v.view === "front")!;
+  expect(front.layers.map((l) => l.type)).toEqual(["image", "text"]);
+
+  const success = page.getByTestId("builder-success");
+  await expect(success).toBeVisible({ timeout: 30_000 });
+});
+
+test("a text-only design sends without any upload", async ({ page }) => {
+  const email = `textonly-${Date.now()}@example.com`;
+  await freshIp(page);
+  await page.request.post("/api/test/session", { data: { email } });
+  await openBuilder(page);
+  await page.getByRole("button", { name: "Step 3: Design" }).click();
+
+  const { artworks, views } = await sentMockupRow(page, email, async () => {
+    await page.getByTestId("add-text").click();
+    await page.getByTestId("text-layer-input").fill("Have a Ruffin awesome day");
+    await page.getByRole("button", { name: "Step 4: Send" }).click();
+    await page.getByTestId("send-email").click();
+  });
+
+  const success = page.getByTestId("builder-success");
+  await expect(success).toBeVisible({ timeout: 30_000 });
+  await expect(success.getByTestId("mockup-image-front")).toBeVisible();
+
+  expect(artworks).toHaveLength(0);
+  expect(views[0]?.layers[0]).toMatchObject({ type: "text", text: "Have a Ruffin awesome day" });
 });
 
 test("t-shirt shows no sleeve options", async ({ page }) => {

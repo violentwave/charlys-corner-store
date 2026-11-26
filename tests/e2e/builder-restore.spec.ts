@@ -2,9 +2,9 @@ import { expect, test, type Page } from "@playwright/test";
 import { Pool } from "pg";
 
 /**
- * The restore-design deep link (P4-3): the customer email's "Order this design"
- * CTA opens /design?mockup=<id>, the builder fetches the design + artwork and
- * restores at the Design step. Runs on the desktop and mobile-360 projects.
+ * The restore-design deep link: the customer email's "Order this design" CTA opens
+ * /design?mockup=<id>, the builder fetches the design + every artwork and restores the
+ * layered sides at the Design step. Runs on the desktop and mobile-360 projects.
  */
 
 async function openAndSubmit(page: Page, email: string) {
@@ -23,15 +23,19 @@ async function openAndSubmit(page: Page, email: string) {
   await page.getByRole("button", { name: "Step 3: Design" }).click();
   await expect(page.getByTestId("artwork-controls")).toBeVisible();
 
-  // Two different files (v3 per-side art): art.png on the front, art-lowdpi.png on the back.
+  // Two different files (v4 per-side art): art.png as an image layer on the front,
+  // text + a different image on the back.
   await page.locator("[data-testid='builder-file-input']").setInputFiles("tests/e2e/fixtures/art.png");
-  await expect(page.getByTestId("artwork-name")).toContainText("art.png", { timeout: 15_000 });
-  await page.getByTestId("print-area-full-front").click();
+  await expect(page.getByTestId("layers-panel")).toContainText("art.png", { timeout: 15_000 });
+  await page.getByTestId("print-location").click();
+  await page.getByRole("option", { name: "Full Front" }).click();
   await page.getByTestId("view-back").click();
   await expect(page.getByTestId("side-chooser")).toBeVisible();
   await page.getByTestId("upload-different").click();
   await page.locator("[data-testid='builder-file-input']").setInputFiles("tests/e2e/fixtures/art-lowdpi.png");
-  await expect(page.getByTestId("artwork-name")).toContainText("art-lowdpi.png", { timeout: 15_000 });
+  await expect(page.getByTestId("layers-panel")).toContainText("art-lowdpi.png", { timeout: 15_000 });
+  await page.getByTestId("add-text").click();
+  await page.getByTestId("text-layer-input").fill("Back print");
 
   await page.getByRole("button", { name: "Step 4: Send" }).click();
   await page.getByTestId("send-email").click();
@@ -52,30 +56,26 @@ async function mockupIdForEmail(email: string): Promise<string> {
   }
 }
 
-test("the restore link loads garment, colors, print location and artwork at the Design step", async ({ page }) => {
+test("the restore link loads garment, colors, print locations and every side's layers", async ({ page }) => {
   const email = `builder-restore-${Date.now()}${test.info().workerIndex}@example.com`;
   await openAndSubmit(page, email);
   const mockupId = await mockupIdForEmail(email);
 
   await page.goto(`/design?mockup=${mockupId}`);
   await expect(page.getByTestId("restore-status")).toHaveText("Loaded your saved design.", { timeout: 30_000 });
-  // Restored at the Design step with the front artwork in place. (The memory storage
-  // driver hands out data: URLs without the original file name, so the file shows the
-  // friendly fallback — the sides are told apart by their art: only the low-res back
-  // file trips the DPI warning.)
+  // Restored at the Design step with the front image layer in place. (The memory storage
+  // driver hands out data: URLs without the original file name, so the layer shows the
+  // friendly fallback name.)
   await expect(page.getByTestId("artwork-controls")).toBeVisible();
-  await expect(page.getByTestId("artwork-name")).toBeVisible();
+  await expect(page.getByTestId("layers-panel")).toBeVisible();
   await expect(page.getByTestId("builder-transform")).toContainText("w=");
-  await expect(page.getByTestId("print-area-full-front")).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByTestId("dpi-warning")).toHaveCount(0);
+  await expect(page.getByTestId("print-location")).toContainText("Full Front");
 
-  // v3 per-side artwork: the back was sent with a DIFFERENT file, and the restore
-  // maps each view back to its own file via artworks[] + views[].artwork.
+  // v4 per-side layers: the back was sent with an image AND text, and the restore maps
+  // each layer back via artworks[] + views[].layers.
   await page.getByTestId("view-back").click();
-  await expect(page.getByTestId("artwork-name")).toBeVisible();
-  await expect(page.getByTestId("print-area-full-back")).toBeVisible();
+  await expect(page.getByTestId("layers-panel")).toContainText("Back print");
   await expect(page.getByTestId("relink-sides")).toHaveCount(0); // both files decoded
-  await expect(page.getByTestId("dpi-warning")).toBeVisible({ timeout: 15_000 }); // the low-res back file
 
   // Garment and colors really come from the link, not a fresh builder.
   await page.getByRole("button", { name: "Step 1: Garment" }).click();

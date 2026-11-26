@@ -74,7 +74,7 @@ Each page prompt is shipped by the agent (Ship section); Claude reviews every me
 ## Phase 4.7: Builder v4: layers, text, stretch/skew, pro controls (Logan, 2026-11-25)
 
 - [x] Foundation (Claude): layer wire format (image + text), skew + free stretch, 8 self-hosted text fonts, text-only designs (migration 0004), owner email lists every layer, restore returns layers
-- [ ] Builder UI: layers panel, text tool, stretch/skew handles + sliders, cleaner professional controls layout (prompt P47-1)
+- [x] Builder UI: layers panel, text tool, stretch/skew handles + sliders, cleaner professional controls layout (prompt P47-1)
 
 ## Phase 5: Shop and checkout
 
