@@ -13,9 +13,12 @@ import { detectArtworkKind, ARTWORK_MAX_BYTES } from "@/lib/artwork";
 import type { AccountUser } from "@/lib/auth-schema";
 import { getGarment, GARMENTS, isHexColor, luma, VIEW_LABELS, type GarmentId, type ViewId } from "@/lib/garments";
 import { MAX_LAYERS_PER_VIEW, MOCKUP_ARTWORK_KINDS, mockupViewSchema } from "@/lib/mockup-schema";
+import type { TextFontId } from "@/lib/text-fonts";
 import { track } from "@/lib/analytics";
 import { MOCKUP_FILES_RETENTION_DAYS } from "@/lib/retention";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/toast";
+import type { BrandKit } from "@/app/api/account/brand-kit/route";
 
 import { ColorPicker } from "./color-picker";
 import { GarmentStep } from "./garment-step";
@@ -37,6 +40,7 @@ import {
 } from "./use-builder-state";
 import { SendStep } from "./send-step";
 import { StartOverButton } from "./start-over-dialog";
+import { SaveDraftDialog } from "./save-draft-dialog";
 import { SuccessScreen, type MockupResult } from "./success-screen";
 import { uploadGateFor } from "./upload-gate";
 import "./text-fonts.css";
@@ -113,9 +117,19 @@ export function Builder() {
   // The verified account (GET /api/auth/me): gates uploads and personalizes step 4.
   const [account, setAccount] = useState<AccountUser | null | undefined>(undefined);
   const [signInDialog, setSignInDialog] = useState<SignInDialogMode>(null);
-  /** Why the dialog opened: to upload (then continue into the picker / dropped file) or to send. */
-  const dialogPurposeRef = useRef<"upload" | "send">("upload");
+  /** Why the dialog opened: to upload (picker/dropped file), to send, or to save a draft. */
+  const dialogPurposeRef = useRef<"upload" | "send" | "draft">("upload");
   const pendingDropRef = useRef<File | null>(null);
+
+  // Saved draft (Member perks): the id/name this design was last saved as. Kept in
+  // sessionStorage so a refresh keeps updating the same draft. (The builder is
+  // client-only — `next/dynamic` with ssr:false — so sessionStorage exists at mount.)
+  const [draftId, setDraftId] = useState<string | null>(() => sessionStorage.getItem("charly.draft-id"));
+  const [draftName, setDraftName] = useState<string | null>(() => sessionStorage.getItem("charly.draft-name"));
+  const [draftError, setDraftError] = useState<string | null>(null);
+  const [saveDraftOpen, setSaveDraftOpen] = useState(false);
+  // The brand kit (colors/fonts/logo), fetched once per session when signed in.
+  const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
 
   const [sending, setSending] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
@@ -146,9 +160,83 @@ export function Builder() {
 
   useEffect(refreshAccount, []);
 
+  // The brand kit, fetched once per session for signed-in members (docs/02 Member perks).
+  useEffect(() => {
+    if (account === undefined || account === null || !account.verified) return;
+    let alive = true;
+    fetch("/api/account/brand-kit", { cache: "no-store" })
+      .then(async (res) => {
+        const data = (await res.json().catch(() => null)) as { brandKit?: BrandKit } | null;
+        if (alive && res.ok && data?.brandKit) setBrandKit(data.brandKit);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [account]);
+
   // Restore-design deep link (email CTA: /design?mockup=<id>). Runs once per mount.
   const restoredRef = useRef(false);
   const [restoreStatus, setRestoreStatus] = useState<"loading" | "loaded" | "expired" | "failed" | null>(null);
+
+  /** Fetches the design's stored images as decoded ArtworkFiles (restore + drafts share this). */
+  const fetchArtworkFiles = async (artworks: { url: string; name?: string }[]): Promise<ArtworkFile[]> => {
+    const files: ArtworkFile[] = [];
+    for (const artwork of artworks) {
+      const blob = await fetch(artwork.url).then((r) => {
+        if (!r.ok) throw new Error("artwork fetch failed");
+        return r.blob();
+      });
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      const kind = detectArtworkKind(bytes);
+      const builderKind = MOCKUP_ARTWORK_KINDS.find((k) => k === kind);
+      if (!builderKind) throw new Error("artwork not drawable");
+      const fileName = artwork.name ?? safeUrlFileName(artwork.url);
+      const file = new File([blob], fileName, { type: blob.type || "image/png" });
+      const objectUrl = URL.createObjectURL(file);
+      let img: HTMLImageElement;
+      try {
+        img = await loadTemplate(objectUrl);
+      } catch {
+        URL.revokeObjectURL(objectUrl);
+        throw new Error("artwork decode failed");
+      }
+      if (img.naturalWidth === 0) {
+        URL.revokeObjectURL(objectUrl);
+        throw new Error("artwork has no size");
+      }
+      files.push({
+        file,
+        url: objectUrl,
+        img,
+        name: fileName,
+        kind: builderKind,
+        naturalWidth: img.naturalWidth,
+        naturalHeight: img.naturalHeight,
+      });
+    }
+    return files;
+  };
+
+  /** Hydrates the builder with a fetched design (+ its decoded files) at the Design step. */
+  const applyRestoredDesign = (design: RestoredDesign, files: ArtworkFile[]) => {
+    // Re-validate on the client: the same schemas the server used for the row.
+    const garmentEnum = z.enum(GARMENTS.map((g) => g.id) as [GarmentId, ...GarmentId[]]);
+    const garmentId = garmentEnum.safeParse(design.garment).success ? design.garment : null;
+    const views = design.views.flatMap((entry) => {
+      const parsed = mockupViewSchema.safeParse(entry);
+      return parsed.success ? [parsed.data] : [];
+    });
+    if (!garmentId || views.length === 0) throw new Error("restore payload invalid");
+    const colors = Object.fromEntries(Object.entries(design.colors).filter(([, hex]) => isHexColor(hex)));
+    dispatch({
+      type: "hydrate",
+      step: 3,
+      design: designFromRestore({ garment: garmentId, colors, views, sizes: design.sizes }, files),
+    });
+    for (const f of files) URL.revokeObjectURL(f.url);
+    setFiles(files);
+  };
 
   const restoreMockup = async (mockupId: string) => {
     // One deferred tick: no setState may run synchronously inside the mount effect.
@@ -161,60 +249,7 @@ export function Builder() {
         | { ok: true; design: RestoredDesign; artworks: { url: string }[]; filesExpired?: boolean }
         | { ok: false; error: string };
       if (!json.ok) throw new Error(json.error);
-      // Re-validate on the client: the same schemas the server used for the row.
-      const garmentEnum = z.enum(GARMENTS.map((g) => g.id) as [GarmentId, ...GarmentId[]]);
-      const garmentId = garmentEnum.safeParse(json.design.garment).success ? json.design.garment : null;
-      const views = json.design.views.flatMap((entry) => {
-        const parsed = mockupViewSchema.safeParse(entry);
-        return parsed.success ? [parsed.data] : [];
-      });
-      if (!garmentId || views.length === 0) throw new Error("restore payload invalid");
-      const colors = Object.fromEntries(Object.entries(json.design.colors).filter(([, hex]) => isHexColor(hex)));
-
-      // Every artwork file (v3): fetch as a Blob and use object URLs, so the canvas stays
-      // untainted and the mockups can still be exported. Image layers' `artwork` indexes
-      // this restored array; text-only designs have no files at all.
-      const restoredFiles: ArtworkFile[] = [];
-      for (const artwork of json.artworks) {
-        const blob = await fetch(artwork.url).then((r) => {
-          if (!r.ok) throw new Error("artwork fetch failed");
-          return r.blob();
-        });
-        const bytes = new Uint8Array(await blob.arrayBuffer());
-        const kind = detectArtworkKind(bytes);
-        const builderKind = MOCKUP_ARTWORK_KINDS.find((k) => k === kind);
-        if (!builderKind) throw new Error("artwork not drawable");
-        const fileName = safeUrlFileName(artwork.url);
-        const file = new File([blob], fileName, { type: blob.type || "image/png" });
-        const objectUrl = URL.createObjectURL(file);
-        let img: HTMLImageElement;
-        try {
-          img = await loadTemplate(objectUrl);
-        } catch {
-          URL.revokeObjectURL(objectUrl);
-          throw new Error("artwork decode failed");
-        }
-        if (img.naturalWidth === 0) {
-          URL.revokeObjectURL(objectUrl);
-          throw new Error("artwork has no size");
-        }
-        restoredFiles.push({
-          file,
-          url: objectUrl,
-          img,
-          name: fileName,
-          kind: builderKind,
-          naturalWidth: img.naturalWidth,
-          naturalHeight: img.naturalHeight,
-        });
-      }
-
-      dispatch({
-        type: "hydrate",
-        step: 3,
-        design: designFromRestore({ garment: garmentId, colors, views, sizes: json.design.sizes }, restoredFiles),
-      });
-      setFiles(restoredFiles);
+      applyRestoredDesign(json.design, await fetchArtworkFiles(json.artworks));
       setRestoreStatus(json.filesExpired ? "expired" : "loaded");
     } catch {
       // Unknown id, expired link, or a hiccup: friendly message, fresh builder.
@@ -223,7 +258,53 @@ export function Builder() {
     }
   };
 
+  /** Opens a saved draft (/?draft=<id>#design) — the same hydrate path as the restore link. */
+  const openDraft = async (id: string) => {
+    await Promise.resolve();
+    setRestoreStatus("loading");
+    try {
+      const res = await fetch(`/api/account/drafts/${id}`, { cache: "no-store" });
+      if (!res.ok) throw new Error("draft request failed");
+      const json = (await res.json()) as
+        | {
+            ok: true;
+            id: string;
+            name: string;
+            design: RestoredDesign;
+            artworks: { name: string; url: string }[];
+            filesExpired?: boolean;
+          }
+        | { ok: false; error: string };
+      if (!json.ok) throw new Error(json.error);
+      const files = json.filesExpired ? [] : await fetchArtworkFiles(json.artworks);
+      if (files.length > 0) applyRestoredDesign(json.design, files);
+      else {
+        // Expired images: hydrate what's left (colors, text, sizes) without files.
+        dispatch({ type: "hydrate", step: 3, design: designFromRestore(json.design, []) });
+        for (const f of files) URL.revokeObjectURL(f.url);
+        setFiles([]);
+      }
+      setDraftId(json.id);
+      setDraftName(json.name);
+      sessionStorage.setItem("charly.draft-id", json.id);
+      sessionStorage.setItem("charly.draft-name", json.name);
+      setRestoreStatus(json.filesExpired ? "expired" : "loaded");
+    } catch {
+      dispatch({ type: "hydrate", step: 1, design: initialDesign(GARMENTS[0]!.id) });
+      setRestoreStatus("failed");
+    }
+  };
+
   useEffect(() => {
+    const draftIdParam = new URLSearchParams(window.location.search).get("draft");
+    if (draftIdParam) {
+      const timer = setTimeout(() => {
+        if (restoredRef.current) return;
+        restoredRef.current = true;
+        void openDraft(draftIdParam);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
     const mockupId = new URLSearchParams(window.location.search).get("mockup");
     if (!mockupId) return;
     // Deferred: the restore fetch (and its status updates) must not run inside the
@@ -565,6 +646,10 @@ export function Builder() {
   const designAnother = () => {
     dispatch({ type: "hydrate", step: 1, design: initialDesign(GARMENTS[0]!.id) });
     setRequestedView("front");
+    setDraftId(null);
+    setDraftName(null);
+    sessionStorage.removeItem("charly.draft-id");
+    sessionStorage.removeItem("charly.draft-name");
     setFileError(null);
     setSuccess(null);
     setExportedUrls({});
@@ -572,6 +657,54 @@ export function Builder() {
     for (const f of files) URL.revokeObjectURL(f.url);
     setFiles([]);
     // The persist effect rewrites sessionStorage with the fresh state.
+  };
+
+  /**
+   * Saves the design as a draft (Member perks): the same payloadPlan the send uses (dense
+   * artwork indexes, only sides with layers) + the artwork files. An existing draftId
+   * updates the same draft (its old images are replaced server-side); "Save as new" clears it.
+   */
+  const saveDraft = async (
+    name: string,
+    asNew: boolean,
+  ): Promise<{ ok: boolean; error?: string; capReached?: boolean }> => {
+    if (!account?.verified) return { ok: false, error: "Please log in first." };
+    const plan = payloadPlan(design);
+    const id = asNew ? undefined : (draftId ?? undefined);
+    const body = new FormData();
+    body.append("payload", JSON.stringify({ ...(id ? { id } : {}), name, design: plan.payload }));
+    plan.filesInUse.forEach((fileIndex, i) => {
+      body.append(`artwork-${i}`, files[fileIndex]!.file);
+    });
+    const res = await fetch("/api/account/drafts", { method: "POST", body });
+    const json = (await res.json().catch(() => null)) as { ok?: boolean; id?: string; error?: string } | null;
+    if (!json?.ok) {
+      const error = json?.error ?? "Something went wrong. Please try again.";
+      // 409 = the drafts cap: the dialog offers the Drafts tab.
+      return { ok: false, error, capReached: res.status === 409 };
+    }
+    const savedId = json.id!;
+    setDraftId(savedId);
+    setDraftName(name);
+    sessionStorage.setItem("charly.draft-id", savedId);
+    sessionStorage.setItem("charly.draft-name", name);
+    toast({ title: "Draft saved" });
+    return { ok: true };
+  };
+
+  /** "Add my logo": fetches the brand kit's logo and adds it through the normal upload path. */
+  const addBrandLogo = async () => {
+    const logo = brandKit?.logo;
+    if (!logo?.url) return;
+    try {
+      const blob = await fetch(logo.url).then((r) => {
+        if (!r.ok) throw new Error();
+        return r.blob();
+      });
+      await handleFileSelected(new File([blob], logo.name, { type: blob.type || "image/png" }));
+    } catch {
+      setFileError("We couldn't load your logo. Try uploading the file instead.");
+    }
   };
 
   const goStep = (next: BuilderStep) => {
@@ -762,6 +895,10 @@ export function Builder() {
                   fileError={fileError}
                   capReached={activeViewState.layers.length >= MAX_LAYERS_PER_VIEW}
                   accountEmail={account?.verified ? account.email : null}
+                  brandInks={brandKit?.inkColors}
+                  brandFonts={brandKit?.fonts as TextFontId[] | undefined}
+                  logo={brandKit?.logo}
+                  onAddLogo={() => void addBrandLogo()}
                   lockRatio={lockRatio}
                   onLockRatioChange={setLockRatio}
                   onUploadClick={() => void attemptUpload()}
@@ -834,6 +971,23 @@ export function Builder() {
                         <Button variant="ghost" size="sm" onClick={redo} disabled={!canRedo} data-testid="redo">
                           Redo
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (account?.verified) {
+                              setDraftError(null);
+                              setSaveDraftOpen(true);
+                              return;
+                            }
+                            dialogPurposeRef.current = "draft";
+                            pendingDropRef.current = null;
+                            setSignInDialog(account === undefined || account ? "signedOut" : "signedOut");
+                          }}
+                          data-testid="save-draft"
+                        >
+                          Save draft
+                        </Button>
                       </>
                     ) : null}
                     <span className="ml-auto">
@@ -846,6 +1000,16 @@ export function Builder() {
           </>
         )}
       </div>
+
+      {saveDraftOpen ? (
+        <SaveDraftDialog
+          initialName={draftName ?? `${garment.name} draft`}
+          hasDraft={!!draftId}
+          capError={draftError}
+          onClose={() => setSaveDraftOpen(false)}
+          onSave={saveDraft}
+        />
+      ) : null}
 
       <SignInDialog
         mode={signInDialog}
@@ -861,6 +1025,10 @@ export function Builder() {
         onContinue={() => {
           setSignInDialog(null);
           setSendError(null);
+          if (dialogPurposeRef.current === "draft") {
+            setSaveDraftOpen(true); // back to saving the draft, now signed in
+            return;
+          }
           if (dialogPurposeRef.current === "send") return; // the send buttons are right there again
           const dropped = pendingDropRef.current;
           pendingDropRef.current = null;

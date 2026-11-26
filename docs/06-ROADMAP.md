@@ -89,6 +89,7 @@ Each page prompt is shipped by the agent (Ship section); Claude reviews every me
 - [x] Foundation (Claude): coupon wallet; order tracking (owner one-click signed links → customer email); account settings (name, marketing emails) + change password (signs out everywhere); re-send a mockup; order again; saved drafts (images under `mockups/drafts/`, 30-day rule); brand kit (logo under `brand/`, kept); saved sizes / team rosters (migration 0007)
 - [x] UI (opencode): account tabs (My designs, Sizes & rosters, Settings, Security — hash-linked, Drafts and Brand kit to come), delete/remove buttons with 30-day warnings and Save links, sign-in screens with Google (when configured) and the 2FA code step incl. backup codes (prompt P49-1)
 - [x] UI (opencode): the perks screens — the coupon wallet, the order-stage tracker (driven by the owner's one-click links), re-send, order again with saved size sets, the Sizes & rosters tab (editor + roster + fill-from-roster), Settings (name, marketing emails, change/set password that signs out everywhere) (prompt P49-2)
+- [x] UI (opencode): saved drafts (Save draft in the builder footer with a name dialog + update / save-as-new; open via /?draft=<id>#design like the restore link; the Drafts tab with the 30-day image note, expiry warnings and delete) and the brand kit tab (inks, fonts, logo) with the builder leading from it — "Your colors", "Your fonts", "Add my logo" (prompt P49-3)
 
 ## Phase 5: Shop and checkout
 
