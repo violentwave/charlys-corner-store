@@ -158,7 +158,7 @@ describe.skipIf(!hasTestDb)("GET /api/mockups/[id] (real Postgres)", () => {
   it("after the retention window an emailed mockup comes back without its images", async () => {
     await testDb
       .update(schema.mockups)
-      .set({ createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000) })
+      .set({ createdAt: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000) })
       .where(eq(schema.mockups.id, mockupId));
     const res = await getRestore(new Request(`http://test/api/mockups/${mockupId}`), {
       params: Promise.resolve({ id: mockupId }),
@@ -179,7 +179,7 @@ describe.skipIf(!hasTestDb)("GET /api/mockups/[id] (real Postgres)", () => {
     expect(_memoryKeys().every((k) => k.startsWith("orders/"))).toBe(true);
     await testDb
       .update(schema.mockups)
-      .set({ createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) })
+      .set({ createdAt: new Date(Date.now() - 300 * 24 * 60 * 60 * 1000) })
       .where(eq(schema.mockups.id, orderId));
     const restore = await getRestore(new Request(`http://test/api/mockups/${orderId}`), {
       params: Promise.resolve({ id: orderId }),

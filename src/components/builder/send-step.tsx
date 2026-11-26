@@ -155,8 +155,10 @@ export function SendStep({
           <h3 className="font-heading text-text-1 text-base tracking-wide uppercase">Email me this mockup</h3>
           <p className="text-text-2 text-sm">
             We&apos;ll email your mockup to{" "}
-            <span className="text-text-1 font-medium">{accountEmail ?? "your account email"}</span> plus 15% off your
-            2nd order.
+            <span className="text-text-1 font-medium [overflow-wrap:anywhere]">
+              {accountEmail ?? "your account email"}
+            </span>{" "}
+            plus 15% off your 2nd order.
           </p>
           <div className="flex items-start gap-3 text-sm">
             <Checkbox

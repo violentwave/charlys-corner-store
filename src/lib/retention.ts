@@ -1,11 +1,12 @@
 /**
- * How long stored files live (Logan, 2026-11-26). The deleting itself is an R2 bucket
+ * How long stored files live (Logan, 2026-11-26: 3 days, then 30 days the same night;
+ * R2 rule "delete-mockups-30-days"). The deleting itself is an R2 bucket
  * lifecycle rule (Cloudflare dashboard → R2 → bucket → Settings → Object lifecycle rules):
  * objects under `mockups/` are deleted after MOCKUP_FILES_RETENTION_DAYS. Keep that rule and
  * this constant in step. Order requests (`orders/`), existing-order uploads (`uploads/`) and
  * quote files (`quotes/`) are kept; the owner cleans those up.
  */
-export const MOCKUP_FILES_RETENTION_DAYS = 3;
+export const MOCKUP_FILES_RETENTION_DAYS = 30;
 
 /** Storage folder for a builder submission's files (originals + rendered mockups). */
 export function mockupStoragePrefix(kind: "mockup" | "order"): "mockups" | "orders" {

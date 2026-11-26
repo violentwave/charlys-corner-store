@@ -124,6 +124,8 @@ export function SiteHeader() {
   const onNavClick = (event: MouseEvent<HTMLAnchorElement>, item: NavItem) => {
     const wasOpen = open;
     setOpen(false);
+    // Let the browser handle new-tab / new-window clicks (Ctrl/Cmd/Shift/Alt, middle button).
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     if (!isHome) return;
 
     if (item.homeSection) {
