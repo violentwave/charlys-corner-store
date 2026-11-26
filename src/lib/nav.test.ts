@@ -37,3 +37,12 @@ describe("nav groups", () => {
     }
   });
 });
+
+describe("menu lists", () => {
+  it("the menu never shows the same link twice (Create vs Explore)", async () => {
+    const { menuCreateNav, exploreNav } = await import("./nav");
+    const hrefs = [...menuCreateNav, ...exploreNav].map((i) => i.href);
+    expect(new Set(hrefs).size).toBe(hrefs.length);
+    expect(menuCreateNav.map((i) => i.href)).toEqual(["/#design", "/#upload"]);
+  });
+});

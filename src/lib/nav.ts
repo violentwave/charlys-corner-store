@@ -51,6 +51,11 @@ export const primaryNav = inGroup("primary");
 export const createNav = inGroup("create");
 export const helpNav = inGroup("help");
 export const exploreNav = inGroup("explore");
+/**
+ * The menu's "Create" list: only the builder and the upload form. Shop and Business & Promo
+ * are already in the menu's Explore list (the footer's Create column keeps them).
+ */
+export const menuCreateNav = createNav.filter((item) => !exploreNav.some((e) => e.href === item.href));
 
 /** Account-page sections for the member menu; they all live under /account#<hash>. */
 export const accountNav = [

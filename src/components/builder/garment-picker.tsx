@@ -64,6 +64,11 @@ function GarmentCard({
         ) : null}
       </span>
       <span className="text-text-1 text-sm font-medium">{garment.name}</span>
+      {garment.badge ? (
+        <span className="border-neon-cyan/60 text-neon-cyan rounded-full border px-2 py-0.5 text-[11px] font-semibold">
+          {garment.badge}
+        </span>
+      ) : null}
       <span className="text-text-3 text-xs">{garment.description}</span>
     </button>
   );
