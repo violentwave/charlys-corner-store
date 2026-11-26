@@ -4,7 +4,7 @@
 
 ## Phase 0: Setup (day 1)
 
-- [x] Create GitHub repo `violentwave/charlys-corner-store` (public for now, see `02` Decision Log); push starter files, `ScrapedData/`, `Assets/`
+- [x] Create GitHub repo `violentwave/charlys-corner-store` (now **private**, see `02` Decision Log 2026-11-26); push starter files, `ScrapedData/`, `Assets/`
 - [x] Scaffold Next.js 16.4 (App Router, TS strict, Tailwind v4, ESLint, pnpm), Prettier, Vitest, Playwright, design tokens, self-hosted fonts, placeholder home with logo
 - [x] GitHub Actions CI: lint, typecheck, unit tests, build, then e2e
 - [x] `opencode.json` + `AGENTS.md` so opencode loads the project rules
