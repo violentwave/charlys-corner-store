@@ -121,9 +121,11 @@ Per view, in `public/garments/{garment}/{view}/`:
 | File | Use |
 |---|---|
 | `mask-<zone>.png` | Alpha mask per color zone; fill with the zone color (lossless PNG) |
-| `shading.webp` | Folds, seams, stitching, plus a subtle knit texture; `multiply` over the fills. Its alpha is the garment silhouette (clip everything to it) |
+| `shading.webp` | Folds, seams, stitching, plus a subtle knit texture; `multiply` over the fills. Its alpha is the garment silhouette **plus the soft contact shadow** under the hem (offset ~14px down, blur ~15, opacity ~0.2 — drawn first in the SVG, so the silhouette always covers it), so the shadow ships in every export for free |
 | `highlight.webp` | Sheen; `screen` at `highlightOpacity(hex)` = 0.15 + 0.85 × (1 − luma), so dark fabric doesn't go flat |
 | `base.webp` | White composite for thumbnails / loading |
+
+Fabric character per garment (set per view in `shapes.mjs`): cotton keeps the fine knit noise; the Performance polyester is smoother (`knit` ≈ 0.045) with a broader sheen; the hoodie's fleece is heavier and matte (stronger grain, highlights × 0.78); the hat's mesh zone carries a real mesh pattern and the structured front panels a twill weave. Sleeve-only views (2026-11-26) are drawn as a sleeve laid flat: shoulder cap, underarm seam, taper, the garment's real cuff (5400 rib band; 42400 hemmed double-stitched; 18500 tall gathered rib; raglan hemmed mid-forearm) and diagonal drape folds.
 
 The soft layers are lossy WebP (quality 82) because the knit texture compresses badly as PNG: all templates together are about 2 MB.
 
