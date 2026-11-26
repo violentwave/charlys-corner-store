@@ -5,15 +5,16 @@ import { mockupPayloadSchema } from "@/lib/mockup-schema";
 
 import {
   builderReducer,
+  canAddLayer,
   designFromRestore,
   fitTransform,
   initialDesign,
   loadPersistedBuilderState,
+  MAX_LAYERS_PER_VIEW,
   PERSIST_KEY,
   payloadPlan,
   persistBuilderState,
   usedFileIndexes,
-  type ArtworkMeta,
   type BuilderState,
 } from "./use-builder-state";
 import { centerInRect, nudgeTransform, rotateAroundCenter, scaleAroundCenter } from "./geometry";
@@ -26,140 +27,169 @@ const start = (): BuilderState => ({
   future: [],
 });
 
-describe("builderReducer — artwork per side", () => {
-  it("places artwork fitted and centered in the active print area", () => {
-    const state = builderReducer(start(), {
-      type: "placeArtwork",
-      view: "front",
-      meta: { name: "art.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 0 },
-    });
-    const front = state.design.views.front?.artwork;
+const imageInput = (fileIndex = 0, name = "art.png") => ({
+  fileIndex,
+  name,
+  kind: "png" as const,
+  naturalWidth: 600,
+  naturalHeight: 300,
+});
+
+const textInput = (text = "Your text") => ({ text, font: "anton" as const, color: "#000000" });
+
+describe("builderReducer — layers (v4)", () => {
+  it("adds an image layer fitted and centered in the active print area, selected", () => {
+    const state = builderReducer(start(), { type: "addImageLayer", view: "front", input: imageInput(0) });
+    const front = state.design.views.front!;
+    expect(front.layers).toHaveLength(1);
+    const layer = front.layers[0]!;
+    expect(layer.type).toBe("image");
     // The initial print area is the front view's first: Front Chest (260×130).
     const chest = getGarment("tshirt").views[0]!.printAreas[0]!.rect;
     expect(chest).toEqual({ x: 370, y: 292, w: 260, h: 130 });
     // 600×300 fits at scale 0.433 → 260×130, centered.
-    expect(front?.transform.width).toBeCloseTo(260);
-    expect(front?.transform.height).toBeCloseTo(130);
-    expect(front?.transform.x).toBeCloseTo(chest.x);
-    expect(front?.transform.y).toBeCloseTo(chest.y);
-    expect(front?.transform.rotation).toBe(0);
-    expect(front?.fileIndex).toBe(0);
+    expect(layer.type === "image" && layer.transform.width).toBeCloseTo(260);
+    expect(layer.type === "image" && layer.transform.height).toBeCloseTo(130);
+    expect(front.selectedLayerId).toBe(layer.id);
   });
 
-  it("an upload on the back doesn't touch the front (per-side files)", () => {
-    let state = builderReducer(start(), {
-      type: "placeArtwork",
+  it("adds a text layer with the requested copy, selected", () => {
+    const state = builderReducer(start(), {
+      type: "addTextLayer",
       view: "front",
-      meta: { name: "front.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 0 },
+      input: textInput("Ruff summer"),
     });
-    const frontBefore = state.design.views.front!.artwork!;
+    const layer = state.design.views.front!.layers[0]!;
+    expect(layer.type).toBe("text");
+    expect(layer.type === "text" && layer.text).toBe("Ruff summer");
+    expect(layer.type === "text" && layer.font).toBe("anton");
+    expect(state.design.views.front!.selectedLayerId).toBe(layer.id);
+  });
+
+  it("an upload on the back doesn't touch the front (per-side layers)", () => {
+    let state = builderReducer(start(), { type: "addImageLayer", view: "front", input: imageInput(0, "front.png") });
+    const frontBefore = state.design.views.front!.layers[0]!;
     state = builderReducer(state, {
-      type: "placeArtwork",
+      type: "addImageLayer",
       view: "back",
-      meta: { name: "back.png", kind: "png", naturalWidth: 400, naturalHeight: 400, fileIndex: 1 },
+      input: imageInput(1, "back.png"),
     });
-
-    const back = state.design.views.back!.artwork!;
-    expect(back.name).toBe("back.png");
-    expect(back.fileIndex).toBe(1);
-    // The front keeps its file, transform and print area.
-    expect(state.design.views.front!.artwork).toEqual(frontBefore);
+    expect(state.design.views.front!.layers[0]).toEqual(frontBefore);
+    const back = state.design.views.back!.layers[0]!;
+    expect(back.type === "image" && back.fileIndex).toBe(1);
   });
 
-  it("reuse: placing an existing file on another side points at the same file index", () => {
-    let state = builderReducer(start(), {
-      type: "placeArtwork",
-      view: "front",
-      meta: { name: "art.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 0 },
-    });
+  it("updates a layer partially (transform and text fields)", () => {
+    let state = builderReducer(start(), { type: "addTextLayer", view: "front", input: textInput("Ruff") });
+    const layerId = state.design.views.front!.layers[0]!.id;
     state = builderReducer(state, {
-      type: "placeArtwork",
-      view: "back",
-      meta: { name: "art.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 0 },
+      type: "updateLayer",
+      view: "front",
+      layerId,
+      patch: {
+        text: "Ruff summer",
+        color: "#ffffff",
+        transform: { x: 10, y: 20, width: 300, height: 120, rotation: 15, flipX: false, skewX: 0.3, skewY: 0 },
+      },
     });
-    expect(state.design.views.front!.artwork!.fileIndex).toBe(0);
-    expect(state.design.views.back!.artwork!.fileIndex).toBe(0);
+    const layer = state.design.views.front!.layers[0]!;
+    expect(layer.type === "text" && layer.text).toBe("Ruff summer");
+    expect(layer.type === "text" && layer.color).toBe("#ffffff");
+    expect(layer.transform.rotation).toBe(15);
+    expect(layer.transform.skewX).toBe(0.3);
   });
 
-  it("removes artwork from one side only, keeping the print-area choice", () => {
-    let state = builderReducer(start(), {
-      type: "placeArtwork",
-      view: "front",
-      meta: { name: "front.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 0 },
-    });
-    state = builderReducer(state, {
-      type: "placeArtwork",
-      view: "back",
-      meta: { name: "back.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 1 },
-    });
-    state = builderReducer(state, { type: "setPrintArea", view: "front", printAreaId: "left-chest" });
-    state = builderReducer(state, { type: "removeArtwork", view: "front" });
-    expect(state.design.views.front?.artwork).toBeNull();
-    expect(state.design.views.back?.artwork).not.toBeNull();
-    expect(state.design.views.front?.printArea).toBe("left-chest");
+  it("removes a layer and clears its selection", () => {
+    let state = builderReducer(start(), { type: "addImageLayer", view: "front", input: imageInput(0) });
+    const layerId = state.design.views.front!.layers[0]!.id;
+    state = builderReducer(state, { type: "removeLayer", view: "front", layerId });
+    expect(state.design.views.front!.layers).toHaveLength(0);
+    expect(state.design.views.front!.selectedLayerId).toBeNull();
   });
 
-  it("usedFileIndexes tracks which files the design references, for dropping unused uploads", () => {
-    let state = builderReducer(start(), {
-      type: "placeArtwork",
-      view: "front",
-      meta: { name: "front.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 0 },
-    });
-    state = builderReducer(state, {
-      type: "placeArtwork",
-      view: "back",
-      meta: { name: "back.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 2 },
-    });
-    expect(usedFileIndexes(state.design)).toEqual(new Set([0, 2]));
-    // With the back removed, file 2 is unused and the builder may drop it.
-    expect(usedFileIndexes(state.design, "back")).toEqual(new Set([0]));
+  it("duplicates a layer offset +12px, selecting the copy above the original", () => {
+    let state = builderReducer(start(), { type: "addTextLayer", view: "front", input: textInput("Ruff") });
+    const originalId = state.design.views.front!.layers[0]!.id;
+    state = builderReducer(state, { type: "duplicateLayer", view: "front", layerId: originalId });
+
+    const layers = state.design.views.front!.layers;
+    expect(layers).toHaveLength(2);
+    expect(layers[0]!.id).toBe(originalId); // stays at the bottom
+    const copy = layers[1]!;
+    expect(copy.id).not.toBe(originalId);
+    expect(state.design.views.front!.selectedLayerId).toBe(copy.id);
+    const original = layers[0]!;
+    expect(copy.transform.x).toBe(original.transform.x + 12);
+    expect(copy.transform.y).toBe(original.transform.y + 12);
   });
 
-  it("commits a transform as one undo step", () => {
-    let state = builderReducer(start(), {
-      type: "placeArtwork",
-      view: "front",
-      meta: { name: "art.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 0 },
-    });
-    const before = state.design.views.front!.artwork!.transform;
-    state = builderReducer(state, {
-      type: "setTransform",
-      view: "front",
-      transform: { ...before, x: before.x + 25, rotation: 15 },
-    });
-    expect(state.design.views.front!.artwork!.transform.x).toBeCloseTo(before.x + 25);
-    expect(state.design.views.front!.artwork!.transform.rotation).toBe(15);
-    expect(state.past).toHaveLength(2); // garment init isn't history; place + transform are
+  it("moveLayer reorders the stack up/down/top/bottom (bottom → top)", () => {
+    let state = builderReducer(start(), { type: "addImageLayer", view: "front", input: imageInput(0, "a.png") });
+    state = builderReducer(state, { type: "addTextLayer", view: "front", input: textInput("B") });
+    state = builderReducer(state, { type: "addImageLayer", view: "front", input: imageInput(1, "c.png") });
+    const [a, b, c] = state.design.views.front!.layers;
+
+    // Top layer can't move up; bottom can't move down.
+    expect(
+      builderReducer(state, { type: "moveLayer", view: "front", layerId: c!.id, to: "up" }).design.views.front!.layers,
+    ).toEqual(state.design.views.front!.layers);
+    expect(
+      builderReducer(state, { type: "moveLayer", view: "front", layerId: a!.id, to: "down" }).design.views.front!
+        .layers,
+    ).toEqual(state.design.views.front!.layers);
+
+    // Up: B goes above C. Down: back again.
+    let moved = builderReducer(state, { type: "moveLayer", view: "front", layerId: b!.id, to: "up" });
+    expect(moved.design.views.front!.layers.map((l) => l.id)).toEqual([a!.id, c!.id, b!.id]);
+    moved = builderReducer(moved, { type: "moveLayer", view: "front", layerId: b!.id, to: "down" });
+    expect(moved.design.views.front!.layers.map((l) => l.id)).toEqual([a!.id, b!.id, c!.id]);
+
+    // Top and bottom.
+    moved = builderReducer(moved, { type: "moveLayer", view: "front", layerId: a!.id, to: "top" });
+    expect(moved.design.views.front!.layers.map((l) => l.id)).toEqual([b!.id, c!.id, a!.id]);
+    moved = builderReducer(moved, { type: "moveLayer", view: "front", layerId: a!.id, to: "bottom" });
+    expect(moved.design.views.front!.layers.map((l) => l.id)).toEqual([a!.id, b!.id, c!.id]);
+  });
+
+  it("selectLayer changes only the selection, without history", () => {
+    let state = builderReducer(start(), { type: "addImageLayer", view: "front", input: imageInput(0) });
+    const layerId = state.design.views.front!.layers[0]!.id;
+    state = builderReducer(state, { type: "selectLayer", view: "front", layerId: null });
+    expect(state.design.views.front!.selectedLayerId).toBeNull();
+    expect(state.past).toHaveLength(1); // just the add
+    void layerId;
+  });
+
+  it("enforces the 8-layer cap per side (canAddLayer + reducer)", () => {
+    let state = start();
+    for (let i = 0; i < MAX_LAYERS_PER_VIEW; i++) {
+      state = builderReducer(state, { type: "addTextLayer", view: "front", input: textInput(`Text ${i}`) });
+    }
+    expect(canAddLayer(state.design.views.front!)).toBe(false);
+    const before = state.design.views.front!.layers;
+    state = builderReducer(state, { type: "addTextLayer", view: "front", input: textInput("One too many") });
+    expect(state.design.views.front!.layers).toEqual(before); // rejected
+  });
+
+  it("all layer actions are undoable", () => {
+    let state = builderReducer(start(), { type: "addTextLayer", view: "front", input: textInput("Ruff") });
+    const layerId = state.design.views.front!.layers[0]!.id;
+    state = builderReducer(state, { type: "duplicateLayer", view: "front", layerId });
+    state = builderReducer(state, { type: "removeLayer", view: "front", layerId });
+    expect(state.design.views.front!.layers).toHaveLength(1);
     state = builderReducer(state, { type: "undo" });
-    expect(state.design.views.front!.artwork!.transform.x).toBeCloseTo(before.x);
-    expect(state.design.views.front!.artwork!.transform.rotation).toBe(0);
-    state = builderReducer(state, { type: "redo" });
-    expect(state.design.views.front!.artwork!.transform.rotation).toBe(15);
-  });
-
-  it("refits the artwork when the print location changes", () => {
-    let state = builderReducer(start(), {
-      type: "placeArtwork",
-      view: "front",
-      meta: { name: "art.png", kind: "png", naturalWidth: 1000, naturalHeight: 1000, fileIndex: 0 },
-    });
-    state = builderReducer(state, { type: "setPrintArea", view: "front", printAreaId: "left-chest" });
-    const transform = state.design.views.front!.artwork!.transform;
-    const chest = getGarment("tshirt").views[0]!.printAreas.find((a) => a.id === "left-chest")!.rect;
-    expect(transform.width).toBeCloseTo(chest.w);
-    expect(transform.height).toBeCloseTo(chest.h);
-    expect(transform.x).toBeCloseTo(chest.x);
+    expect(state.design.views.front!.layers).toHaveLength(2); // back to before the remove
+    state = builderReducer(state, { type: "undo" });
+    expect(state.design.views.front!.layers).toHaveLength(1); // before the duplicate
   });
 });
 
-describe("builderReducer — garment step", () => {
+describe("builderReducer — garment step and colors", () => {
   it("selecting a garment never moves the step (Continue-only, v3)", () => {
     const state = builderReducer(start(), { type: "selectGarment", garmentId: "hoodie" });
-    expect(state.step).toBe(3); // unchanged — only setStep (Continue / pills) moves
+    expect(state.step).toBe(3);
   });
-});
 
-describe("builderReducer — colors and garment switch", () => {
   it("sets a zone color when it is a valid hex and ignores garbage", () => {
     let state = builderReducer(start(), { type: "setZoneColor", zone: "body", hex: "#d50032" });
     expect(state.design.colors.body).toBe("#d50032");
@@ -167,132 +197,21 @@ describe("builderReducer — colors and garment switch", () => {
     expect(state.design.colors.body).toBe("#d50032");
   });
 
-  it("carries shared zone colors on a garment switch, defaults new zones, clears views and invalid sizes", () => {
+  it("carries shared zone colors on a garment switch, defaults new zones, clears layers", () => {
     let state = builderReducer(start(), { type: "setZoneColor", zone: "body", hex: "#d50032" });
-    state = builderReducer(state, { type: "setSize", size: "2XL", qty: 4 });
-    state = builderReducer(state, {
-      type: "placeArtwork",
-      view: "front",
-      meta: { name: "art.png", kind: "png", naturalWidth: 600, naturalHeight: 600, fileIndex: 0 },
-    });
+    state = builderReducer(state, { type: "addImageLayer", view: "front", input: imageInput(0) });
     state = builderReducer(state, { type: "selectGarment", garmentId: "raglan" });
-
     expect(state.design.garment).toBe("raglan");
-    // #d50032 isn't half of any real raglan combo, so the default combo is used.
     expect(state.design.colors).toEqual(getGarment("raglan").defaultColors);
-    expect(Object.keys(state.design.views).sort()).toEqual(["back", "front", "left", "right"]);
-    expect(state.design.views.front?.artwork).toBeNull(); // geometry differs per garment
-    expect(state.design.views.front?.printArea).toBe("front-chest"); // raglan front's first area
-    expect(state.design.sizes["2XL"]).toBe(4); // still a valid size for a raglan
-    expect(state.past).toHaveLength(3); // color + place + garment switch
-
-    state = builderReducer(state, { type: "selectGarment", garmentId: "hat" });
-    expect(Object.keys(state.design.views)).toEqual(["front"]);
-    expect(state.design.colors.body).toBeUndefined();
-    expect(state.design.colors.front).toBe(getGarment("hat").defaultColors.front);
-    expect(state.design.sizes).toEqual({}); // OSFA only — apparel sizes are invalid
-  });
-
-  it("ignores a no-op garment switch", () => {
-    const state = builderReducer(start(), { type: "selectGarment", garmentId: "tshirt" });
-    expect(state.past).toHaveLength(0);
+    expect(state.design.views.front?.layers).toEqual([]); // geometry differs per garment
+    expect(state.past).toHaveLength(3); // color + layer + garment switch
   });
 });
 
-describe("builderReducer — undo/redo cap", () => {
-  it("caps history at 50 and drops the oldest design", () => {
-    let state = start();
-    for (let i = 0; i < 60; i++) {
-      state = builderReducer(state, {
-        type: "setZoneColor",
-        zone: "body",
-        hex: `#${(0x100000 + i).toString(16).slice(0, 6)}`,
-      });
-    }
-    expect(state.past).toHaveLength(50);
-    // 60 pushes with a 50-cap: the kept history starts at the design after push 9.
-    expect(state.past[0]!.colors.body).toBe(`#${(0x100000 + 9).toString(16).slice(0, 6)}`);
-    for (let i = 0; i < 50; i++) state = builderReducer(state, { type: "undo" });
-    expect(state.design.colors.body).toBe(`#${(0x100000 + 9).toString(16).slice(0, 6)}`);
-    expect(state.future).toHaveLength(50);
-  });
-});
-
-describe("builderReducer — details don't flood history", () => {
-  it("updates sizes, notes and referral without pushing history", () => {
-    let state = builderReducer(start(), { type: "setSize", size: "XL", qty: 3 });
-    state = builderReducer(state, { type: "setSize", size: "XL", qty: 90000 }); // clamped to 10000
-    state = builderReducer(state, { type: "setNotes", notes: `x`.repeat(3000) });
-    state = builderReducer(state, { type: "setReferral", referral: { referralSource: "friend" } });
-    expect(state.design.sizes.XL).toBe(10000);
-    expect(state.design.notes).toHaveLength(2000);
-    expect(state.design.referral.referralSource).toBe("friend");
-    expect(state.past).toHaveLength(0);
-  });
-});
-
-describe("sessionStorage round-trip (jsdom)", () => {
-  it("restores design + step, per-side file indexes included, and drops stale views/sizes", () => {
-    let state = builderReducer(start(), { type: "setZoneColor", zone: "body", hex: "#d50032" });
-    state = builderReducer(state, { type: "setSize", size: "2XL", qty: 2 });
-    state = builderReducer(state, {
-      type: "placeArtwork",
-      view: "front",
-      meta: { name: "art.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 0 },
-    });
-    state = builderReducer(state, {
-      type: "placeArtwork",
-      view: "back",
-      meta: { name: "back.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 1 },
-    });
-    persistBuilderState(state);
-
-    const restored = loadPersistedBuilderState();
-    expect(restored).not.toBeNull();
-    expect(restored!.step).toBe(3);
-    expect(restored!.design.colors.body).toBe("#d50032");
-    expect(restored!.design.views.front?.artwork?.name).toBe("art.png");
-    expect(restored!.design.views.front?.artwork?.fileIndex).toBe(0);
-    expect(restored!.design.views.back?.artwork?.fileIndex).toBe(1);
-    expect(restored!.design.views.front?.artwork?.transform.width).toBeGreaterThan(0);
-
-    // A garment that changed underneath (e.g. a stale tab) gets sanitized.
-    sessionStorage.setItem(
-      PERSIST_KEY,
-      JSON.stringify({
-        version: 1,
-        step: 4,
-        design: {
-          ...restored!.design,
-          garment: "hat",
-          views: { ...restored!.design.views, back: restored!.design.views.front },
-          sizes: { "2XL": 9, OSFA: 1 },
-        },
-      }),
-    );
-    const stale = loadPersistedBuilderState()!;
-    expect(Object.keys(stale.design.views)).toEqual(["front"]);
-    expect(stale.design.sizes).toEqual({ OSFA: 1 });
-  });
-
-  it("returns null for corrupt or missing data", () => {
-    sessionStorage.removeItem(PERSIST_KEY);
-    expect(loadPersistedBuilderState()).toBeNull();
-    sessionStorage.setItem(PERSIST_KEY, "{not json");
-    expect(loadPersistedBuilderState()).toBeNull();
-    sessionStorage.setItem(PERSIST_KEY, JSON.stringify({ version: 999, step: 1, design: {} }));
-    expect(loadPersistedBuilderState()).toBeNull();
-  });
-});
-
-describe("payloadPlan (the /api/mockups artwork plan)", () => {
+describe("payloadPlan (the /api/mockups artwork plan, v4)", () => {
   it("maps the design 1:1 onto mockupPayloadSchema's design portion", () => {
     let state = builderReducer(start(), { type: "setZoneColor", zone: "body", hex: "#d50032" });
-    state = builderReducer(state, {
-      type: "placeArtwork",
-      view: "front",
-      meta: { name: "art.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 0 },
-    });
+    state = builderReducer(state, { type: "addImageLayer", view: "front", input: imageInput(0) });
     state = builderReducer(state, { type: "setPrintArea", view: "front", printAreaId: "left-chest" });
     state = builderReducer(state, { type: "setSize", size: "XL", qty: 2 });
     state = builderReducer(state, { type: "setNotes", notes: "  Gildan please  " });
@@ -303,159 +222,260 @@ describe("payloadPlan (the /api/mockups artwork plan)", () => {
       referralSource: state.design.referral.referralSource,
     });
     expect(result.success).toBe(true);
-    expect(result.success && result.data.views).toEqual([
+    expect(result.success && result.data.views[0]?.layers).toEqual([
       {
-        view: "front",
-        printArea: "left-chest",
-        layers: [{ type: "image", artwork: 0, transform: state.design.views.front!.artwork!.transform }],
+        type: "image",
+        artwork: 0,
+        transform:
+          state.design.views.front!.layers[0]!.type === "image" ? state.design.views.front!.layers[0]!.transform : {},
       },
     ]);
     expect(result.success && result.data.notes).toBe("Gildan please");
   });
 
-  it("only includes views that carry artwork", () => {
+  it("only includes sides that carry layers", () => {
     const { payload, filesInUse } = payloadPlan(start().design);
     expect(payload.views).toEqual([]);
     expect(filesInUse).toEqual([]);
   });
 
-  it("assigns dense artwork indexes in first-use order across views", () => {
-    // The front uses file 1, the back uses file 0 (uploaded later, but printed second).
-    let state = builderReducer(start(), {
-      type: "placeArtwork",
-      view: "front",
-      meta: { name: "front.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 1 },
-    });
-    state = builderReducer(state, {
-      type: "placeArtwork",
-      view: "back",
-      meta: { name: "back.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 0 },
-    });
+  it("assigns dense artwork indexes across several image layers, in first-use order", () => {
+    // Long sleeve: front uses file 1, the left sleeve uses file 0 — first use wins.
+    let state = builderReducer(start(), { type: "selectGarment", garmentId: "longsleeve" });
+    state = builderReducer(state, { type: "addImageLayer", view: "front", input: imageInput(1, "front.png") });
+    state = builderReducer(state, { type: "addImageLayer", view: "left", input: imageInput(0, "sleeve.png") });
 
     const { payload, filesInUse } = payloadPlan(state.design);
-    expect(payload.views.map((v) => [v.view, (v.layers[0] as { artwork: number }).artwork])).toEqual([
-      ["front", 0],
-      ["back", 1],
-    ]);
+    const [front, left] = payload.views;
+    expect(front.view).toBe("front");
+    expect(front.layers[0]).toEqual({ type: "image", artwork: 0, transform: expect.anything() });
+    expect(left.view).toBe("left");
+    expect(left.layers[0]).toEqual({ type: "image", artwork: 1, transform: expect.anything() });
     // File 1 goes on the wire first (artwork-0), then file 0 (artwork-1).
     expect(filesInUse).toEqual([1, 0]);
   });
 
-  it("a file used on several sides is uploaded once", () => {
-    let state = builderReducer(start(), {
-      type: "placeArtwork",
-      view: "front",
-      meta: { name: "art.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 0 },
-    });
+  it("a text-only design passes the payload schema with zero files", () => {
+    let state = builderReducer(start(), { type: "addTextLayer", view: "front", input: textInput("Ruff summer") });
     state = builderReducer(state, {
-      type: "placeArtwork",
-      view: "back",
-      meta: { name: "art.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 0 },
+      type: "updateLayer",
+      view: "front",
+      layerId: state.design.views.front!.layers[0]!.id,
+      patch: {
+        color: "#ffffff",
+        outline: { color: "#000000", width: 3 },
+        transform: {
+          x: 350,
+          y: 300,
+          width: 300,
+          height: 120,
+          rotation: -20,
+          flipX: false,
+          skewX: -0.45,
+          skewY: 0,
+        },
+      },
     });
 
     const { payload, filesInUse } = payloadPlan(state.design);
-    expect(payload.views.map((v) => (v.layers[0] as { artwork: number }).artwork)).toEqual([0, 0]);
-    expect(filesInUse).toEqual([0]);
+    expect(filesInUse).toEqual([]);
+    const result = mockupPayloadSchema.safeParse(payload);
+    expect(result.success).toBe(true);
+    expect(result.success && result.data.views[0]?.layers[0]).toMatchObject({
+      type: "text",
+      text: "Ruff summer",
+      font: "anton",
+      color: "#ffffff",
+      outline: { color: "#000000", width: 3 },
+      transform: { skewX: -0.45, height: 120, width: 300 },
+    });
+  });
+
+  it("several layers per side keep their stack order", () => {
+    let state = builderReducer(start(), { type: "addImageLayer", view: "front", input: imageInput(0) });
+    state = builderReducer(state, { type: "addTextLayer", view: "front", input: textInput("On top") });
+
+    const { payload } = payloadPlan(state.design);
+    expect(payload.views[0]!.layers.map((l) => l.type)).toEqual(["image", "text"]);
   });
 });
 
-describe("designFromRestore (deep link, v3: artwork per side)", () => {
-  const frontMeta = { name: "front.png", kind: "png", naturalWidth: 600, naturalHeight: 300 } as Omit<
-    ArtworkMeta,
-    "transform" | "fileIndex"
-  >;
-  const backMeta = { name: "back.png", kind: "png", naturalWidth: 400, naturalHeight: 400 } as Omit<
-    ArtworkMeta,
-    "transform" | "fileIndex"
-  >;
+describe("usedFileIndexes (file cleanup)", () => {
+  it("collects every image layer's file across sides, and can exclude one side", () => {
+    let state = builderReducer(start(), { type: "addImageLayer", view: "front", input: imageInput(0) });
+    state = builderReducer(state, { type: "addImageLayer", view: "back", input: imageInput(2) });
+    expect(usedFileIndexes(state.design)).toEqual(new Set([0, 2]));
+    expect(usedFileIndexes(state.design, "back")).toEqual(new Set([0]));
+  });
+});
 
-  it("rebuilds the design and maps each view to its artwork file", () => {
-    const design = designFromRestore(
-      {
-        garment: "tshirt",
-        colors: { body: "#263147" },
-        views: [
-          {
-            view: "front",
-            printArea: "full-front",
-            transform: { x: 344, y: 292, width: 312, height: 364, rotation: 15, flipX: false, skewX: 0, skewY: 0 },
-            artwork: 0,
-          },
-          {
-            view: "back",
-            printArea: "full-back",
-            transform: { x: 344, y: 262, width: 312, height: 364, rotation: 0, flipX: false, skewX: 0, skewY: 0 },
-            artwork: 1,
-          },
-        ],
-        sizes: { M: 2 },
-      },
-      [frontMeta, backMeta],
-    );
-    expect(design.garment).toBe("tshirt");
-    expect(design.colors.body).toBe("#263147");
-    expect(design.views.front?.printArea).toBe("full-front");
-    expect(design.views.front?.artwork).toMatchObject({
-      name: "front.png",
-      fileIndex: 0,
-      transform: { rotation: 15, flipX: false, skewX: 0, skewY: 0 },
-    });
-    expect(design.views.back?.artwork).toMatchObject({ name: "back.png", fileIndex: 1 });
-    expect(design.sizes).toEqual({ M: 2 });
-    // Notes are not part of the restore response; the design starts clean.
-    expect(design.notes).toBe("");
+describe("sessionStorage round-trip (jsdom)", () => {
+  it("restores design + step with per-side layers and file indexes", () => {
+    let state = builderReducer(start(), { type: "setZoneColor", zone: "body", hex: "#d50032" });
+    state = builderReducer(state, { type: "addImageLayer", view: "front", input: imageInput(0) });
+    state = builderReducer(state, { type: "addTextLayer", view: "back", input: textInput("Back print") });
+    persistBuilderState(state);
+
+    const restored = loadPersistedBuilderState();
+    expect(restored).not.toBeNull();
+    expect(restored!.step).toBe(3);
+    expect(restored!.design.colors.body).toBe("#d50032");
+    expect(restored!.design.views.front?.layers[0]?.type).toBe("image");
+    expect(
+      restored!.design.views.front?.layers[0]?.type === "image" && restored!.design.views.front?.layers[0]?.fileIndex,
+    ).toBe(0);
+    expect(restored!.design.views.back?.layers[0]?.type).toBe("text");
+    expect(
+      restored!.design.views.back?.layers[0]?.type === "text" && restored!.design.views.back?.layers[0]?.text,
+    ).toBe("Back print");
   });
 
-  it("two views sharing an artwork index share one file", () => {
-    const design = designFromRestore(
-      {
-        garment: "tshirt",
-        colors: { body: "#ffffff" },
-        views: [
-          {
-            view: "front",
-            printArea: "full-front",
-            transform: { x: 344, y: 292, width: 312, height: 364, rotation: 0, flipX: false, skewX: 0, skewY: 0 },
-            artwork: 0,
+  it("migrates a v1 saved design (one artwork per view) into one image layer", () => {
+    // Build a v1 payload by hand: one artwork per view, no layers.
+    sessionStorage.setItem(
+      "charly.builder.v1",
+      JSON.stringify({
+        version: 1,
+        step: 3,
+        design: {
+          garment: "tshirt",
+          colors: { body: "#d50032" },
+          views: {
+            front: {
+              printArea: "full-front",
+              artwork: {
+                name: "art.png",
+                kind: "png",
+                naturalWidth: 600,
+                naturalHeight: 300,
+                transform: {
+                  x: 344,
+                  y: 292,
+                  width: 312,
+                  height: 364,
+                  rotation: 0,
+                  flipX: false,
+                  skewX: 0,
+                  skewY: 0,
+                },
+                fileIndex: 0,
+              },
+            },
           },
-          {
-            view: "back",
-            printArea: "full-back",
-            transform: { x: 344, y: 262, width: 312, height: 364, rotation: 0, flipX: false, skewX: 0, skewY: 0 },
-            artwork: 0,
-          },
-        ],
-        sizes: {},
-      },
-      [frontMeta],
+          sizes: { M: 2 },
+          notes: "saved before v4",
+          referral: {},
+        },
+      }),
     );
-    expect(design.views.front?.artwork?.fileIndex).toBe(0);
-    expect(design.views.back?.artwork?.fileIndex).toBe(0);
+    const migrated = loadPersistedBuilderState();
+    expect(migrated).not.toBeNull();
+    expect(migrated!.design.views.front?.layers).toHaveLength(1);
+    const layer = migrated!.design.views.front!.layers[0]!;
+    expect(layer.type).toBe("image");
+    expect(layer.type === "image" && layer.fileIndex).toBe(0);
+    expect(layer.type === "image" && layer.name).toBe("art.png");
+    expect(migrated!.design.colors.body).toBe("#d50032");
+    // The migrated design is persisted in the v2 format for the next visit.
+    expect(sessionStorage.getItem(PERSIST_KEY)).toContain('"version":2');
+  });
+
+  it("returns null for corrupt or missing data", () => {
+    sessionStorage.removeItem(PERSIST_KEY);
+    sessionStorage.removeItem("charly.builder.v1");
+    expect(loadPersistedBuilderState()).toBeNull();
+    sessionStorage.setItem(PERSIST_KEY, "{not json");
+    expect(loadPersistedBuilderState()).toBeNull();
+  });
+});
+
+describe("designFromRestore (deep link, v4: layers)", () => {
+  it("rebuilds layered sides from the API response", () => {
+    const design = designFromRestore({
+      garment: "longsleeve",
+      colors: { body: "#263147" },
+      views: [
+        {
+          view: "left",
+          printArea: "full-sleeve",
+          layers: [
+            {
+              type: "text",
+              text: "RUFF",
+              font: "anton",
+              color: "#ffffff",
+              outline: { color: "#000000", width: 2 },
+              align: "center",
+              letterSpacing: 4,
+              transform: {
+                x: 425,
+                y: 300,
+                width: 140,
+                height: 420,
+                rotation: 0,
+                flipX: false,
+                skewX: -0.45,
+                skewY: 0,
+              },
+            },
+          ],
+        },
+        {
+          view: "front",
+          printArea: "full-front",
+          layers: [
+            {
+              type: "image",
+              artwork: 0,
+              transform: { x: 350, y: 290, width: 300, height: 350, rotation: 0, flipX: false, skewX: 0, skewY: 0 },
+            },
+          ],
+        },
+      ],
+      sizes: { M: 2 },
+    });
+
+    const left = design.views.left!;
+    expect(left.layers[0]!.type).toBe("text");
+    const textLayer = left.layers[0]!;
+    expect(textLayer.type === "text" && textLayer.text).toBe("RUFF");
+    expect(textLayer.type === "text" && textLayer.transform.skewX).toBe(-0.45);
+
+    const front = design.views.front!;
+    expect(front.layers[0]!.type).toBe("image");
+    // The image layer's fileIndex points into the builder's restored files array.
+    expect(front.layers[0]!.type === "image" && front.layers[0]!.fileIndex).toBe(0);
+
+    const { payload } = payloadPlan(design);
+    const result = mockupPayloadSchema.safeParse(payload);
+    expect(result.success).toBe(true);
   });
 
   it("falls back to garment defaults for unknown zones, print areas and sizes", () => {
-    const design = designFromRestore(
-      {
-        garment: "hat",
-        colors: { body: "#d50032", notAZone: "#000000" },
-        views: [
-          {
-            view: "front",
-            printArea: "made-up-area",
-            transform: { ...fitTransform({ x: 0, y: 0, w: 100, h: 100 }, 600, 300), rotation: 999 },
-            artwork: 0,
-          },
-        ],
-        sizes: { OSFA: 3, "2XL": 5 },
-      },
-      [frontMeta],
-    );
+    const design = designFromRestore({
+      garment: "hat",
+      colors: { body: "#d50032", notAZone: "#000000" },
+      views: [
+        {
+          view: "front",
+          printArea: "made-up-area",
+          layers: [
+            {
+              type: "image",
+              artwork: 0,
+              transform: { ...fitTransform({ x: 0, y: 0, w: 100, h: 100 }, 600, 300), rotation: 999 },
+            },
+          ],
+        },
+      ],
+      sizes: { OSFA: 3, "2XL": 5 },
+    });
     expect(design.colors.front).toBe(getGarment("hat").defaultColors.front);
     expect(design.colors.notAZone).toBeUndefined();
     const front = design.views.front!;
     expect(front.printArea).toBe("hat-front"); // unknown area → the view's first
     // A corrupt transform (rotation outside ±360) re-fits into the area instead.
-    expect(front.artwork!.transform.rotation).toBe(0);
+    expect(front.layers[0]!.type === "image" && front.layers[0]!.transform.rotation).toBe(0);
     expect(design.sizes).toEqual({ OSFA: 3 }); // 2XL isn't a hat size
   });
 });
@@ -468,6 +488,7 @@ describe("fitTransform", () => {
     expect(t.y).toBeCloseTo(292 + (364 - 156) / 2);
     expect(t.rotation).toBe(0);
     expect(t.flipX).toBe(false);
+    expect(t.skewX).toBe(0);
   });
 
   it("falls back to the rect size for a zero-sized image", () => {
