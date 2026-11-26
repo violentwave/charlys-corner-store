@@ -19,6 +19,7 @@ import { track } from "@/lib/analytics";
 import { MOCKUP_FILES_RETENTION_DAYS } from "@/lib/retention";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
+import { cn } from "@/lib/cn";
 import type { BrandKit } from "@/app/api/account/brand-kit/route";
 
 import { ColorPicker } from "./color-picker";
@@ -28,6 +29,8 @@ import { AUTH_CHANGED_EVENT } from "@/components/layout/session";
 
 import { DesignInspector } from "./design-inspector";
 import { SignInDialog, type SignInDialogMode } from "./sign-in-dialog";
+import { MobileActionBar } from "./action-bar";
+import { ToolTabs } from "./tool-tabs";
 import {
   designFromRestore,
   initialDesign,
@@ -347,6 +350,13 @@ export function Builder() {
     track("builder_start");
   }, []);
 
+  // Preload the default text font so "Add text" measures and dispatches without a font
+  // fetch in between (the tab auto-switch must not land a beat after the visitor's
+  // next tap).
+  useEffect(() => {
+    void loadTextFont(DEFAULT_TEXT_FONT);
+  }, []);
+
   useEffect(() => {
     if (step === 4 && !success) track("gate_viewed", { garment: design.garment });
   }, [step, success, design.garment]);
@@ -371,6 +381,31 @@ export function Builder() {
     setLockRatioFor(activeViewState.selectedLayerId);
     setLockRatio(selectedLayer?.type === "image");
   }
+
+  // Below lg, step 3 switches to the mobile shell (sticky canvas + tool tabs + action
+  // bar); desktop and the other steps keep the current layout.
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const onChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  // On-screen keyboard open (visual viewport shrank): the sticky canvas drops to 30svh
+  // so the text field stays visible above the keyboard.
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    const onResize = () => setKeyboardOpen(viewport.height < window.innerHeight * 0.75);
+    viewport.addEventListener("resize", onResize);
+    return () => viewport.removeEventListener("resize", onResize);
+  }, []);
+
+  const mobileStep3 = step === 3 && !isDesktop;
 
   /** Validates + decodes an uploaded file into a new ArtworkFile entry. */
   const decodeUpload = async (selected: File): Promise<ArtworkFile | null> => {
@@ -724,13 +759,101 @@ export function Builder() {
 
   const goStep = (next: BuilderStep) => {
     dispatch({ type: "setStep", step: next });
-    // Steps live below the canvas on phones; keep the panel in view.
+    // Steps live below the canvas on phones; keep the panel in view. The scroll-margin
+    // that clears the fixed canvas (mobile step 3) arrives with the new step's render,
+    // so scroll one frame later — an immediate scrollIntoView reads margin 0.
     if (typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches) {
-      document.getElementById("builder-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      requestAnimationFrame(() => {
+        document.getElementById("builder-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
     }
   };
 
   const stepInfo = STEPS.find((s) => s.id === step)!;
+
+  /* The restore/relink notices (they matter most right after a refresh or restore). */
+  const notices = (
+    <>
+      {restoreStatus ? (
+        <p
+          role="status"
+          data-testid="restore-status"
+          className={restoreStatus === "failed" ? "text-danger text-sm" : "text-neon-cyan text-sm"}
+        >
+          {restoreStatus === "loading"
+            ? "Loading your saved design…"
+            : restoreStatus === "loaded"
+              ? "Loaded your saved design."
+              : restoreStatus === "expired"
+                ? `Loaded your colors and text. Uploaded images are deleted after ${MOCKUP_FILES_RETENTION_DAYS} days, so add yours again.`
+                : "We couldn't load that saved design — starting fresh."}
+        </p>
+      ) : null}
+      {sidesNeedingFiles.length > 0 && step === 3 ? (
+        <p className="border-border bg-bg-2/60 rounded-md border p-2 text-xs" data-testid="relink-sides" role="note">
+          Pick your artwork file again to put it back on: {sidesNeedingFiles.join(", ")}.
+        </p>
+      ) : null}
+    </>
+  );
+
+  /* Step pills (smaller) + "Step n of 4" + slim progress bar (docs/04 v2). Rendered in
+     the flow everywhere, and inside the mobile tool shell on step 3 (the flow copy is
+     display:none there — one visible instance per size). */
+  const stepProgress = (
+    <div className="flex flex-col gap-2" data-testid="builder-progress">
+      <div className="flex items-center justify-between gap-3">
+        <ol className="flex flex-wrap items-center gap-1.5" aria-label="Builder steps">
+          {STEPS.map(({ id, label }) => (
+            <li key={id} className="flex items-center gap-1.5" aria-current={step === id ? "step" : undefined}>
+              <button
+                type="button"
+                onClick={() => goStep(id)}
+                aria-label={`Step ${id}: ${label}`}
+                className={
+                  step === id
+                    ? "bg-neon-pink text-bg-0 focus-visible:ring-neon-cyan flex h-9 items-center rounded-full px-3 text-xs font-semibold focus-visible:ring-2 focus-visible:outline-none"
+                    : "bg-bg-2 text-text-2 focus-visible:ring-neon-cyan hover:text-text-1 flex h-9 items-center rounded-full px-3 text-xs focus-visible:ring-2 focus-visible:outline-none"
+                }
+              >
+                {id}. {label}
+              </button>
+              {id < STEPS.length ? (
+                <span aria-hidden="true" className="text-text-3 text-xs">
+                  →
+                </span>
+              ) : null}
+            </li>
+          ))}
+        </ol>
+        <p aria-hidden="true" className="text-text-3 shrink-0 font-mono text-xs">
+          Step {step} of {STEPS.length}
+        </p>
+      </div>
+      <div className="bg-bg-3 h-1 overflow-hidden rounded-full" role="presentation">
+        <div
+          className="bg-neon-pink h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none"
+          style={{ width: `${(step / STEPS.length) * 100}%` }}
+        />
+      </div>
+      <p className="sr-only" role="status">
+        Step {step} of {STEPS.length}: {stepInfo.headline}
+      </p>
+    </div>
+  );
+
+  /** The footer's and the action bar's shared "Save draft" click (sign-in gate first). */
+  const startSaveDraft = () => {
+    if (account?.verified) {
+      setDraftError(null);
+      setSaveDraftOpen(true);
+      return;
+    }
+    dialogPurposeRef.current = "draft";
+    pendingDropRef.current = null;
+    setSignInDialog(account && !account.verified ? "unverified" : "signedOut");
+  };
+
   const colorNames = garment.colorZones.map((zone) => {
     const hex = design.colors[zone.id] ?? garment.defaultColors[zone.id] ?? "#f4f4f4";
     const name = garment.palette.find((c) => c.hex === hex)?.name;
@@ -743,8 +866,27 @@ export function Builder() {
   const activeArea = activeView.printAreas.find((a) => a.id === activeViewState.printArea) ?? activeView.printAreas[0]!;
 
   return (
-    <div className="mt-8 grid items-start gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
-      <div className="flex min-w-0 flex-col gap-2 lg:sticky lg:top-24">
+    <div
+      className={cn(
+        "mt-8 flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-start",
+        // Mobile step 3 (P51-1): the canvas height budget and the surrounding chrome
+        // heights as custom properties, so the tool-tab panel can size itself against
+        // them (the sticky canvas also reads --canvas-h).
+        mobileStep3 && !keyboardOpen && "[--canvas-h:max(42svh,260px)]",
+        mobileStep3 && keyboardOpen && "[--canvas-h:30svh]",
+        // The fixed canvas leaves the flow: pad the content below it by its height.
+        mobileStep3 && "pt-[calc(var(--canvas-h)+1rem)]",
+      )}
+    >
+      <div
+        className={cn(
+          "flex min-w-0 flex-col gap-2 lg:sticky lg:top-24",
+          // Mobile step 3: FIXED, not sticky — a sticky element can only travel within
+          // its parent, so it unsticks exactly when the visitor reads the panel below.
+          // Fixed keeps the canvas on screen for the whole step; content scrolls under it.
+          mobileStep3 && "bg-bg-0 fixed inset-x-0 top-16 z-30 pb-4",
+        )}
+      >
         <GarmentStage
           ref={stageRef}
           garmentName={garment.name}
@@ -754,6 +896,7 @@ export function Builder() {
           layers={activeViewState.layers}
           selectedLayerId={activeViewState.selectedLayerId}
           images={Object.fromEntries(files.map((f, i) => [i, f.img]))}
+          fitContainerHeight={mobileStep3}
           emptyState={
             step === 3
               ? {
@@ -775,7 +918,7 @@ export function Builder() {
           onUndo={undo}
           onRedo={redo}
         />
-        <p className="text-text-3 text-xs">
+        <p className={cn("text-text-3 text-xs", mobileStep3 && "sr-only")}>
           Preview on a neutral studio background — the exported mockup is exactly what we print.
         </p>
         {/* The gated file picker: opened by attemptUpload, never before the account check. */}
@@ -795,7 +938,15 @@ export function Builder() {
         />
       </div>
 
-      <div id="builder-panel" className="flex min-w-0 flex-col gap-4">
+      <div
+        id="builder-panel"
+        className={cn(
+          "flex min-w-0 flex-col gap-4",
+          // Mobile step 3: goStep's scrollIntoView must land the panel below the sticky
+          // canvas + tabs, not at the viewport top (which the sticky canvas covers).
+          mobileStep3 && "scroll-mt-[calc(4rem+var(--canvas-h)+1rem)]",
+        )}
+      >
         {success ? (
           <div className="bg-bg-2/60 rounded-2xl p-4 sm:p-6">
             <SuccessScreen
@@ -812,74 +963,18 @@ export function Builder() {
           </div>
         ) : (
           <>
-            {restoreStatus ? (
-              <p
-                role="status"
-                data-testid="restore-status"
-                className={restoreStatus === "failed" ? "text-danger text-sm" : "text-neon-cyan text-sm"}
-              >
-                {restoreStatus === "loading"
-                  ? "Loading your saved design…"
-                  : restoreStatus === "loaded"
-                    ? "Loaded your saved design."
-                    : restoreStatus === "expired"
-                      ? `Loaded your colors and text. Uploaded images are deleted after ${MOCKUP_FILES_RETENTION_DAYS} days, so add yours again.`
-                      : "We couldn't load that saved design — starting fresh."}
-              </p>
+            {/* Notices + step navigation. On mobile step 3 these render inside the fixed
+                tool shell instead (conditionally — never two copies in the DOM). */}
+            {!mobileStep3 ? (
+              <>
+                {notices}
+                {stepProgress}
+              </>
             ) : null}
-            {sidesNeedingFiles.length > 0 && step === 3 ? (
-              <p
-                className="border-border bg-bg-2/60 rounded-md border p-2 text-xs"
-                data-testid="relink-sides"
-                role="note"
-              >
-                Pick your artwork file again to put it back on: {sidesNeedingFiles.join(", ")}.
-              </p>
-            ) : null}
-
-            {/* Step pills (smaller) + "Step n of 4" + slim progress bar (docs/04 v2). */}
-            <div className="flex flex-col gap-2" data-testid="builder-progress">
-              <div className="flex items-center justify-between gap-3">
-                <ol className="flex flex-wrap items-center gap-1.5" aria-label="Builder steps">
-                  {STEPS.map(({ id, label }) => (
-                    <li key={id} className="flex items-center gap-1.5" aria-current={step === id ? "step" : undefined}>
-                      <button
-                        type="button"
-                        onClick={() => goStep(id)}
-                        aria-label={`Step ${id}: ${label}`}
-                        className={
-                          step === id
-                            ? "bg-neon-pink text-bg-0 focus-visible:ring-neon-cyan flex h-9 items-center rounded-full px-3 text-xs font-semibold focus-visible:ring-2 focus-visible:outline-none"
-                            : "bg-bg-2 text-text-2 focus-visible:ring-neon-cyan hover:text-text-1 flex h-9 items-center rounded-full px-3 text-xs focus-visible:ring-2 focus-visible:outline-none"
-                        }
-                      >
-                        {id}. {label}
-                      </button>
-                      {id < STEPS.length ? (
-                        <span aria-hidden="true" className="text-text-3 text-xs">
-                          →
-                        </span>
-                      ) : null}
-                    </li>
-                  ))}
-                </ol>
-                <p aria-hidden="true" className="text-text-3 shrink-0 font-mono text-xs">
-                  Step {step} of {STEPS.length}
-                </p>
-              </div>
-              <div className="bg-bg-3 h-1 overflow-hidden rounded-full" role="presentation">
-                <div
-                  className="bg-neon-pink h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none"
-                  style={{ width: `${(step / STEPS.length) * 100}%` }}
-                />
-              </div>
-              <p className="sr-only" role="status">
-                Step {step} of {STEPS.length}: {stepInfo.headline}
-              </p>
-            </div>
 
             <div className="bg-bg-2/60 rounded-2xl p-4 sm:p-6">
-              <header className="mb-5 flex flex-col gap-1">
+              {/* Below lg on step 3 the fixed tool shell replaces this card header. */}
+              <header className={cn("mb-5 flex flex-col gap-1", mobileStep3 && "hidden")}>
                 <h2 className="font-heading text-text-1 text-xl tracking-wide uppercase">{stepInfo.headline}</h2>
                 <p className="text-text-2 text-sm">{stepInfo.helper}</p>
               </header>
@@ -902,53 +997,111 @@ export function Builder() {
                 />
               ) : null}
               {step === 3 ? (
-                <DesignInspector
-                  view={activeView}
-                  views={garment.views}
-                  viewState={activeViewState}
-                  artByView={artByView}
-                  files={chooserFiles}
-                  selectedFileReady={selectedLayer?.type !== "image" || !!files[selectedLayer.fileIndex]}
-                  fileError={fileError}
-                  capReached={activeViewState.layers.length >= MAX_LAYERS_PER_VIEW}
-                  accountEmail={account?.verified ? account.email : null}
-                  brandInks={brandKit?.inkColors}
-                  brandFonts={brandKit?.fonts as TextFontId[] | undefined}
-                  logo={brandKit?.logo}
-                  onAddLogo={() => void addBrandLogo()}
-                  lockRatio={lockRatio}
-                  onLockRatioChange={setLockRatio}
-                  onUploadClick={() => void attemptUpload()}
-                  onDropFile={(file) => void attemptUpload(file)}
-                  onAddText={addText}
-                  onViewChange={setRequestedView}
-                  onSetPrintArea={(viewId, areaId) =>
-                    dispatch({ type: "setPrintArea", view: viewId, printAreaId: areaId })
-                  }
-                  method={effectiveMethod(activeViewState.method, garment, design.colors, activeArea)}
-                  methodOptions={PRINT_METHODS.map((m) => ({
-                    ...m,
-                    blocker: methodBlocker(m.id, garment, design.colors, activeArea),
-                  }))}
-                  onSetPrintMethod={(viewId, method) => dispatch({ type: "setPrintMethod", view: viewId, method })}
-                  onSelectLayer={(layerId) => dispatch({ type: "selectLayer", view: activeViewId, layerId })}
-                  onTransform={(layerId, transform, mergeKey) =>
-                    dispatch({ type: "updateLayer", view: activeViewId, layerId, patch: { transform }, mergeKey })
-                  }
-                  onTextChange={changeText}
-                  onOutlineChange={(layerId, outline, mergeKey) =>
-                    dispatch({
-                      type: "updateLayer",
-                      view: activeViewId,
-                      layerId,
-                      patch: { outline } as Partial<BuilderLayer>,
-                      mergeKey,
-                    })
-                  }
-                  onRemoveLayer={(layerId) => removeLayer(activeViewId, layerId)}
-                  onDuplicateLayer={(layerId) => dispatch({ type: "duplicateLayer", view: activeViewId, layerId })}
-                  onMoveLayer={(layerId, to) => dispatch({ type: "moveLayer", view: activeViewId, layerId, to })}
-                />
+                isDesktop ? (
+                  <DesignInspector
+                    view={activeView}
+                    views={garment.views}
+                    viewState={activeViewState}
+                    artByView={artByView}
+                    files={chooserFiles}
+                    selectedFileReady={selectedLayer?.type !== "image" || !!files[selectedLayer.fileIndex]}
+                    fileError={fileError}
+                    capReached={activeViewState.layers.length >= MAX_LAYERS_PER_VIEW}
+                    accountEmail={account?.verified ? account.email : null}
+                    brandInks={brandKit?.inkColors}
+                    brandFonts={brandKit?.fonts as TextFontId[] | undefined}
+                    logo={brandKit?.logo}
+                    onAddLogo={() => void addBrandLogo()}
+                    lockRatio={lockRatio}
+                    onLockRatioChange={setLockRatio}
+                    onUploadClick={() => void attemptUpload()}
+                    onDropFile={(file) => void attemptUpload(file)}
+                    onAddText={addText}
+                    onViewChange={setRequestedView}
+                    onSetPrintArea={(viewId, areaId) =>
+                      dispatch({ type: "setPrintArea", view: viewId, printAreaId: areaId })
+                    }
+                    method={effectiveMethod(activeViewState.method, garment, design.colors, activeArea)}
+                    methodOptions={PRINT_METHODS.map((m) => ({
+                      ...m,
+                      blocker: methodBlocker(m.id, garment, design.colors, activeArea),
+                    }))}
+                    onSetPrintMethod={(viewId, method) => dispatch({ type: "setPrintMethod", view: viewId, method })}
+                    onSelectLayer={(layerId) => dispatch({ type: "selectLayer", view: activeViewId, layerId })}
+                    onTransform={(layerId, transform, mergeKey) =>
+                      dispatch({ type: "updateLayer", view: activeViewId, layerId, patch: { transform }, mergeKey })
+                    }
+                    onTextChange={changeText}
+                    onOutlineChange={(layerId, outline, mergeKey) =>
+                      dispatch({
+                        type: "updateLayer",
+                        view: activeViewId,
+                        layerId,
+                        patch: { outline } as Partial<BuilderLayer>,
+                        mergeKey,
+                      })
+                    }
+                    onRemoveLayer={(layerId) => removeLayer(activeViewId, layerId)}
+                    onDuplicateLayer={(layerId) => dispatch({ type: "duplicateLayer", view: activeViewId, layerId })}
+                    onMoveLayer={(layerId, to) => dispatch({ type: "moveLayer", view: activeViewId, layerId, to })}
+                  />
+                ) : (
+                  <ToolTabs
+                    top={
+                      mobileStep3 ? (
+                        <>
+                          {notices}
+                          {stepProgress}
+                        </>
+                      ) : undefined
+                    }
+                    view={activeView}
+                    views={garment.views}
+                    viewState={activeViewState}
+                    artByView={artByView}
+                    files={chooserFiles}
+                    selectedFileReady={selectedLayer?.type !== "image" || !!files[selectedLayer.fileIndex]}
+                    fileError={fileError}
+                    capReached={activeViewState.layers.length >= MAX_LAYERS_PER_VIEW}
+                    accountEmail={account?.verified ? account.email : null}
+                    brandInks={brandKit?.inkColors}
+                    brandFonts={brandKit?.fonts as TextFontId[] | undefined}
+                    logo={brandKit?.logo}
+                    onAddLogo={() => void addBrandLogo()}
+                    lockRatio={lockRatio}
+                    onLockRatioChange={setLockRatio}
+                    onUploadClick={() => void attemptUpload()}
+                    onDropFile={(file) => void attemptUpload(file)}
+                    onAddText={addText}
+                    onViewChange={setRequestedView}
+                    onSetPrintArea={(viewId, areaId) =>
+                      dispatch({ type: "setPrintArea", view: viewId, printAreaId: areaId })
+                    }
+                    method={effectiveMethod(activeViewState.method, garment, design.colors, activeArea)}
+                    methodOptions={PRINT_METHODS.map((m) => ({
+                      ...m,
+                      blocker: methodBlocker(m.id, garment, design.colors, activeArea),
+                    }))}
+                    onSetPrintMethod={(viewId, method) => dispatch({ type: "setPrintMethod", view: viewId, method })}
+                    onSelectLayer={(layerId) => dispatch({ type: "selectLayer", view: activeViewId, layerId })}
+                    onTransform={(layerId, transform, mergeKey) =>
+                      dispatch({ type: "updateLayer", view: activeViewId, layerId, patch: { transform }, mergeKey })
+                    }
+                    onTextChange={changeText}
+                    onOutlineChange={(layerId, outline, mergeKey) =>
+                      dispatch({
+                        type: "updateLayer",
+                        view: activeViewId,
+                        layerId,
+                        patch: { outline } as Partial<BuilderLayer>,
+                        mergeKey,
+                      })
+                    }
+                    onRemoveLayer={(layerId) => removeLayer(activeViewId, layerId)}
+                    onDuplicateLayer={(layerId) => dispatch({ type: "duplicateLayer", view: activeViewId, layerId })}
+                    onMoveLayer={(layerId, to) => dispatch({ type: "moveLayer", view: activeViewId, layerId, to })}
+                  />
+                )
               ) : null}
               {step === 4 ? (
                 <SendStep
@@ -967,62 +1120,66 @@ export function Builder() {
                 />
               ) : null}
 
-              <div className="mt-6 flex flex-col gap-2">
-                <div className="flex items-center justify-between gap-3">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => goStep((step - 1) as BuilderStep)}
-                    disabled={step === 1}
-                  >
-                    ← Back
-                  </Button>
-                  {step < 4 ? (
-                    <Button size="sm" onClick={() => goStep((step + 1) as BuilderStep)}>
-                      Continue →
+              {/* Below lg on step 3 these live in the fixed action bar instead (P51-1);
+                  conditionally rendered — never two copies in the DOM. */}
+              {!mobileStep3 ? (
+                <div className="mt-6 flex flex-col gap-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => goStep((step - 1) as BuilderStep)}
+                      disabled={step === 1}
+                    >
+                      ← Back
                     </Button>
+                    {step < 4 ? (
+                      <Button size="sm" onClick={() => goStep((step + 1) as BuilderStep)}>
+                        Continue →
+                      </Button>
+                    ) : null}
+                  </div>
+                  {/* Secondary actions on their own row, so the footer never overflows at 360px. */}
+                  {step > 1 ? (
+                    <div className="flex flex-wrap items-center gap-1">
+                      {step === 3 ? (
+                        <>
+                          <Button variant="ghost" size="sm" onClick={undo} disabled={!canUndo} data-testid="undo">
+                            Undo
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={redo} disabled={!canRedo} data-testid="redo">
+                            Redo
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={startSaveDraft} data-testid="save-draft">
+                            Save draft
+                          </Button>
+                        </>
+                      ) : null}
+                      <span className="ml-auto">
+                        <StartOverButton onConfirm={designAnother} />
+                      </span>
+                    </div>
                   ) : null}
                 </div>
-                {/* Secondary actions on their own row, so the footer never overflows at 360px. */}
-                {step > 1 ? (
-                  <div className="flex flex-wrap items-center gap-1">
-                    {step === 3 ? (
-                      <>
-                        <Button variant="ghost" size="sm" onClick={undo} disabled={!canUndo} data-testid="undo">
-                          Undo
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={redo} disabled={!canRedo} data-testid="redo">
-                          Redo
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            if (account?.verified) {
-                              setDraftError(null);
-                              setSaveDraftOpen(true);
-                              return;
-                            }
-                            dialogPurposeRef.current = "draft";
-                            pendingDropRef.current = null;
-                            setSignInDialog(account && !account.verified ? "unverified" : "signedOut");
-                          }}
-                          data-testid="save-draft"
-                        >
-                          Save draft
-                        </Button>
-                      </>
-                    ) : null}
-                    <span className="ml-auto">
-                      <StartOverButton onConfirm={designAnother} />
-                    </span>
-                  </div>
-                ) : null}
-              </div>
+              ) : null}
             </div>
           </>
         )}
       </div>
+
+      {mobileStep3 ? (
+        <MobileActionBar
+          canGoBack={step > 1}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          onBack={() => goStep((step - 1) as BuilderStep)}
+          onContinue={() => goStep(4)}
+          onSaveDraft={startSaveDraft}
+          onUndo={undo}
+          onRedo={redo}
+          onStartOver={designAnother}
+        />
+      ) : null}
 
       {saveDraftOpen ? (
         <SaveDraftDialog

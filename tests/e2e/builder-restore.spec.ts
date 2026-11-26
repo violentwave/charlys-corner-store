@@ -1,6 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 import { Pool } from "pg";
 
+import { openToolTab } from "./builder-tabs";
+
 /**
  * The restore-design deep link: the customer email's "Order this design" CTA opens
  * /design?mockup=<id>, the builder fetches the design + every artwork and restores the
@@ -27,6 +29,7 @@ async function openAndSubmit(page: Page, email: string) {
   // text + a different image on the back.
   await page.locator("[data-testid='builder-file-input']").setInputFiles("tests/e2e/fixtures/art.png");
   await expect(page.getByRole("region", { name: "Selected image" })).toBeVisible({ timeout: 15_000 });
+  await openToolTab(page, "side");
   await page.getByTestId("print-location").click();
   await page.getByRole("option", { name: "Full Front" }).click();
   await page.getByTestId("view-back").click();
@@ -34,6 +37,7 @@ async function openAndSubmit(page: Page, email: string) {
   await page.getByTestId("upload-different").click();
   await page.locator("[data-testid='builder-file-input']").setInputFiles("tests/e2e/fixtures/art-lowdpi.png");
   await expect(page.getByRole("region", { name: "Selected image" })).toBeVisible({ timeout: 15_000 });
+  await openToolTab(page, "add");
   await page.getByTestId("add-text").click();
   await page.getByTestId("text-layer-input").fill("Back print");
 
@@ -72,11 +76,13 @@ test("the restore link loads garment, colors, print locations and every side's l
   // is picked — the transform readout falls back to the bottom layer.
   await expect(page.getByTestId("artwork-controls")).toBeVisible();
   await expect(page.getByTestId("builder-transform")).toContainText("w=");
+  await openToolTab(page, "side");
   await expect(page.getByTestId("print-location")).toContainText("Full Front");
 
   // v4 per-side layers: the back was sent with an image AND text, and the restore maps
   // each layer back via artworks[] + views[].layers.
   await page.getByTestId("view-back").click();
+  await openToolTab(page, "layers");
   await expect(page.getByTestId("layers-panel")).toContainText("Back print");
   await expect(page.getByTestId("relink-sides")).toHaveCount(0); // both files decoded
 

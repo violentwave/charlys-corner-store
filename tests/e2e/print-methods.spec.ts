@@ -5,6 +5,8 @@
  */
 import { expect, test } from "@playwright/test";
 
+import { openToolTab } from "./builder-tabs";
+
 test("performance tee: sublimation fits white, not navy; DTG never fits polyester", async ({ page }) => {
   await page.goto("/");
   await page.getByTestId("garment-perftee").click();
@@ -12,6 +14,7 @@ test("performance tee: sublimation fits white, not navy; DTG never fits polyeste
   await page.getByRole("button", { name: "Step 3: Design" }).click();
   await page.getByTestId("add-text").click();
 
+  await openToolTab(page, "side");
   await page.getByTestId("print-method").click();
   await expect(page.getByTestId("print-method-dtg")).toHaveAttribute("data-disabled", "");
   await expect(page.getByTestId("print-method-dtg")).toContainText("needs cotton");
@@ -23,6 +26,7 @@ test("performance tee: sublimation fits white, not navy; DTG never fits polyeste
   await page.getByRole("button", { name: "Step 2: Colors" }).click();
   await page.getByRole("group", { name: "Shirt color" }).getByRole("button", { name: "Navy", exact: true }).click();
   await page.getByRole("button", { name: "Step 3: Design" }).click();
+  await openToolTab(page, "side");
   await expect(page.getByTestId("print-method")).toContainText("Recommend one for me");
   await page.getByTestId("print-method").click();
   await expect(page.getByTestId("print-method-sublimation")).toContainText("light shirt color");

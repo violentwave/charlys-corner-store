@@ -13,7 +13,7 @@
  * local draft and only commit valid values, so the design never holds an empty text or a
  * NaN.
  */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { TEXT_FONTS, type TextFontId } from "@/lib/text-fonts";
 import { luma, printedInches, type PrintArea } from "@/lib/garments";
@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/cn";
 
-import { centerInRect, fitIntoRect, resizeAroundCenter, setRotationAroundCenter } from "./geometry";
+import { centerInRect, fitIntoRect, nudgeTransform, resizeAroundCenter, setRotationAroundCenter } from "./geometry";
 import type { BuilderImageLayer, BuilderTextLayer, BuilderTransform, TextPatch } from "./use-builder-state";
 
 /**
@@ -146,6 +146,72 @@ function InspectorDisclosure({
       </summary>
       <div className="mt-3 flex flex-col gap-3">{children}</div>
     </details>
+  );
+}
+
+/**
+ * Nudge pad (P51-1): four arrow buttons, 1 template px per tap; holding repeats at 10px
+ * per tick (one press = one undo step, via the shared mergeKey). Touch-first sizing
+ * (≥ 44px targets) but rendered at every size — pointer precision without the canvas.
+ */
+function NudgePad({ onNudge }: { onNudge: (dx: number, dy: number, mergeKey: string) => void }) {
+  const holdRef = useRef<{ timeout: number; interval: number } | null>(null);
+  const stopHold = () => {
+    if (!holdRef.current) return;
+    window.clearTimeout(holdRef.current.timeout);
+    window.clearInterval(holdRef.current.interval);
+    holdRef.current = null;
+  };
+  useEffect(() => stopHold, []);
+
+  const startHold = (dx: number, dy: number) => {
+    onNudge(dx, dy, "nudge");
+    const timeout = window.setTimeout(() => {
+      const interval = window.setInterval(() => onNudge(dx * 10, dy * 10, "nudge"), 90);
+      holdRef.current = { timeout: 0, interval };
+    }, 400);
+    holdRef.current = { timeout, interval: 0 };
+  };
+
+  const padButton = (label: string, glyph: string, dx: number, dy: number, testid: string) => (
+    <button
+      type="button"
+      aria-label={label}
+      data-testid={testid}
+      onPointerDown={() => startHold(dx, dy)}
+      onPointerUp={stopHold}
+      onPointerLeave={stopHold}
+      onPointerCancel={stopHold}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") return; // let the click handle it once
+        stopHold();
+      }}
+      onContextMenu={(e) => e.preventDefault()}
+      className="border-border bg-bg-3 text-text-1 hover:border-border-strong focus-visible:ring-neon-cyan flex h-11 w-11 items-center justify-center rounded-md border text-base transition-colors focus-visible:ring-2 focus-visible:outline-none"
+    >
+      <span aria-hidden="true">{glyph}</span>
+    </button>
+  );
+
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-text-2 w-14 shrink-0 text-xs" id="nudge-pad-label">
+        Nudge
+      </span>
+      <div role="group" aria-labelledby="nudge-pad-label" className="grid w-fit grid-cols-3 gap-0.5">
+        <span />
+        {padButton("Nudge up", "↑", 0, -1, "nudge-up")}
+        <span />
+        {padButton("Nudge left", "←", -1, 0, "nudge-left")}
+        <span aria-hidden="true" className="text-text-3 flex h-11 w-11 items-center justify-center text-[10px]">
+          1px
+        </span>
+        {padButton("Nudge right", "→", 1, 0, "nudge-right")}
+        <span />
+        {padButton("Nudge down", "↓", 0, 1, "nudge-down")}
+        <span />
+      </div>
+    </div>
   );
 }
 
@@ -427,6 +493,9 @@ export function LayerControls({
         {actionButton("Duplicate", "⧉", onDuplicate, "action-duplicate")}
         {actionButton("Delete", "×", onRemove, "action-delete", true)}
       </div>
+
+      {/* Nudge pad: pixel-precise moves without the canvas (P51-1). */}
+      <NudgePad onNudge={(dx, dy, mergeKey) => onTransform(nudgeTransform(transform, dx, dy), mergeKey)} />
 
       {textLayer ? (
         <InspectorDisclosure label="Text style" testid="text-style-section">
