@@ -15,6 +15,7 @@ import type { GarmentView, ViewId } from "@/lib/garments";
 import type { TextFontId } from "@/lib/text-fonts";
 import { effectiveDpi } from "@/lib/mockup-schema";
 import { printedInches } from "@/lib/garments";
+import { RECOMMEND_LABEL, type PrintMethodChoice, type PrintMethodId } from "@/lib/print-methods";
 
 import { isOutsideArea } from "./geometry";
 import { InspectorSection } from "./inspector-section";
@@ -43,6 +44,11 @@ export interface DesignInspectorProps {
   onAddText: () => void;
   onViewChange: (view: ViewId) => void;
   onSetPrintArea: (viewId: ViewId, areaId: string) => void;
+  /** This side's print method (already checked against garment, color and area). */
+  method: PrintMethodChoice;
+  /** Every method, with why it can't be used here (null = usable). */
+  methodOptions: { id: PrintMethodId; name: string; blurb: string; blocker: string | null }[];
+  onSetPrintMethod: (viewId: ViewId, method: PrintMethodChoice) => void;
   onSelectLayer: (layerId: string | null) => void;
   onTransform: (layerId: string, transform: BuilderLayer["transform"], mergeKey?: string) => void;
   onTextChange: (layerId: string, patch: TextPatch, mergeKey?: string) => void;
@@ -74,6 +80,9 @@ export function DesignInspector({
   onAddText,
   onViewChange,
   onSetPrintArea,
+  method,
+  methodOptions,
+  onSetPrintMethod,
   onSelectLayer,
   onTransform,
   onTextChange,
@@ -157,6 +166,37 @@ export function DesignInspector({
               </SelectContent>
             </Select>
           </div>
+        </div>
+        <div className="mt-3">
+          <label htmlFor="print-method" className="text-text-2 mb-1 block text-xs">
+            Print method
+          </label>
+          <Select value={method} onValueChange={(value) => onSetPrintMethod(view.id, value as PrintMethodChoice)}>
+            <SelectTrigger
+              id="print-method"
+              data-testid="print-method"
+              className="h-11 w-full"
+              aria-describedby="print-method-help"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="recommend">{RECOMMEND_LABEL}</SelectItem>
+              {methodOptions.map((m) => (
+                <SelectItem key={m.id} value={m.id} disabled={m.blocker !== null} data-testid={`print-method-${m.id}`}>
+                  <span className="flex flex-col">
+                    <span>{m.name}</span>
+                    {m.blocker ? <span className="text-text-3 text-xs">{m.blocker}</span> : null}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p id="print-method-help" className="text-text-3 mt-1 text-xs" data-testid="print-method-help">
+            {method === "recommend"
+              ? "We'll pick what suits your design, garment and quantity."
+              : methodOptions.find((m) => m.id === method)?.blurb}
+          </p>
         </div>
       </InspectorSection>
 

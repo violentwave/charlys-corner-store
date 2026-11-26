@@ -38,9 +38,10 @@ export const faq: readonly FaqItem[] = [
     answer: "Port St. Lucie, Florida, serving the Treasure Coast.",
   },
   {
-    // Source: src/content/services.ts (screen printing, DTF, embroidery, print & promo).
+    // Source: Logan 2026-11-26 (owner runs every method in house); src/lib/print-methods.ts.
     question: "What printing methods do you offer?",
-    answer: "Screen printing, DTF (direct-to-film), embroidery, and print & promo products.",
+    answer:
+      "Screen printing, DTF (direct-to-film), DTG (direct-to-garment), embroidery, sublimation, and heat-transfer vinyl, plus print & promo products. The designer shows which ones fit your garment.",
     links: [{ label: "Compare the methods", href: "/services" }],
   },
   {

@@ -9,7 +9,7 @@ export interface MockupOwnerEmailProps {
   /** Zone label + hex for every color zone. */
   colors: { label: string; hex: string; name: string }[];
   /** View label + print-location label for every view with artwork. */
-  views: { view: string; area: string }[];
+  views: { view: string; area: string; method?: string }[];
   /** Per side, what's printed (bottom → top), from describeLayers(). Optional for older callers. */
   layers?: { view: string; items: string[] }[];
   /** "2 × M" entries for sizes the customer entered (empty when none). */
@@ -62,6 +62,7 @@ export function MockupOwnerEmail(p: MockupOwnerEmailProps) {
               <React.Fragment key={v.view}>
                 {i > 0 ? ", " : ""}
                 {v.view} — {v.area}
+                {v.method ? ` (${v.method})` : ""}
               </React.Fragment>
             ))}
           </Text>

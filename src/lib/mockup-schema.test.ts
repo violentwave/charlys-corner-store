@@ -82,8 +82,26 @@ describe("layers (image + text, stretch, skew)", () => {
     expect(r.views[0]).toEqual({
       view: "front",
       printArea: "full-front",
+      method: "recommend",
       layers: [{ type: "image", artwork: 0, transform: { ...base.views[0]!.transform, skewX: 0, skewY: 0 } }],
     });
+  });
+
+  it("print method: accepts a method that fits, rejects one that doesn't", () => {
+    const withMethod = (garment: string, colors: Record<string, string>, method: string) =>
+      mockupPayloadSchema.safeParse({
+        ...base,
+        garment,
+        colors,
+        views: [{ ...layered([{ type: "image", artwork: 0, transform: t }]).views[0]!, method }],
+      });
+    expect(withMethod("perftee", { body: "#ffffff" }, "sublimation").success).toBe(true);
+    const dark = withMethod("perftee", { body: "#1f2a44" }, "sublimation");
+    expect(dark.success).toBe(false);
+    expect(JSON.stringify(dark.error?.issues)).toMatch(/light shirt/);
+    expect(withMethod("tshirt", { body: "#ffffff" }, "sublimation").success).toBe(false);
+    expect(withMethod("tshirt", { body: "#ffffff" }, "dtg").success).toBe(true);
+    expect(withMethod("tshirt", { body: "#ffffff" }, "laser").success).toBe(false);
   });
 
   it("accepts image + text layers and fills text defaults", () => {

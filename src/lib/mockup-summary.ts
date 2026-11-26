@@ -1,6 +1,7 @@
 import { colorName, findCombo, getGarment, type GarmentId } from "./garments";
 import type { MockupColors, MockupLayer, MockupSizes, MockupView } from "./mockup-schema";
 import { getTextFont } from "./text-fonts";
+import { printMethodName } from "./print-methods";
 
 const deg = (skew: number) => Math.round((Math.atan(skew) * 180) / Math.PI);
 
@@ -32,7 +33,7 @@ export function describeLayers(layers: MockupLayer[]): string[] {
 export function mockupSummary(
   garmentId: GarmentId,
   colors: MockupColors,
-  views: Pick<MockupView, "view" | "printArea">[],
+  views: (Pick<MockupView, "view" | "printArea"> & Partial<Pick<MockupView, "method">>)[],
   sizes: MockupSizes,
 ) {
   const garment = getGarment(garmentId);
@@ -47,7 +48,7 @@ export function mockupSummary(
   const viewRows = views.map((entry) => {
     const view = garment.views.find((v) => v.id === entry.view)!;
     const area = view.printAreas.find((a) => a.id === entry.printArea) ?? view.printAreas[0]!;
-    return { view: view.label, area: area.label };
+    return { view: view.label, area: area.label, method: printMethodName(entry.method ?? "recommend") };
   });
   const sizeRows = Object.entries(sizes)
     .filter(([, qty]) => qty > 0)

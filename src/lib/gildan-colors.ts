@@ -211,3 +211,35 @@ export const GILDAN_5400: GarmentColor[] = [
   if (!c) throw new Error(`GILDAN_5400: no hex for ${name}`);
   return c;
 });
+
+/**
+ * Gildan 42000 Performance tee (100% polyester). Names and Pantone codes from the 42000 spec
+ * sheet; hex values are screen approximations of those Pantone codes. Codes shared with the
+ * 5000 list reuse its hex so the same color looks the same across garments.
+ */
+export const GILDAN_42000: GarmentColor[] = [
+  { name: "White", hex: "#ffffff" },
+  { name: "Sport Grey", hex: "#97999b" }, // Cool Gray 7C
+  { name: "Charcoal", hex: "#63666a" }, // Cool Gray 10C
+  { name: "Black", hex: "#25282a" }, // 426C
+  { name: "Prairie Dust", hex: "#7a7256" }, // 7497C
+  { name: "Gold", hex: "#ffb81c" }, // 1235C
+  { name: "Orange", hex: "#f68d76", approx: true }, // 2026C
+  { name: "Safety Pink", hex: "#f4587a" }, // 1915C
+  { name: "Plumrose", hex: "#c9809e", approx: true }, // 7431C
+  { name: "Red", hex: "#d50032" }, // 199C
+  { name: "Safety Green", hex: "#c4d600" }, // 382C
+  { name: "Lime", hex: "#6cc24a" }, // 7488C
+  { name: "Sage", hex: "#93a98b", approx: true }, // 2406C
+  { name: "Military Green", hex: "#737b4c" }, // 5615C
+  { name: "Carolina Blue", hex: "#7ba4db" }, // 659C
+  { name: "Stone Blue", hex: "#8fa8c4", approx: true }, // 2164C
+  { name: "Sapphire", hex: "#0067a0" }, // 641C
+  { name: "Royal", hex: "#1d4f91" }, // 7686C
+  { name: "Navy", hex: "#1f2a44" }, // 533C
+];
+
+/** Gildan 42400 Performance long sleeve (100% polyester): the 8 colors on its spec sheet. */
+export const GILDAN_42400: GarmentColor[] = GILDAN_42000.filter((c) =>
+  ["White", "Sport Grey", "Charcoal", "Black", "Red", "Safety Green", "Royal", "Navy"].includes(c.name),
+);

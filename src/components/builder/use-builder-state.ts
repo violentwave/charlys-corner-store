@@ -34,6 +34,7 @@ import {
   type ViewId,
 } from "@/lib/garments";
 import { TEXT_FONT_IDS, type TextFontId } from "@/lib/text-fonts";
+import { effectiveMethod, PRINT_METHOD_CHOICES, type PrintMethodChoice } from "@/lib/print-methods";
 import { REFERRAL_SOURCES } from "@/lib/schemas";
 
 import { fitIntoRect } from "./geometry";
@@ -92,6 +93,11 @@ export type BuilderLayer = BuilderImageLayer | BuilderTextLayer;
 export type BuilderViewState = {
   /** Active print-location id for this view (kept even without layers). */
   printArea: string;
+  /**
+   * Picked print method (src/lib/print-methods.ts). Absent = "recommend". It may stop fitting
+   * after a color or area change: read it through `effectiveMethod`, which falls back.
+   */
+  method?: PrintMethodChoice;
   /** The layer stack, bottom → top. */
   layers: BuilderLayer[];
   /** The selected layer (UI state, not on the wire). */
@@ -153,6 +159,7 @@ export type BuilderAction =
   | { type: "setStep"; step: BuilderStep }
   | { type: "setZoneColor"; zone: string; hex: string }
   | { type: "setPrintArea"; view: ViewId; printAreaId: string }
+  | { type: "setPrintMethod"; view: ViewId; method: PrintMethodChoice }
   /** Adds an image layer on top of the given side (capped at MAX_LAYERS_PER_VIEW). */
   | { type: "addImageLayer"; view: ViewId; input: ImageLayerInput }
   /** Adds a text layer on top of the given side (capped at MAX_LAYERS_PER_VIEW). */
@@ -323,6 +330,15 @@ export function builderReducer(state: BuilderState, action: BuilderAction): Buil
       if (!isHexColor(action.hex)) return state;
       const colors = { ...state.design.colors, [action.zone]: action.hex };
       return withHistory(state, { ...state.design, colors });
+    }
+
+    case "setPrintMethod": {
+      const current = state.design.views[action.view];
+      if (!current || (current.method ?? "recommend") === action.method) return state;
+      return withHistory(state, {
+        ...state.design,
+        views: { ...state.design.views, [action.view]: { ...current, method: action.method } },
+      });
     }
 
     case "setPrintArea": {
@@ -542,6 +558,7 @@ const persistedDesignSchema = z.object({
     z.string(),
     z.object({
       printArea: z.string().max(40),
+      method: z.enum(PRINT_METHOD_CHOICES).optional(),
       layers: z.array(persistedLayerSchema).max(MAX_LAYERS_PER_VIEW).default([]),
       selectedLayerId: z.string().max(40).nullable().default(null),
     }),
@@ -608,7 +625,7 @@ function sanitizeDesign(parsed: z.infer<typeof persistedDesignSchema>): BuilderD
     );
     const selectedLayerId =
       saved?.selectedLayerId && layers.some((l) => l.id === saved.selectedLayerId) ? saved.selectedLayerId : null;
-    views[view.id] = { printArea: area, layers, selectedLayerId };
+    views[view.id] = { printArea: area, method: saved?.method, layers, selectedLayerId };
   }
   const sizes = Object.fromEntries(Object.entries(parsed.sizes).filter(([size]) => garment.sizes.includes(size)));
   const colors = realBlankColors(garment, parsed.colors);
@@ -735,7 +752,7 @@ export type RestoredDesign = {
   garment: GarmentId;
   colors: Record<string, string>;
   /** `layers` already normalized by mockupViewSchema; image layers' `artwork` indexes `artworks[]`. */
-  views: { view: ViewId; printArea: string; layers: MockupLayer[] }[];
+  views: { view: ViewId; printArea: string; method?: PrintMethodChoice; layers: MockupLayer[] }[];
   sizes: MockupSizes;
 };
 
@@ -799,6 +816,7 @@ export function designFromRestore(
     const area = view.printAreas.find((a) => a.id === areaId)!;
     views[view.id] = {
       printArea: areaId,
+      method: saved?.method,
       layers: saved
         ? layersFromRestore(saved.layers, fitTransform(area.rect, 600, 300), files).filter(
             // An image layer whose file didn't come back can't be drawn or re-sent: drop it.
@@ -884,9 +902,12 @@ export function payloadPlan(design: BuilderDesign): {
       }
       return { type: "image", artwork: dense, transform: layer.transform };
     });
+    const area = view.printAreas.find((a) => a.id === saved.printArea) ?? view.printAreas[0]!;
     views.push({
       view: view.id,
       printArea: saved.printArea,
+      // A pick that no longer fits (color/area changed since) goes out as "recommend".
+      method: effectiveMethod(saved.method, garment, design.colors, area),
       layers,
     });
   }

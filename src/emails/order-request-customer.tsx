@@ -9,7 +9,7 @@ export interface OrderRequestCustomerEmailProps {
   name: string;
   garmentName: string;
   colors: { label: string; hex: string; name: string }[];
-  views: { view: string; area: string }[];
+  views: { view: string; area: string; method?: string }[];
   /** "2 × M" entries for the sizes the customer ordered. */
   sizes: string[];
   coupon: { code: string; expiresAt: Date; isNew: boolean };
@@ -44,7 +44,8 @@ export function OrderRequestCustomerEmail(p: OrderRequestCustomerEmailProps) {
             Thanks for sending us your {p.garmentName.toLowerCase()}
             {p.colors.length > 0
               ? ` (${p.colors.map((c) => `${c.label.toLowerCase()}: ${c.name}`).join(", ")})`
-              : ""} — {p.views.map((v) => `${v.view.toLowerCase()} (${v.area})`).join(", ")}
+              : ""} —{" "}
+            {p.views.map((v) => `${v.view.toLowerCase()} (${v.area}${v.method ? `, ${v.method}` : ""})`).join(", ")}
             {p.sizes.length > 0 ? <> · {p.sizes.join(", ")}</> : null}.
           </Text>
           <Text>We&apos;ll confirm the price and send you an invoice — nothing is charged now.</Text>

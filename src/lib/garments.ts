@@ -19,11 +19,19 @@
  */
 
 import { HAT_COMBOS, RAGLAN_COMBOS, type ColorCombo } from "./blank-combos";
-import { GILDAN_18500, GILDAN_5000, GILDAN_5400, sortByHue } from "./gildan-colors";
+import { GILDAN_18500, GILDAN_42000, GILDAN_42400, GILDAN_5000, GILDAN_5400, sortByHue } from "./gildan-colors";
 
 export type { ColorCombo } from "./blank-combos";
 
-export type GarmentId = "tshirt" | "longsleeve" | "raglan" | "hoodie" | "hat" | "polo" | "tank";
+export type GarmentId =
+  "tshirt" | "longsleeve" | "raglan" | "hoodie" | "hat" | "polo" | "tank" | "perftee" | "perflongsleeve";
+
+/**
+ * What the blank is made of; decides which print methods fit (src/lib/print-methods.ts).
+ * cotton = 100% cotton (heathers have some poly), blend = cotton/poly, polyester = 100% poly,
+ * hat = structured cap front.
+ */
+export type Fabric = "cotton" | "blend" | "polyester" | "hat";
 /** front/back, plus left/right sleeve views on long-sleeve garments (wearer's left/right). */
 export type ViewId = "front" | "back" | "left" | "right";
 export const VIEW_IDS = ["front", "back", "left", "right"] as const satisfies readonly ViewId[];
@@ -72,6 +80,7 @@ export type GarmentConfig = {
   description: string;
   /** Blank style the colors come from (owner confirms, Brief §6). */
   blank: string;
+  fabric: Fabric;
   colorZones: ColorZone[];
   /** Default color per zone (hex). For combo garments this is the first combo. */
   defaultColors: Record<string, string>;
@@ -98,10 +107,14 @@ export type GarmentConfig = {
 const SHIRT_PALETTE: GarmentColor[] = sortByHue(GILDAN_5000);
 const LONGSLEEVE_PALETTE: GarmentColor[] = sortByHue(GILDAN_5400);
 const HOODIE_PALETTE: GarmentColor[] = sortByHue(GILDAN_18500);
+const PERF_TEE_PALETTE: GarmentColor[] = sortByHue(GILDAN_42000);
+const PERF_LONGSLEEVE_PALETTE: GarmentColor[] = sortByHue(GILDAN_42400);
 
 const APPAREL_SIZES = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL", "5XL"];
 const LONGSLEEVE_SIZES = ["S", "M", "L", "XL", "2XL", "3XL", "4XL", "5XL"];
 const RAGLAN_SIZES = ["XS", "S", "M", "L", "XL", "2XL"];
+/** Gildan 42000 / 42400 adult sizes (spec sheets). */
+const PERF_SIZES = ["S", "M", "L", "XL", "2XL", "3XL"];
 
 const TOP_W = 1000;
 const TOP_H = 1200;
@@ -181,6 +194,7 @@ export const GARMENTS: GarmentConfig[] = [
     name: "T-Shirt",
     description: "Classic short-sleeve tee.",
     blank: "Gildan 5000",
+    fabric: "cotton",
     zoneLabel: "Shirt",
     defaultName: "White",
     palette: SHIRT_PALETTE,
@@ -195,6 +209,7 @@ export const GARMENTS: GarmentConfig[] = [
     name: "Long Sleeve Tee",
     description: "Heavy cotton long sleeve with rib cuffs.",
     blank: "Gildan 5400",
+    fabric: "cotton",
     zoneLabel: "Shirt",
     defaultName: "White",
     palette: LONGSLEEVE_PALETTE,
@@ -214,11 +229,54 @@ export const GARMENTS: GarmentConfig[] = [
     ],
     sizes: LONGSLEEVE_SIZES,
   }),
+  single({
+    id: "perftee",
+    name: "Performance Tee",
+    // TODO(content): owner confirms whether to advertise sun/UV protection (the Gildan spec sheet makes no UPF claim).
+    description: "Lightweight 100% polyester, moisture-wicking. Built for heat, sport and sun.",
+    blank: "Gildan 42000",
+    fabric: "polyester",
+    zoneLabel: "Shirt",
+    defaultName: "White",
+    palette: PERF_TEE_PALETTE,
+    views: [
+      view("perftee", "front", ["body"], [FULL_FRONT, FRONT_CHEST, LEFT_CHEST]),
+      view("perftee", "back", ["body"], [FULL_BACK]),
+    ],
+    sizes: PERF_SIZES,
+  }),
+  single({
+    id: "perflongsleeve",
+    name: "Performance Long Sleeve",
+    // TODO(content): same UV/UPF question as the Performance Tee.
+    description: "100% polyester long sleeve, moisture-wicking, hemmed cuffs. Full coverage for long days outside.",
+    blank: "Gildan 42400",
+    fabric: "polyester",
+    zoneLabel: "Shirt",
+    defaultName: "White",
+    palette: PERF_LONGSLEEVE_PALETTE,
+    views: [
+      view(
+        "perflongsleeve",
+        "front",
+        ["body"],
+        [
+          area("full-front", "Full Front", [350, 290, 300, 350], [12, 14]),
+          area("front-chest", "Front Chest", [375, 290, 250, 125], [10, 5]),
+          area("left-chest", "Left Chest", [570, 300, 100, 100], [4, 4]),
+        ],
+      ),
+      view("perflongsleeve", "back", ["body"], [area("full-back", "Full Back", [350, 270, 300, 350], [12, 14])]),
+      ...sleeveViews("perflongsleeve", "body", [FULL_SLEEVE, UPPER_SLEEVE]),
+    ],
+    sizes: PERF_SIZES,
+  }),
   combo({
     id: "raglan",
     name: "Baseball Tee",
     description: "3/4-sleeve raglan with contrast sleeves.",
     blank: "Bella+Canvas 3200",
+    fabric: "blend",
     colorZones: [
       { id: "body", label: "Body" },
       { id: "sleeves", label: "Sleeves & collar" },
@@ -245,6 +303,7 @@ export const GARMENTS: GarmentConfig[] = [
     name: "Hoodie",
     description: "Pullover hoodie with kangaroo pocket. Hood lining and drawcords match the body.",
     blank: "Gildan 18500",
+    fabric: "blend",
     zoneLabel: "Hoodie",
     defaultName: "Sport Grey",
     palette: HOODIE_PALETTE,
@@ -268,6 +327,7 @@ export const GARMENTS: GarmentConfig[] = [
     name: "Trucker Hat",
     description: "Structured front, mesh back, curved brim.",
     blank: "Richardson 112",
+    fabric: "hat",
     colorZones: [
       { id: "front", label: "Front panels" },
       { id: "mesh", label: "Mesh" },
@@ -290,6 +350,7 @@ export const GARMENTS: GarmentConfig[] = [
     name: "Polo",
     description: "Short-sleeve polo with a three-button placket.",
     blank: "Gildan 8800",
+    fabric: "blend",
     zoneLabel: "Shirt",
     defaultName: "White",
     palette: SHIRT_PALETTE, // TODO(content): the 8800 color list once the owner confirms the polo style
@@ -304,6 +365,7 @@ export const GARMENTS: GarmentConfig[] = [
     name: "Tank Top",
     description: "Sleeveless tank.",
     blank: "Gildan 2200",
+    fabric: "cotton",
     zoneLabel: "Shirt",
     defaultName: "White",
     palette: SHIRT_PALETTE, // TODO(content): the 2200 color list once the owner confirms the tank style

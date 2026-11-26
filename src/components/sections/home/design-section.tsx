@@ -21,7 +21,7 @@ export function DesignSection() {
       <PageHeader
         eyebrow={`${site.city}, ${site.region} · Custom apparel`}
         title="Design your own custom gear"
-        description={`Pick a tee, raglan, hoodie, hat, polo, or tank, choose your colors, and drop in your art. We'll email you the mockup plus ${COUPON_RULES.percentOff}% off your 2nd order (${minOrderDollars} minimum).`}
+        description={`Pick a tee, performance shirt, raglan, hoodie, hat, polo, or tank, choose your colors and print method, and drop in your art. We'll email you the mockup plus ${COUPON_RULES.percentOff}% off your 2nd order (${minOrderDollars} minimum).`}
       />
       <p className="text-text-2 mt-3 text-sm">
         Already ordered?{" "}
