@@ -62,7 +62,10 @@ function shadeElement(el) {
 export function shadingSvg(view) {
   const { width: W, height: H, silhouette, shade = [] } = view;
   const defs = `<clipPath id="sil"><path d="${silhouette}"/></clipPath>`;
-  const body = `<g clip-path="url(#sil)">
+  // Contact shadow first: the opaque clipped garment drawn next paints over it, so it only shows
+  // around the silhouette (drawn after, it darkened every color ~20%: white read as grey).
+  const body = `<path d="${silhouette}" fill="#000" fill-opacity="${view.shadow ?? 0.2}" transform="translate(0, 14)" filter="url(#b-shadow)"/>
+<g clip-path="url(#sil)">
 <rect width="${W}" height="${H}" fill="#fff"/>
 <path d="${silhouette}" fill="none" stroke="#000" stroke-opacity="${view.edgeOpacity ?? 0.17}" stroke-width="${view.edgeWidth ?? 70}" filter="url(#b-edge)"/>
 <path d="${silhouette}" fill="none" stroke="#000" stroke-opacity="${((view.edgeOpacity ?? 0.17) + 0.08).toFixed(3)}" stroke-width="${Math.round((view.edgeWidth ?? 70) * 0.4)}" filter="url(#b-edge)"/>
@@ -74,7 +77,6 @@ ${
 }
 ${shade.map(shadeElement).join("\n")}
 </g>
-<path d="${silhouette}" fill="#000" fill-opacity="${view.shadow ?? 0.2}" transform="translate(0, 14)" filter="url(#b-shadow)"/>
 <path d="${silhouette}" fill="none" stroke="#000" stroke-opacity="0.5" stroke-width="2.6" stroke-linejoin="round"/>`;
   return svg(W, H, defs, body);
 }

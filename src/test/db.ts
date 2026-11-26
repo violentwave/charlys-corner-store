@@ -24,7 +24,7 @@ export async function setupTestDb(): Promise<{ db: Db; reset: () => Promise<void
     db,
     reset: async () => {
       await db.execute(
-        sql`truncate leads, contact_messages, quotes, uploads, survey_responses, rate_limits, coupons, mockups, users, sessions, auth_tokens restart identity cascade`,
+        sql`truncate leads, contact_messages, quotes, uploads, survey_responses, rate_limits, coupons, mockups, users, sessions, auth_tokens, webhook_events restart identity cascade`,
       );
     },
     close: () => pool.end(),

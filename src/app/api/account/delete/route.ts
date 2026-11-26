@@ -8,6 +8,7 @@ import { fail, readJson } from "@/lib/auth/route-helpers";
 import { currentUser, endSession } from "@/lib/auth/session";
 import { getDb, schema } from "@/lib/db";
 import { LIMITS, rateLimit } from "@/lib/rate-limit";
+import { disableCard, listCards, squareConfigured } from "@/lib/square";
 import { getStorage } from "@/lib/storage";
 
 /**
@@ -31,31 +32,9 @@ export async function POST(request: Request) {
   if (!confirmed.ok) return fail(confirmed.message, 400, { [confirmed.field]: confirmed.message });
 
   // Best-effort: disable any saved Square cards before the account goes (P51-4).
-  if (row.squareCustomerId && process.env.SQUARE_ACCESS_TOKEN) {
-    try {
-      const { squareBaseUrl } = await import("@/lib/square");
-      const r = await fetch(`${squareBaseUrl()}/v2/cards?customer_id=${encodeURIComponent(row.squareCustomerId)}`, {
-        headers: {
-          Authorization: `Bearer ${process.env.SQUARE_ACCESS_TOKEN}`,
-          "Square-Version": "2024-10-17",
-          "Content-Type": "application/json",
-        },
-      });
-      const json = (await r.json().catch(() => null)) as { cards?: { id: string; enabled: boolean }[] } | null;
-      for (const c of (json?.cards ?? []).filter((x) => x.enabled !== false)) {
-        await fetch(`${squareBaseUrl()}/v2/cards/${encodeURIComponent(c.id)}/disable`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${process.env.SQUARE_ACCESS_TOKEN}`,
-            "Square-Version": "2024-10-17",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({}),
-        }).catch(() => undefined);
-      }
-    } catch {
-      // best-effort; never block deletion
-    }
+  if (row.squareCustomerId && squareConfigured()) {
+    const cards = await listCards(row.squareCustomerId).catch(() => []);
+    for (const c of cards) await disableCard(c.id).catch(() => false);
   }
 
   await deleteMemberAccount(db, getStorage(), user.id);

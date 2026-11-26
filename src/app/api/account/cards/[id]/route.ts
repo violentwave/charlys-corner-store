@@ -2,40 +2,24 @@ import { NextResponse } from "next/server";
 
 import { verifiedUser } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
-import { getOrCreateSquareCustomer, squareBaseUrl } from "@/lib/square";
+import { LIMITS, rateLimit } from "@/lib/rate-limit";
+import { disableCard, existingSquareCustomerId, getOwnedCard, squareConfigured } from "@/lib/square";
 
+/** Removes (disables) one of the member's own saved cards. */
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const db = getDb();
   const v = await verifiedUser(db);
   if (!v.ok) return NextResponse.json({ error: v.error }, { status: v.status });
-  const user = v.user;
+  if (!squareConfigured()) return NextResponse.json({ error: "not found" }, { status: 404 });
+  const rl = await rateLimit(db, { key: `cards:${v.user.id}`, ...LIMITS.securityChange });
+  if (!rl.ok) return NextResponse.json({ error: "Too many tries. Please wait a few minutes." }, { status: 429 });
 
-  const customerId = await getOrCreateSquareCustomer({ id: user.id, email: user.email });
-  if (!customerId) return NextResponse.json({ error: "payments not enabled" }, { status: 503 });
-
-  // Confirm the card belongs to this customer before disabling.
-  const r = await fetch(`${squareBaseUrl()}/v2/cards/${encodeURIComponent(id)}`, {
-    headers: {
-      Authorization: `Bearer ${process.env.SQUARE_ACCESS_TOKEN}`,
-      "Square-Version": "2024-10-17",
-      "Content-Type": "application/json",
-    },
-  });
-  const json = (await r.json().catch(() => null)) as { card?: { customer_id: string } } | null;
-  if (!r.ok || !json?.card || json.card.customer_id !== customerId) {
-    return NextResponse.json({ error: "not found" }, { status: 404 });
+  const customerId = await existingSquareCustomerId(v.user.id);
+  const card = customerId ? await getOwnedCard(id, customerId) : null;
+  if (!card) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (!(await disableCard(card.id))) {
+    return NextResponse.json({ error: "Square didn't answer. Please try again." }, { status: 502 });
   }
-
-  const dr = await fetch(`${squareBaseUrl()}/v2/cards/${encodeURIComponent(id)}/disable`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.SQUARE_ACCESS_TOKEN}`,
-      "Square-Version": "2024-10-17",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({}),
-  });
-  if (!dr.ok) return NextResponse.json({ error: "couldn't remove the card" }, { status: 502 });
   return NextResponse.json({ ok: true });
 }

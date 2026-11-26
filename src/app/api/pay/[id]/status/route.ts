@@ -25,6 +25,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       .sql`select status, paid_at from order_payments where mockup_id = ${id} order by created_at desc limit 1`,
   );
   const r = rows[0];
+  if (row.mockup.paidAt) {
+    return NextResponse.json({ status: "paid", paidAt: new Date(row.mockup.paidAt).toISOString() });
+  }
   return NextResponse.json({
     status: r?.status ?? "none",
     paidAt: r?.paid_at ? new Date(r.paid_at).toISOString() : null,

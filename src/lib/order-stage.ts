@@ -82,7 +82,7 @@ function signatureQuote(mockupId: string, expires: number): string {
 export function ownerQuoteUrl(mockupId: string, now = Date.now()): string {
   const expires = Math.floor(now / 1000) + OWNER_QUOTE_DAYS * 24 * 60 * 60;
   const params = new URLSearchParams({ exp: String(expires), sig: signatureQuote(mockupId, expires) });
-  return `${site.url.replace(/\/$/, "")}/owner/quote/${mockupId}?${params.toString()}`;
+  return `${site.url.replace(/\/$/, "")}/api/owner/orders/${mockupId}/quote?${params.toString()}`;
 }
 
 export function checkOwnerQuoteLink(

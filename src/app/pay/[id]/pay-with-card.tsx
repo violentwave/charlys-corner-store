@@ -27,10 +27,16 @@ export function PayWithSavedCard({
       const res = await fetch(`/api/pay/${id}/card`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ cardId: selected, t: token ?? undefined }),
+        body: JSON.stringify({ cardId: selected }),
       });
-      const data = (await res.json().catch(() => null)) as { ok?: boolean; paid?: boolean; error?: string } | null;
-      if (res.ok && data?.paid) {
+      const data = (await res.json().catch(() => null)) as {
+        ok?: boolean;
+        paid?: boolean;
+        pending?: boolean;
+        error?: string;
+      } | null;
+      // Paid, or still clearing at Square: the done page polls until the webhook settles it.
+      if (res.ok && (data?.paid || data?.pending)) {
         router.push(`/pay/${id}/done${token ? `?t=${encodeURIComponent(token)}` : ""}`);
         return;
       }
@@ -56,7 +62,7 @@ export function PayWithSavedCard({
               onChange={() => setSelected(c.id)}
             />
             <span className="text-text-1">
-              {c.brand} •••• {c.last4}{" "}
+              {c.brand.replace(/_/g, " ")} •••• {c.last4}{" "}
               <span className="text-text-3">
                 (exp {String(c.expMonth).padStart(2, "0")}/{c.expYear})
               </span>
@@ -75,7 +81,7 @@ export function PayWithSavedCard({
         disabled={busy || !selected}
         className="bg-neon-pink text-bg-0 shadow-glow-pink mt-3 rounded-full px-6 py-3 text-sm font-semibold disabled:opacity-50"
       >
-        {busy ? "Processing…" : `Pay $${(total / 100).toFixed(2)} with saved card`}
+        {busy ? "Processing…" : `Pay $${(total / 100).toFixed(2)} with this card`}
       </button>
     </div>
   );

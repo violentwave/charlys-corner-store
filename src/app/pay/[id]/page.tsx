@@ -2,15 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { sql } from "drizzle-orm";
 
 import { currentUser } from "@/lib/auth/session";
-import { getDb, schema } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { getGarment, type GarmentId } from "@/lib/garments";
-import { checkCoupon } from "@/lib/coupons";
 import { checkPayToken } from "@/lib/order-stage";
-import { squareConfigured, getOrCreateSquareCustomer, squareBaseUrl } from "@/lib/square";
-import { eq } from "drizzle-orm";
+import { loadQuotedOrder, PAY_ERRORS, priceOrder, type PayErrorCode, type Pricing } from "@/lib/payments";
+import { existingSquareCustomerId, listCards, squareConfigured, type SavedCard } from "@/lib/square";
 import { PayWithSavedCard } from "./pay-with-card";
 
 export const metadata: Metadata = { title: "Pay", robots: { index: false, follow: false } };
@@ -19,89 +17,36 @@ type LoadResult = {
   id: string;
   token: string | null;
   garment: string;
-  subtotal: number;
   note: string | null;
-  coupon: { code: string; status: string; expiresAt: Date } | null;
-  couponCheck: ReturnType<typeof checkCoupon> | { ok: false; reason: "no_coupon" };
-  savedCards: { id: string; brand: string; last4: string; expMonth: number; expYear: number }[];
+  paidAt: Date | null;
+  pricing: Pricing;
+  savedCards: SavedCard[];
   isOwner: boolean;
 };
 
 async function load(id: string, token: string | null): Promise<LoadResult | null> {
-  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
   const db = getDb();
-  const [row] = await db
-    .select({ mockup: schema.mockups, lead: schema.leads })
-    .from(schema.mockups)
-    .innerJoin(schema.leads, eq(schema.leads.id, schema.mockups.leadId))
-    .where(eq(schema.mockups.id, id));
-  if (!row || row.mockup.kind !== "order" || row.mockup.quoteCents == null) return null;
+  const row = await loadQuotedOrder(db, id);
+  if (!row) return null;
   const user = await currentUser(db);
   const isOwner = Boolean(user && row.mockup.userId === user.id);
-  const guestOk = checkPayToken(id, token);
-  if (!isOwner && !guestOk) return null;
+  if (!isOwner && !checkPayToken(id, token)) return null;
 
-  const { rows: couponRows } = await db.execute<{ code: string; status: string; expires_at: Date | string }>(
-    sql`select code, status, expires_at from coupons where lead_id = ${row.lead.id} order by issued_at desc limit 1`,
-  );
-  const coupon = couponRows[0]
-    ? { code: couponRows[0].code, status: couponRows[0].status, expiresAt: new Date(couponRows[0].expires_at) }
-    : null;
-
-  const { rows: paidRows } = await db.execute<{ n: number }>(
-    sql`select count(*)::int as n from order_payments op join mockups m on m.id = op.mockup_id join leads l on l.id = m.lead_id where lower(l.email) = lower(${row.lead.email}) and op.status = 'paid'`,
-  );
-  const completedOrders = Number(paidRows[0]?.n ?? 0);
-
-  const subtotal = row.mockup.quoteCents;
-  let couponCheck: ReturnType<typeof checkCoupon> | { ok: false; reason: "no_coupon" };
-  if (coupon) {
-    couponCheck = checkCoupon({
-      status: coupon.status as "issued" | "eligible" | "redeemed" | "expired",
-      expiresAt: coupon.expiresAt,
-      completedOrdersForEmail: completedOrders,
-      subtotalCents: subtotal,
-    });
-  } else {
-    couponCheck = { ok: false, reason: "no_coupon" as const };
-  }
-
-  // Saved cards for members (server-side fetch from Square).
-  let savedCards: { id: string; brand: string; last4: string; expMonth: number; expYear: number }[] = [];
-  if (isOwner && user && process.env.SQUARE_ACCESS_TOKEN) {
-    const customerId = await getOrCreateSquareCustomer({ id: user.id, email: user.email });
-    if (customerId) {
-      const r = await fetch(`${squareBaseUrl()}/v2/cards?customer_id=${encodeURIComponent(customerId)}`, {
-        headers: {
-          Authorization: `Bearer ${process.env.SQUARE_ACCESS_TOKEN}`,
-          "Square-Version": "2024-10-17",
-          "Content-Type": "application/json",
-        },
-      });
-      const json = (await r.json().catch(() => null)) as {
-        cards?: {
-          id: string;
-          card_brand: string;
-          last_4: string;
-          exp_month: number;
-          exp_year: number;
-          enabled: boolean;
-        }[];
-      } | null;
-      savedCards = (json?.cards ?? [])
-        .filter((c) => c.enabled !== false)
-        .map((c) => ({ id: c.id, brand: c.card_brand, last4: c.last_4, expMonth: c.exp_month, expYear: c.exp_year }));
-    }
+  // Saved cards: only for the member who owns the order, and only if they already have a
+  // Square customer (viewing this page never creates one).
+  let savedCards: SavedCard[] = [];
+  if (isOwner && user && squareConfigured() && !row.mockup.paidAt) {
+    const customerId = await existingSquareCustomerId(user.id);
+    if (customerId) savedCards = await listCards(customerId).catch(() => []);
   }
 
   return {
     id,
     token,
     garment: getGarment(row.mockup.garment as GarmentId).name,
-    subtotal,
     note: row.mockup.quoteNote,
-    coupon,
-    couponCheck,
+    paidAt: row.mockup.paidAt,
+    pricing: await priceOrder(db, row),
     savedCards,
     isOwner,
   };
@@ -115,12 +60,11 @@ function couponReason(c: { ok: false; reason: string }): string {
   return "not available";
 }
 
-async function PayGate({ id, token }: { id: string; token: string | null }) {
+async function PayGate({ id, token, error }: { id: string; token: string | null; error: string | null }) {
   const data = await load(id, token);
   if (!data) notFound();
 
-  const discount = data.couponCheck.ok ? (data.couponCheck as { discountCents: number }).discountCents : 0;
-  const total = data.subtotal - discount;
+  const { subtotalCents, discountCents: discount, totalCents: total, coupon, couponCheck } = data.pricing;
 
   return (
     <main className="mx-auto max-w-lg px-4 py-10">
@@ -132,17 +76,15 @@ async function PayGate({ id, token }: { id: string; token: string | null }) {
       <div className="border-border bg-bg-2 mt-6 rounded-2xl border p-4">
         <div className="flex justify-between">
           <span className="text-text-2">Subtotal</span>
-          <span className="text-text-1 font-mono">${(data.subtotal / 100).toFixed(2)}</span>
+          <span className="text-text-1 font-mono">${(subtotalCents / 100).toFixed(2)}</span>
         </div>
-        {data.coupon ? (
+        {coupon && couponCheck ? (
           <div className="mt-2 flex items-center justify-between gap-2">
-            <span className="text-text-2">15% coupon ({data.coupon.code})</span>
-            {data.couponCheck.ok ? (
+            <span className="text-text-2">15% coupon ({coupon.code})</span>
+            {couponCheck.ok ? (
               <span className="text-neon-green font-mono">−${(discount / 100).toFixed(2)}</span>
             ) : (
-              <span className="text-text-3 text-xs">
-                {couponReason(data.couponCheck as { ok: false; reason: string })}
-              </span>
+              <span className="text-text-3 text-xs">{couponReason(couponCheck as { ok: false; reason: string })}</span>
             )}
           </div>
         ) : null}
@@ -151,7 +93,17 @@ async function PayGate({ id, token }: { id: string; token: string | null }) {
           <span className="text-neon-yellow font-mono text-xl">${(total / 100).toFixed(2)}</span>
         </div>
       </div>
-      {!squareConfigured() ? (
+      {error ? (
+        <p role="alert" className="text-danger mt-6 text-sm">
+          {error}
+        </p>
+      ) : null}
+      {data.paidAt ? (
+        <p className="text-neon-green mt-6 font-semibold" data-testid="pay-paid">
+          Paid on {data.paidAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}. Thank
+          you! 🐾
+        </p>
+      ) : !squareConfigured() ? (
         <p className="text-text-2 mt-6">Payments aren&apos;t enabled yet — we&apos;ll send payment details shortly.</p>
       ) : (
         <>
@@ -184,11 +136,13 @@ async function PayGateLoader({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ t?: string }>;
+  searchParams: Promise<{ t?: string; error?: string }>;
 }) {
   const { id } = await params;
   const sp = await searchParams;
-  return <PayGate id={id} token={sp.t ?? null} />;
+  // ?error=<code> comes back from the checkout route; only known codes show (no text from the URL).
+  const error = sp.error && sp.error in PAY_ERRORS ? PAY_ERRORS[sp.error as PayErrorCode] : null;
+  return <PayGate id={id} token={sp.t ?? null} error={error} />;
 }
 
 export default function PayPage({
@@ -196,7 +150,7 @@ export default function PayPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ t?: string }>;
+  searchParams: Promise<{ t?: string; error?: string }>;
 }) {
   return (
     <Suspense fallback={<p className="text-text-2 p-10">Loading…</p>}>

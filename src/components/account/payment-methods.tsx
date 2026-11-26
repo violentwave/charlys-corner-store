@@ -5,28 +5,18 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { postJson, NETWORK_ERROR } from "@/components/forms/auth-post";
 
 type Card = { id: string; brand: string; last4: string; expMonth: number; expYear: number };
 
 const MAX_CARDS = 3;
 
-function sdkUrl(): string {
-  return process.env.NEXT_PUBLIC_SQUARE_ENVIRONMENT === "production"
-    ? "https://web.squarecdn.com/v1/square.js"
-    : "https://sandbox.web.squarecdn.com/v1/square.js";
-}
-
-function appId(): string {
-  return process.env.NEXT_PUBLIC_SQUARE_APPLICATION_ID ?? "";
-}
-function locationId(): string {
-  return process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID ?? "";
-}
+/** Public Web Payments SDK settings, from GET /api/account/cards (null = payments off here). */
+type SdkConfig = { applicationId: string; locationId: string; scriptUrl: string };
 
 export function PaymentMethods() {
-  const configured = Boolean(appId() && locationId());
+  const [sdk, setSdk] = useState<SdkConfig | null | undefined>(undefined);
   const [cards, setCards] = useState<Card[] | null>(null);
+  const [confirming, setConfirming] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,12 +25,17 @@ export function PaymentMethods() {
     setLoading(true);
     setError(null);
     const res = await fetch("/api/account/cards", { cache: "no-store" });
-    const data = (await res.json().catch(() => null)) as { cards?: Card[]; error?: string } | null;
+    const data = (await res.json().catch(() => null)) as {
+      cards?: Card[];
+      sdk?: SdkConfig | null;
+      error?: string;
+    } | null;
     if (!res.ok) {
       setError(data?.error ?? "Couldn't load your cards.");
       setCards([]);
     } else {
       setCards(data?.cards ?? []);
+      setSdk(data?.sdk ?? null);
     }
     setLoading(false);
   }, []);
@@ -48,7 +43,9 @@ export function PaymentMethods() {
   useEffect(() => {
     let cancelled = false;
     fetch("/api/account/cards", { cache: "no-store" })
-      .then((res) => res.json().then((data: { cards?: Card[]; error?: string } | null) => ({ res, data })))
+      .then((res) =>
+        res.json().then((data: { cards?: Card[]; sdk?: SdkConfig | null; error?: string } | null) => ({ res, data })),
+      )
       .then(({ res, data }) => {
         if (cancelled) return;
         if (!res.ok) {
@@ -56,6 +53,7 @@ export function PaymentMethods() {
           setCards([]);
         } else {
           setCards(data?.cards ?? []);
+          setSdk(data?.sdk ?? null);
         }
         setLoading(false);
       })
@@ -70,7 +68,7 @@ export function PaymentMethods() {
     };
   }, []);
 
-  if (!configured) {
+  if (sdk === null) {
     return (
       <div className="text-text-2 text-sm">
         Saved cards are coming soon — payments aren&apos;t enabled on this environment yet.
@@ -100,15 +98,37 @@ export function PaymentMethods() {
                   Expires {String(c.expMonth).padStart(2, "0")}/{c.expYear}
                 </p>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-danger hover:text-danger"
-                onClick={() => void removeCard(c.id, loadCards)}
-                data-testid={`remove-card-${c.id}`}
-              >
-                Remove
-              </Button>
+              {confirming === c.id ? (
+                <span className="flex items-center gap-2" role="group" aria-label={`Remove card ending ${c.last4}?`}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-danger hover:text-danger"
+                    onClick={async () => {
+                      const msg = await removeCard(c.id);
+                      setConfirming(null);
+                      if (msg) setError(msg);
+                      else await loadCards();
+                    }}
+                    data-testid={`confirm-remove-card-${c.id}`}
+                  >
+                    Remove
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setConfirming(null)}>
+                    Keep
+                  </Button>
+                </span>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-danger hover:text-danger"
+                  onClick={() => setConfirming(c.id)}
+                  data-testid={`remove-card-${c.id}`}
+                >
+                  Remove
+                </Button>
+              )}
             </li>
           ))}
           {(cards ?? []).length === 0 ? <p className="text-text-3 text-sm">No saved cards yet.</p> : null}
@@ -128,28 +148,27 @@ export function PaymentMethods() {
         ) : null}
       </div>
 
-      <AddCardDialog open={addOpen} onClose={() => setAddOpen(false)} onSaved={loadCards} />
+      {sdk ? <AddCardDialog open={addOpen} sdk={sdk} onClose={() => setAddOpen(false)} onSaved={loadCards} /> : null}
     </div>
   );
 }
 
-async function removeCard(id: string, reload: () => Promise<void>) {
-  if (!confirm("Remove this card?")) return;
-  const res = await fetch(`/api/account/cards/${id}`, { method: "DELETE" });
-  if (!res.ok) {
-    const data = (await res.json().catch(() => null)) as { error?: string } | null;
-    alert(data?.error ?? "Couldn't remove the card.");
-    return;
-  }
-  await reload();
+/** Removes a card; returns an error message, or null when it worked. */
+async function removeCard(id: string): Promise<string | null> {
+  const res = await fetch(`/api/account/cards/${id}`, { method: "DELETE" }).catch(() => null);
+  if (res?.ok) return null;
+  const data = (await res?.json().catch(() => null)) as { error?: string } | null;
+  return data?.error ?? "Couldn't remove the card.";
 }
 
 function AddCardDialog({
   open,
+  sdk,
   onClose,
   onSaved,
 }: {
   open: boolean;
+  sdk: SdkConfig;
   onClose: () => void;
   onSaved: () => Promise<void>;
 }) {
@@ -185,7 +204,7 @@ function AddCardDialog({
     if (!open) return;
 
     const script = document.createElement("script");
-    script.src = sdkUrl();
+    script.src = sdk.scriptUrl;
     script.async = true;
     script.onload = async () => {
       try {
@@ -203,7 +222,7 @@ function AddCardDialog({
           }
         ).Square;
         if (!Square) throw new Error("Square SDK didn't load.");
-        const payments = Square.payments(appId(), locationId());
+        const payments = Square.payments(sdk.applicationId, sdk.locationId);
         const card = (await payments.card()) as {
           attach: (el: HTMLElement) => Promise<void>;
           tokenize: () => Promise<{ status: string; token?: string; errors?: { message?: string }[] }>;
@@ -221,7 +240,7 @@ function AddCardDialog({
       document.head.removeChild(script);
       cardRef.current = null;
     };
-  }, [open]);
+  }, [open, sdk]);
 
   const submit = async () => {
     if (!consent) {
@@ -259,6 +278,7 @@ function AddCardDialog({
           verificationToken,
           cardholderName: name,
           postalCode: zip,
+          consent,
         }),
       });
       const data = (await res.json().catch(() => null)) as { error?: string } | null;
