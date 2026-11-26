@@ -390,50 +390,83 @@ describe("sessionStorage round-trip (jsdom)", () => {
 });
 
 describe("designFromRestore (deep link, v4: layers)", () => {
-  it("rebuilds layered sides from the API response", () => {
+  const restoredFiles = [{ name: "art.png", kind: "png" as const, naturalWidth: 1800, naturalHeight: 2100 }];
+
+  it("drops image layers whose file didn't come back (text layers stay)", () => {
     const design = designFromRestore({
-      garment: "longsleeve",
-      colors: { body: "#263147" },
+      garment: "tshirt",
+      colors: { body: "#ffffff" },
       views: [
-        {
-          view: "left",
-          printArea: "full-sleeve",
-          layers: [
-            {
-              type: "text",
-              text: "RUFF",
-              font: "anton",
-              color: "#ffffff",
-              outline: { color: "#000000", width: 2 },
-              align: "center",
-              letterSpacing: 4,
-              transform: {
-                x: 425,
-                y: 300,
-                width: 140,
-                height: 420,
-                rotation: 0,
-                flipX: false,
-                skewX: -0.45,
-                skewY: 0,
-              },
-            },
-          ],
-        },
         {
           view: "front",
           printArea: "full-front",
           layers: [
+            { type: "image", artwork: 0, transform: fitTransform({ x: 344, y: 292, w: 312, h: 364 }, 600, 300) },
             {
-              type: "image",
-              artwork: 0,
-              transform: { x: 350, y: 290, width: 300, height: 350, rotation: 0, flipX: false, skewX: 0, skewY: 0 },
+              type: "text",
+              text: "RUFF",
+              font: "anton",
+              color: "#000000",
+              outline: { color: "#000000", width: 0 },
+              align: "center",
+              letterSpacing: 0,
+              transform: fitTransform({ x: 344, y: 292, w: 312, h: 364 }, 300, 100),
             },
           ],
         },
       ],
-      sizes: { M: 2 },
+      sizes: {},
     });
+    expect(design.views.front!.layers.map((l) => l.type)).toEqual(["text"]);
+  });
+
+  it("rebuilds layered sides from the API response", () => {
+    const design = designFromRestore(
+      {
+        garment: "longsleeve",
+        colors: { body: "#263147" },
+        views: [
+          {
+            view: "left",
+            printArea: "full-sleeve",
+            layers: [
+              {
+                type: "text",
+                text: "RUFF",
+                font: "anton",
+                color: "#ffffff",
+                outline: { color: "#000000", width: 2 },
+                align: "center",
+                letterSpacing: 4,
+                transform: {
+                  x: 425,
+                  y: 300,
+                  width: 140,
+                  height: 420,
+                  rotation: 0,
+                  flipX: false,
+                  skewX: -0.45,
+                  skewY: 0,
+                },
+              },
+            ],
+          },
+          {
+            view: "front",
+            printArea: "full-front",
+            layers: [
+              {
+                type: "image",
+                artwork: 0,
+                transform: { x: 350, y: 290, width: 300, height: 350, rotation: 0, flipX: false, skewX: 0, skewY: 0 },
+              },
+            ],
+          },
+        ],
+        sizes: { M: 2 },
+      },
+      restoredFiles,
+    );
 
     const left = design.views.left!;
     expect(left.layers[0]!.type).toBe("text");
@@ -445,6 +478,8 @@ describe("designFromRestore (deep link, v4: layers)", () => {
     expect(front.layers[0]!.type).toBe("image");
     // The image layer's fileIndex points into the builder's restored files array.
     expect(front.layers[0]!.type === "image" && front.layers[0]!.fileIndex).toBe(0);
+    // ...and carries the restored file's name and size (DPI warning, layer names, persistence).
+    expect(front.layers[0]).toMatchObject({ name: "art.png", naturalWidth: 1800, naturalHeight: 2100 });
 
     const { payload } = payloadPlan(design);
     const result = mockupPayloadSchema.safeParse(payload);
@@ -452,24 +487,27 @@ describe("designFromRestore (deep link, v4: layers)", () => {
   });
 
   it("falls back to garment defaults for unknown zones, print areas and sizes", () => {
-    const design = designFromRestore({
-      garment: "hat",
-      colors: { body: "#d50032", notAZone: "#000000" },
-      views: [
-        {
-          view: "front",
-          printArea: "made-up-area",
-          layers: [
-            {
-              type: "image",
-              artwork: 0,
-              transform: { ...fitTransform({ x: 0, y: 0, w: 100, h: 100 }, 600, 300), rotation: 999 },
-            },
-          ],
-        },
-      ],
-      sizes: { OSFA: 3, "2XL": 5 },
-    });
+    const design = designFromRestore(
+      {
+        garment: "hat",
+        colors: { body: "#d50032", notAZone: "#000000" },
+        views: [
+          {
+            view: "front",
+            printArea: "made-up-area",
+            layers: [
+              {
+                type: "image",
+                artwork: 0,
+                transform: { ...fitTransform({ x: 0, y: 0, w: 100, h: 100 }, 600, 300), rotation: 999 },
+              },
+            ],
+          },
+        ],
+        sizes: { OSFA: 3, "2XL": 5 },
+      },
+      restoredFiles,
+    );
     expect(design.colors.front).toBe(getGarment("hat").defaultColors.front);
     expect(design.colors.notAZone).toBeUndefined();
     const front = design.views.front!;
@@ -477,6 +515,57 @@ describe("designFromRestore (deep link, v4: layers)", () => {
     // A corrupt transform (rotation outside ±360) re-fits into the area instead.
     expect(front.layers[0]!.type === "image" && front.layers[0]!.transform.rotation).toBe(0);
     expect(design.sizes).toEqual({ OSFA: 3 }); // 2XL isn't a hat size
+  });
+});
+
+describe("undo grouping (mergeKey)", () => {
+  it("one slider drag is one undo step; another control starts a new one", () => {
+    let state = builderReducer(start(), { type: "addTextLayer", view: "front", input: textInput() });
+    const id = state.design.views.front!.layers[0]!.id;
+    const t = state.design.views.front!.layers[0]!.transform;
+    const pastAfterAdd = state.past.length;
+    for (const skewX of [0.1, 0.2, 0.3]) {
+      state = builderReducer(state, {
+        type: "updateLayer",
+        view: "front",
+        layerId: id,
+        patch: { transform: { ...t, skewX } },
+        mergeKey: `${id}:skewX`,
+      });
+    }
+    expect(state.past.length).toBe(pastAfterAdd + 1);
+    state = builderReducer(state, {
+      type: "updateLayer",
+      view: "front",
+      layerId: id,
+      patch: { transform: { ...t, skewX: 0.3, rotation: 10 } },
+      mergeKey: `${id}:rotate`,
+    });
+    expect(state.past.length).toBe(pastAfterAdd + 2);
+
+    state = builderReducer(state, { type: "undo" });
+    expect(state.design.views.front!.layers[0]!.transform.skewX).toBe(0.3);
+    state = builderReducer(state, { type: "undo" });
+    expect(state.design.views.front!.layers[0]!.transform.skewX).toBe(0);
+  });
+
+  it("after an undo, the same control starts a fresh step", () => {
+    let state = builderReducer(start(), { type: "addTextLayer", view: "front", input: textInput() });
+    const id = state.design.views.front!.layers[0]!.id;
+    const t = state.design.views.front!.layers[0]!.transform;
+    const move = (s: BuilderState, rotation: number) =>
+      builderReducer(s, {
+        type: "updateLayer",
+        view: "front",
+        layerId: id,
+        patch: { transform: { ...t, rotation } },
+        mergeKey: `${id}:rotate`,
+      });
+    state = move(state, 10);
+    state = builderReducer(state, { type: "undo" });
+    const pastLen = state.past.length;
+    state = move(state, 20);
+    expect(state.past.length).toBe(pastLen + 1);
   });
 });
 

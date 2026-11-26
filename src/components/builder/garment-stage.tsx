@@ -24,7 +24,7 @@ import type { MockupColors } from "@/lib/mockup-schema";
 import { Button } from "@/components/ui/button";
 
 import { composeArtworkLayer, composeGarment, type TemplateImages } from "./compositor";
-import { centerToTopLeft, nudgeTransform, rotateAroundCenter, scaleAroundCenter } from "./geometry";
+import { centerToTopLeft, nudgeTransform, rotateAroundCenter, scaleAroundCenter, SKEW_LIMIT } from "./geometry";
 import { SideArtworkChooser } from "./side-artwork-chooser";
 import type { BuilderLayer, BuilderTransform } from "./use-builder-state";
 
@@ -138,6 +138,48 @@ export interface GarmentStageProps {
 
 const raf = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
+/**
+ * Image layers with fold shading baked in, composed once per (shading, file, size, position)
+ * rather than on every render — typing in a text field or selecting a layer mustn't recompose
+ * every image. Keyed by the image elements (WeakMaps), a few entries per file.
+ */
+const artworkLayerCache = new WeakMap<HTMLImageElement, WeakMap<HTMLImageElement, Map<string, HTMLCanvasElement>>>();
+function cachedArtworkLayer(
+  img: HTMLImageElement,
+  shading: HTMLImageElement,
+  t: BuilderTransform,
+  view: GarmentView,
+): HTMLCanvasElement {
+  let byImage = artworkLayerCache.get(shading);
+  if (!byImage) artworkLayerCache.set(shading, (byImage = new WeakMap()));
+  let entries = byImage.get(img);
+  if (!entries) byImage.set(img, (entries = new Map()));
+  const key = `${Math.round(t.x)}|${Math.round(t.y)}|${Math.round(t.width)}|${Math.round(t.height)}`;
+  let canvas = entries.get(key);
+  if (!canvas) {
+    canvas = composeArtworkLayer(img, shading, t, view);
+    entries.set(key, canvas);
+    if (entries.size > 8) entries.delete(entries.keys().next().value!);
+  }
+  return canvas;
+}
+
+/** The Transformer may re-decompose a rotated + skewed node: keep what it shows, within the schema. */
+const nodeSkew = (node: Konva.Node) => ({
+  skewX: Math.max(-SKEW_LIMIT, Math.min(SKEW_LIMIT, node.skewX())),
+  skewY: Math.max(-SKEW_LIMIT, Math.min(SKEW_LIMIT, node.skewY())),
+});
+
+/**
+ * Konva strokes are centered on the glyph edge and scaled with the node. With the fill drawn
+ * over the stroke, the visible outline is half the stroke, so this keeps the visible outline at
+ * `outline.width` template px whatever the text's size (what the owner email says it is).
+ */
+function textStrokeWidth(outlineWidth: number, scaleX: number, scaleY: number): number {
+  const s = Math.sqrt(Math.abs(scaleX * scaleY)) || 1;
+  return (2 * outlineWidth) / s;
+}
+
 export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(function GarmentStage(
   {
     garmentName,
@@ -202,6 +244,11 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
   // Deselect when the view changes (the layer nodes are replaced).
   const selectThisView = () => setSelectedView(view.id);
 
+  const artworkCanvas = (layer: Extract<BuilderLayer, { type: "image" }>): HTMLCanvasElement | undefined => {
+    const img = stageImages[layer.fileIndex];
+    return img && images ? cachedArtworkLayer(img, images.shading, layer.transform, view) : undefined;
+  };
+
   // Garment layer: mask fills + shading + highlight, clipped to the silhouette.
   const garmentCanvas = useMemo(() => (images ? composeGarment(view, colors, images) : null), [view, colors, images]);
 
@@ -243,6 +290,7 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
         height,
         rotation,
         flipX: scaleX < 0,
+        ...nodeSkew(node),
       });
       return;
     }
@@ -259,6 +307,7 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
       width,
       height,
       rotation,
+      ...nodeSkew(node),
     });
   };
 
@@ -309,8 +358,17 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
       onMoveLayer(selectedLayer.id, e.key === "]" ? "up" : "down");
       return;
     }
+    // Tab walks through the layers, then lets focus leave the canvas (no keyboard trap,
+    // WCAG 2.1.2): forward past the top layer or backward past the bottom one moves on.
     if (e.key === "Tab" && layers.length > 0) {
+      const index = layers.findIndex((l) => l.id === selectedLayerId);
+      const leaving = e.shiftKey ? index === 0 || index === -1 : index === layers.length - 1;
+      if (leaving) {
+        onSelectLayer(null);
+        return;
+      }
       e.preventDefault();
+      selectThisView();
       onCycleLayer(e.shiftKey);
       return;
     }
@@ -391,6 +449,12 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
       layer.transform.width,
     )}, h=${Math.round(layer.transform.height)}, rotation=${Math.round(layer.transform.rotation)}${
       layer.transform.flipX ? ", flipped" : ""
+    }${
+      layer.transform.skewX || layer.transform.skewY
+        ? `, skew=${Math.round((Math.atan(layer.transform.skewX) * 180) / Math.PI)}°/${Math.round(
+            (Math.atan(layer.transform.skewY) * 180) / Math.PI,
+          )}°`
+        : ""
     }`;
 
   const hasLayers = layers.length > 0;
@@ -403,7 +467,7 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
       tabIndex={0}
       aria-label={`Mockup canvas: ${garmentName} ${view.label.toLowerCase()}. ${
         hasLayers ? "Click a design to select it. " : ""
-      }Keyboard: Tab cycles layers, arrow keys nudge, plus and minus scale, R rotates, Delete removes, Control-Z undoes.`}
+      }Keyboard: Tab moves through layers, arrow keys nudge, plus and minus scale, R rotates, Delete removes, Control-Z undoes.`}
       onKeyDown={handleKeyDown}
       className="bg-builder-backdrop focus-visible:ring-neon-cyan relative w-full overflow-hidden rounded-xl focus-visible:ring-2 focus-visible:outline-none"
     >
@@ -491,11 +555,7 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
                   {layer.type === "image" ? (
                     <KonvaImage
                       ref={attachRef}
-                      image={
-                        stageImages[layer.fileIndex]
-                          ? composeArtworkLayer(stageImages[layer.fileIndex]!, images!.shading, layer.transform, view)
-                          : undefined
-                      }
+                      image={artworkCanvas(layer)}
                       {...position}
                       offsetX={layer.transform.width / 2}
                       offsetY={layer.transform.height / 2}
@@ -508,6 +568,8 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
                     (() => {
                       const natural = measureText(layer.text, layer.font, layer.letterSpacing);
                       const font = getTextFont(layer.font);
+                      const sx = layer.transform.width / natural.width;
+                      const sy = layer.transform.height / natural.height;
                       return (
                         <Text
                           ref={attachRef}
@@ -519,13 +581,13 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
                           align={layer.align}
                           fill={layer.color}
                           stroke={layer.outline.width > 0 ? layer.outline.color : undefined}
-                          strokeWidth={layer.outline.width}
+                          strokeWidth={textStrokeWidth(layer.outline.width, sx, sy)}
                           fillAfterStrokeEnabled
                           {...position}
                           offsetX={natural.width / 2}
                           offsetY={natural.height / 2}
-                          scaleX={(layer.transform.width / natural.width) * (layer.transform.flipX ? -1 : 1)}
-                          scaleY={layer.transform.height / natural.height}
+                          scaleX={sx * (layer.transform.flipX ? -1 : 1)}
+                          scaleY={sy}
                           {...layerHandlers}
                         />
                       );

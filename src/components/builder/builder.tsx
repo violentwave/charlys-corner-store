@@ -11,7 +11,7 @@ import { z } from "zod";
 
 import { detectArtworkKind, ARTWORK_MAX_BYTES } from "@/lib/artwork";
 import type { AccountUser } from "@/lib/auth-schema";
-import { getGarment, GARMENTS, isHexColor, VIEW_LABELS, type GarmentId, type ViewId } from "@/lib/garments";
+import { getGarment, GARMENTS, isHexColor, luma, VIEW_LABELS, type GarmentId, type ViewId } from "@/lib/garments";
 import { MAX_LAYERS_PER_VIEW, MOCKUP_ARTWORK_KINDS, mockupViewSchema } from "@/lib/mockup-schema";
 import { track } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
@@ -60,7 +60,9 @@ const raf = () => new Promise<void>((resolve) => requestAnimationFrame(() => res
 
 const DEFAULT_TEXT = "Your text";
 const DEFAULT_TEXT_FONT = "anton";
-const DEFAULT_TEXT_COLOR = "#000000";
+/** New text starts in black, or white on a dark garment, so it's visible right away. */
+const defaultTextColor = (garmentHex: string | undefined) =>
+  garmentHex && luma(garmentHex) < 0.5 ? "#ffffff" : "#000000";
 
 /** File name for a restored artwork: the key's basename, or a friendly fallback. */
 function safeUrlFileName(url: string): string {
@@ -204,7 +206,7 @@ export function Builder() {
       dispatch({
         type: "hydrate",
         step: 3,
-        design: designFromRestore({ garment: garmentId, colors, views, sizes: json.design.sizes }),
+        design: designFromRestore({ garment: garmentId, colors, views, sizes: json.design.sizes }, restoredFiles),
       });
       setFiles(restoredFiles);
       setRestoreStatus("loaded");
@@ -324,7 +326,8 @@ export function Builder() {
       setFiles([...files, decoded]);
     } else {
       // The wire format takes 4 files; reuse a slot no layer references anymore.
-      const used = usedFileIndexes(design);
+      // Never reuse a file an Undo/Redo step could bring back.
+      const used = new Set([design, ...state.past, ...state.future].flatMap((d) => [...usedFileIndexes(d)]));
       const free = files.findIndex((_, i) => !used.has(i));
       if (free === -1) {
         setFileError("Up to 4 images per mockup — remove one first.");
@@ -362,22 +365,11 @@ export function Builder() {
 
   /** Removing a layer drops its file when no other layer uses it (object URL revoked). */
   const removeLayer = (viewId: ViewId, layerId: string) => {
-    const viewState = design.views[viewId];
-    const layer = viewState?.layers.find((l) => l.id === layerId);
     dispatch({ type: "removeLayer", view: viewId, layerId });
-    if (layer?.type !== "image") return;
-    const stillUsed = usedFileIndexes(design, viewId);
-    const referencedElsewhere =
-      viewId === activeViewId
-        ? activeViewState.layers.filter(
-            (l) => l.type === "image" && l.id !== layerId && l.fileIndex === layer.fileIndex,
-          ).length > 0
-        : false;
-    if (referencedElsewhere || stillUsed.has(layer.fileIndex)) return;
-    if (files[layer.fileIndex]) {
-      URL.revokeObjectURL(files[layer.fileIndex]!.url);
-      setFiles(files.filter((_, i) => i !== layer.fileIndex));
-    }
+    // The file stays in `files`: other layers' fileIndex values point into that array (removing
+    // an entry would shift them onto the wrong file), Undo can bring the layer back, and the
+    // upload path reuses a slot nothing references once 4 files are loaded. Unused files are
+    // never uploaded (payloadPlan only sends files in use).
   };
 
   /**
@@ -410,7 +402,11 @@ export function Builder() {
     dispatch({
       type: "addTextLayer",
       view: activeViewId,
-      input: { text: DEFAULT_TEXT, font: DEFAULT_TEXT_FONT, color: DEFAULT_TEXT_COLOR },
+      input: {
+        text: DEFAULT_TEXT,
+        font: DEFAULT_TEXT_FONT,
+        color: defaultTextColor(design.colors[garment.colorZones[0]!.id]),
+      },
     });
     track("text_added", { garment: design.garment });
   };
@@ -731,18 +727,19 @@ export function Builder() {
                     dispatch({ type: "setPrintArea", view: viewId, printAreaId: areaId })
                   }
                   onSelectLayer={(layerId) => dispatch({ type: "selectLayer", view: activeViewId, layerId })}
-                  onTransform={(layerId, transform) =>
-                    dispatch({ type: "updateLayer", view: activeViewId, layerId, patch: { transform } })
+                  onTransform={(layerId, transform, mergeKey) =>
+                    dispatch({ type: "updateLayer", view: activeViewId, layerId, patch: { transform }, mergeKey })
                   }
-                  onTextChange={(layerId, patch) =>
-                    dispatch({ type: "updateLayer", view: activeViewId, layerId, patch })
+                  onTextChange={(layerId, patch, mergeKey) =>
+                    dispatch({ type: "updateLayer", view: activeViewId, layerId, patch, mergeKey })
                   }
-                  onOutlineChange={(layerId, outline) =>
+                  onOutlineChange={(layerId, outline, mergeKey) =>
                     dispatch({
                       type: "updateLayer",
                       view: activeViewId,
                       layerId,
                       patch: { outline } as Partial<BuilderLayer>,
+                      mergeKey,
                     })
                   }
                   onRemoveLayer={(layerId) => removeLayer(activeViewId, layerId)}

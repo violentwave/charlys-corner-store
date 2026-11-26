@@ -37,6 +37,7 @@ export function LayersPanel({ rows, selectedId, onSelect, onMove, onDuplicate, o
       {rows.map((row, index) => {
         const selected = row.id === selectedId;
         const top = index === 0;
+        const bottom = index === rows.length - 1;
         return (
           <li key={row.id}>
             <div
@@ -75,12 +76,24 @@ export function LayersPanel({ rows, selectedId, onSelect, onMove, onDuplicate, o
                 variant="ghost"
                 size="sm"
                 className="h-8 w-8 min-w-0 px-0"
-                aria-label={top ? `Move ${row.name} down` : `Move ${row.name} up`}
-                onClick={() => onMove(row.id, top ? "down" : "up")}
-                data-testid={`layer-move-${row.id}`}
-                disabled={rows.length < 2}
+                aria-label={`Move ${row.name} up`}
+                onClick={() => onMove(row.id, "up")}
+                data-testid={`layer-up-${row.id}`}
+                disabled={top}
               >
-                {top ? "↓" : "↑"}
+                ↑
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 min-w-0 px-0"
+                aria-label={`Move ${row.name} down`}
+                onClick={() => onMove(row.id, "down")}
+                data-testid={`layer-down-${row.id}`}
+                disabled={bottom}
+              >
+                ↓
               </Button>
               <Button
                 type="button"
