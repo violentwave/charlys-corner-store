@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 
 import { composeArtworkLayer, composeGarment, type TemplateImages } from "./compositor";
 import { centerToTopLeft, nudgeTransform, rotateAroundCenter, scaleAroundCenter } from "./geometry";
+import { SideArtworkChooser } from "./side-artwork-chooser";
 import type { BuilderTransform, BuilderViewState } from "./use-builder-state";
 
 /** Loads the template layer images for a view (same-origin /garments/…, keeps export untainted). */
@@ -81,8 +82,13 @@ export interface GarmentStageProps {
   placement?: BuilderViewState;
   /** Decoded artwork image (the object URL of the in-memory File). */
   artworkImg: HTMLImageElement | null;
-  /** Shown over the empty canvas: "Your design goes here" + an upload button (v2). */
-  onAddDesign?: () => void;
+  /** Empty-side state (v3): "Your design goes here" plus the same/different chooser. */
+  emptyState?: {
+    /** Uploaded files to offer for reuse; empty → just the upload CTA. */
+    files: { index: number; url: string; name: string }[];
+    onUse: (fileIndex: number) => void;
+    onUploadDifferent: () => void;
+  };
   onTransformCommit: (transform: BuilderTransform) => void;
   onRemove?: () => void;
   onUndo?: () => void;
@@ -92,7 +98,7 @@ export interface GarmentStageProps {
 const raf = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
 export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(function GarmentStage(
-  { garmentName, view, colors, placement, artworkImg, onAddDesign, onTransformCommit, onRemove, onUndo, onRedo },
+  { garmentName, view, colors, placement, artworkImg, emptyState, onTransformCommit, onRemove, onUndo, onRedo },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -377,18 +383,24 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
       ) : (
         <div className="bg-builder-backdrop min-h-64 w-full animate-pulse" aria-hidden="true" />
       )}
-      {/* Empty state over the canvas: dashed guide + one clear call to action (docs/04 v2). */}
-      {scale > 0 && garmentCanvas && !artwork && onAddDesign ? (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 text-center">
-          <p
-            className="rounded-full bg-white/75 px-3 py-1 text-sm font-medium text-[#3f3f50]"
-            data-testid="canvas-empty"
-          >
+      {/* Empty side (v3): dashed guide, one-line instruction, same/different chooser. */}
+      {scale > 0 && garmentCanvas && !artwork && emptyState ? (
+        <div className="bg-builder-backdrop/90 absolute inset-0 flex flex-col items-center justify-center gap-2 p-3 text-center">
+          <p className="text-text-2 text-sm font-medium" data-testid="canvas-empty">
             Your design goes here
           </p>
-          <Button type="button" size="sm" onClick={onAddDesign} data-testid="add-design">
-            Add your design
-          </Button>
+          {emptyState.files.length > 0 ? (
+            <SideArtworkChooser
+              files={emptyState.files}
+              sideLabel={view.label}
+              onUse={emptyState.onUse}
+              onUploadDifferent={emptyState.onUploadDifferent}
+            />
+          ) : (
+            <Button type="button" size="sm" onClick={emptyState.onUploadDifferent} data-testid="add-design">
+              Add your design
+            </Button>
+          )}
         </div>
       ) : null}
       <p className="sr-only" aria-live="polite" data-testid="builder-transform">

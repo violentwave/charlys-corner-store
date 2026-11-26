@@ -48,6 +48,12 @@ export type ArtworkMeta = {
   naturalWidth: number;
   naturalHeight: number;
   transform: BuilderTransform;
+  /**
+   * Which uploaded file (the builder's files array) this side prints — v3: every side
+   * remembers its own file, so the back can carry the same design as the front or a
+   * different one. The File/decoded image live outside the reducer.
+   */
+  fileIndex: number;
 };
 
 export type BuilderViewState = {
@@ -87,8 +93,12 @@ export type BuilderAction =
   | { type: "setStep"; step: BuilderStep }
   | { type: "setZoneColor"; zone: string; hex: string }
   | { type: "setPrintArea"; view: ViewId; printAreaId: string }
-  /** Places (or re-links) artwork on the given views, fitted into each view's active print area. */
-  | { type: "placeArtwork"; views: ViewId[]; meta: Omit<ArtworkMeta, "transform"> }
+  /**
+   * Places (or replaces) artwork on exactly ONE side, fitted into its active print area
+   * (v3: an upload goes on the side being edited only; `fileIndex` says which uploaded
+   * file that side prints).
+   */
+  | { type: "placeArtwork"; view: ViewId; meta: Omit<ArtworkMeta, "transform"> }
   | { type: "setTransform"; view: ViewId; transform: BuilderTransform }
   | { type: "removeArtwork"; view: ViewId }
   | { type: "setSize"; size: string; qty: number }
@@ -213,21 +223,23 @@ export function builderReducer(state: BuilderState, action: BuilderAction): Buil
 
     case "placeArtwork": {
       const garment = getGarment(state.design.garment);
-      const views = { ...state.design.views };
-      for (const viewId of action.views) {
-        const view = garment.views.find((v) => v.id === viewId);
-        if (!view) continue;
-        const current = views[viewId];
-        const area = view.printAreas.find((a) => a.id === current?.printArea) ?? view.printAreas[0]!;
-        views[viewId] = {
-          printArea: area.id,
-          artwork: {
-            ...action.meta,
-            transform: fitTransform(area.rect, action.meta.naturalWidth, action.meta.naturalHeight),
+      const view = garment.views.find((v) => v.id === action.view);
+      const current = state.design.views[action.view];
+      if (!view) return state;
+      const area = view.printAreas.find((a) => a.id === current?.printArea) ?? view.printAreas[0]!;
+      return withHistory(state, {
+        ...state.design,
+        views: {
+          ...state.design.views,
+          [action.view]: {
+            printArea: area.id,
+            artwork: {
+              ...action.meta,
+              transform: fitTransform(area.rect, action.meta.naturalWidth, action.meta.naturalHeight),
+            },
           },
-        };
-      }
-      return withHistory(state, { ...state.design, views });
+        },
+      });
     }
 
     case "setTransform": {
@@ -312,6 +324,9 @@ const persistedDesignSchema = z.object({
           naturalWidth: z.number().finite().nonnegative(),
           naturalHeight: z.number().finite().nonnegative(),
           transform: artworkTransformSchema,
+          // Which uploaded file this side prints (v3); the files themselves don't survive
+          // a refresh, so the visitor re-picks them and the indexes stay meaningful.
+          fileIndex: z.number().int().min(0).max(3),
         })
         .nullable(),
     }),
@@ -407,32 +422,40 @@ export function useBuilderState() {
 export type RestoredDesign = {
   garment: GarmentId;
   colors: Record<string, string>;
-  views: { view: ViewId; printArea: string; transform: BuilderTransform }[];
+  /** `artwork` indexes the response's `artworks[]` (0 on rows from before per-view files). */
+  views: { view: ViewId; printArea: string; transform: BuilderTransform; artwork: number }[];
   sizes: MockupSizes;
 };
 
 /**
- * Rebuilds a BuilderDesign from the restore endpoint's response. Only keys that
- * match the garment survive (views, print areas, sizes, zones); anything unknown
- * falls back to the garment defaults, and corrupt transforms re-fit to the area.
+ * Rebuilds a BuilderDesign from the restore endpoint's response. `metas[i]` describes
+ * artwork file i (name/kind/dimensions, decoded by the builder from `artworks[]`). Only
+ * keys that match the garment survive (views, print areas, sizes, zones); anything
+ * unknown falls back to the garment defaults, and corrupt transforms re-fit to the area.
  */
-export function designFromRestore(restored: RestoredDesign, meta: Omit<ArtworkMeta, "transform">): BuilderDesign {
+export function designFromRestore(
+  restored: RestoredDesign,
+  metas: Omit<ArtworkMeta, "transform" | "fileIndex">[],
+): BuilderDesign {
   const garment = getGarment(restored.garment);
   const byView = new Map(restored.views.map((v) => [v.view, v]));
   const views: BuilderDesign["views"] = {};
   for (const view of garment.views) {
     const saved = byView.get(view.id);
-    const area =
+    const areaId =
       saved && view.printAreas.some((a) => a.id === saved.printArea) ? saved.printArea : view.printAreas[0]!.id;
+    const area = view.printAreas.find((a) => a.id === areaId)!;
+    const meta = saved ? metas[saved.artwork] : undefined;
     const artwork: ArtworkMeta | null = saved
       ? {
-          ...meta,
+          ...(meta ?? metas[0]!),
+          fileIndex: saved.artwork,
           transform: artworkTransformSchema.safeParse(saved.transform).success
             ? saved.transform
-            : fitTransform(view.printAreas.find((a) => a.id === area)!.rect, meta.naturalWidth, meta.naturalHeight),
+            : fitTransform(area.rect, (meta ?? metas[0]!).naturalWidth, (meta ?? metas[0]!).naturalHeight),
         }
       : null;
-    views[view.id] = { printArea: area, artwork };
+    views[view.id] = { printArea: areaId, artwork };
   }
   const sizes = Object.fromEntries(
     Object.entries(restored.sizes).filter(
@@ -449,7 +472,7 @@ export function designFromRestore(restored: RestoredDesign, meta: Omit<ArtworkMe
 }
 
 /* ------------------------------------------------------------------ */
-/* Mapping onto the /api/mockups payload (identity comes from the v2 account) */
+/* Mapping onto the /api/mockups payload (identity comes from the account) */
 /* ------------------------------------------------------------------ */
 
 export type MockupPayloadDesign = Pick<
@@ -457,25 +480,57 @@ export type MockupPayloadDesign = Pick<
   "garment" | "colors" | "views" | "sizes" | "notes"
 >;
 
-/** The design portion of the payload: only views that actually carry artwork. */
-export function toPayloadDesign(design: BuilderDesign): MockupPayloadDesign {
+/**
+ * The builder's file indexes the design references (optionally excluding one side, e.g.
+ * the side being cleared) — used to drop uploaded files no side uses anymore.
+ */
+export function usedFileIndexes(design: BuilderDesign, exceptView?: ViewId): Set<number> {
+  const out = new Set<number>();
+  for (const [view, state] of Object.entries(design.views)) {
+    if (view === exceptView) continue;
+    const index = state?.artwork?.fileIndex;
+    if (index != null) out.add(index);
+  }
+  return out;
+}
+
+/**
+ * The design portion of the payload plus the artwork plan (v3): only views that carry
+ * artwork, each with a `artwork` index that is dense (0..n-1) and assigned in first-use
+ * order across the garment's views (front, back, left sleeve, right sleeve).
+ * `filesInUse` lists the builder's file indexes in that same order, so the builder
+ * appends file `filesInUse[i]` as `artwork-<i>`.
+ */
+export function payloadPlan(design: BuilderDesign): {
+  payload: MockupPayloadDesign;
+  filesInUse: number[];
+} {
   const garment = getGarment(design.garment);
   const views: MockupView[] = [];
+  const filesInUse: number[] = [];
   for (const view of garment.views) {
     const saved = design.views[view.id];
     if (!saved?.artwork) continue;
+    let dense = filesInUse.indexOf(saved.artwork.fileIndex);
+    if (dense === -1) {
+      filesInUse.push(saved.artwork.fileIndex);
+      dense = filesInUse.length - 1;
+    }
     views.push({
       view: view.id,
       printArea: saved.printArea,
       transform: saved.artwork.transform,
-      artwork: 0, // one shared file today; the builder UI picks per-view files (artwork-<n>)
+      artwork: dense,
     });
   }
   return {
-    garment: design.garment,
-    colors: design.colors,
-    views,
-    sizes: design.sizes,
-    notes: design.notes.trim() ? design.notes.trim() : undefined,
+    payload: {
+      garment: design.garment,
+      colors: design.colors,
+      views,
+      sizes: design.sizes,
+      notes: design.notes.trim() ? design.notes.trim() : undefined,
+    },
+    filesInUse,
   };
 }

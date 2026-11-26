@@ -1,23 +1,25 @@
 "use client";
 /**
- * The /design builder shell (v2): stepper with one-line headlines and a slim progress
- * bar, canvas + controls layout, the account gate before upload, and the two send
- * paths ("Email me this mockup" / "Order this design"). Loaded client-only through
- * next/dynamic (ssr:false) because Konva must never run on the server.
+ * The /design builder shell (v3): stepper with one-line headlines and a slim progress
+ * bar, canvas + controls layout, the account gate before upload, per-side artwork
+ * (up to 4 files; the back and sleeves can carry the same design as the front or a
+ * different one), and the two send paths ("Email me this mockup" / "Order this design").
+ * Loaded client-only through next/dynamic (ssr:false) because Konva must never run on
+ * the server.
  */
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 
 import { detectArtworkKind, ARTWORK_MAX_BYTES } from "@/lib/artwork";
 import type { AccountUser } from "@/lib/auth-schema";
-import { getGarment, GARMENTS, isHexColor, type GarmentId, type ViewId } from "@/lib/garments";
+import { getGarment, GARMENTS, isHexColor, VIEW_LABELS, type GarmentId, type ViewId } from "@/lib/garments";
 import { MOCKUP_ARTWORK_KINDS, mockupViewSchema } from "@/lib/mockup-schema";
 import { track } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
 
 import { ArtworkControls } from "./artwork-controls";
 import { ColorPicker } from "./color-picker";
-import { GarmentPicker } from "./garment-picker";
+import { GarmentStep } from "./garment-step";
 import { GarmentStage, loadTemplate, type GarmentStageHandle } from "./garment-stage";
 import { AUTH_CHANGED_EVENT } from "@/components/layout/account-link";
 
@@ -25,7 +27,8 @@ import { SignInDialog, type SignInDialogMode } from "./sign-in-dialog";
 import {
   designFromRestore,
   initialDesign,
-  toPayloadDesign,
+  payloadPlan,
+  usedFileIndexes,
   useBuilderState,
   type BuilderStep,
   type RestoredDesign,
@@ -42,15 +45,20 @@ const STEPS: { id: BuilderStep; label: string; headline: string; helper: string 
     helper: "Gildan tees, long sleeves and hoodies are always stocked.",
   },
   { id: 2, label: "Colors", headline: "Choose its color", helper: "Only colors the real blank comes in." },
-  { id: 3, label: "Design", headline: "Add your design", helper: "Drag it, size it, done." },
+  {
+    id: 3,
+    label: "Design",
+    headline: "Add your design",
+    helper:
+      "Your design goes on the front. Want it on the back or a sleeve too? Pick the side, then use the same design or upload another.",
+  },
   { id: 4, label: "Send", headline: "Send it or order it", helper: "Pick one — you can always do the other after." },
 ];
 
 const raf = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
-/** File name for a restored artwork: the key's basename, or a friendly fallback. */ function safeUrlFileName(
-  url: string,
-): string {
+/** File name for a restored artwork: the key's basename, or a friendly fallback. */
+function safeUrlFileName(url: string): string {
   try {
     const name = new URL(url).pathname.split("/").pop();
     return name && name.length > 0 && name.length <= 255 ? name : "your-design.png";
@@ -59,10 +67,16 @@ const raf = () => new Promise<void>((resolve) => requestAnimationFrame(() => res
   }
 }
 
-/**
- * The upload gate decision for the current account (docs/04 Flow v2) lives in
- * ./upload-gate.ts (kept Konva-free so it's unit-testable).
- */
+/** One uploaded file: the original, its object URL and the decoded image for the canvas. */
+type ArtworkFile = {
+  file: File;
+  url: string;
+  img: HTMLImageElement;
+  name: string;
+  kind: (typeof MOCKUP_ARTWORK_KINDS)[number];
+  naturalWidth: number;
+  naturalHeight: number;
+};
 
 export function Builder() {
   const { state, dispatch, canUndo, canRedo, undo, redo } = useBuilderState();
@@ -73,9 +87,8 @@ export function Builder() {
   const activeViewId: ViewId = garment.views.some((v) => v.id === requestedView) ? requestedView : garment.views[0]!.id;
   const activeView = garment.views.find((v) => v.id === activeViewId)!;
 
-  const [file, setFile] = useState<File | null>(null);
-  const [fileUrl, setFileUrl] = useState<string | null>(null);
-  const [artworkImg, setArtworkImg] = useState<HTMLImageElement | null>(null);
+  /** Uploaded files (≤ 4). A side's `artwork.fileIndex` points into this array. */
+  const [files, setFiles] = useState<ArtworkFile[]>([]);
   const [fileError, setFileError] = useState<string | null>(null);
   const stageRef = useRef<GarmentStageHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -94,12 +107,12 @@ export function Builder() {
   const [success, setSuccess] = useState<MockupResult | null>(null);
   const [exportedUrls, setExportedUrls] = useState<Partial<Record<ViewId, string>>>({});
 
-  // Only one object URL alive at a time; revoked on replace and on unmount.
+  // Object URLs of the uploaded files: revoked when dropped or on unmount.
   useEffect(
     () => () => {
-      if (fileUrl) URL.revokeObjectURL(fileUrl);
+      for (const f of files) URL.revokeObjectURL(f.url);
     },
-    [fileUrl],
+    [files],
   );
 
   const refreshAccount = () => {
@@ -128,7 +141,7 @@ export function Builder() {
       const res = await fetch(`/api/mockups/${mockupId}`);
       if (!res.ok) throw new Error("restore request failed");
       const json = (await res.json()) as
-        { ok: true; design: RestoredDesign; artwork: { url: string } } | { ok: false; error: string };
+        { ok: true; design: RestoredDesign; artworks: { url: string }[] } | { ok: false; error: string };
       if (!json.ok) throw new Error(json.error);
       // Re-validate on the client: the same schemas the server used for the row.
       const garmentEnum = z.enum(GARMENTS.map((g) => g.id) as [GarmentId, ...GarmentId[]]);
@@ -138,54 +151,63 @@ export function Builder() {
         return parsed.success ? [parsed.data] : [];
       });
       if (!garmentId || views.length === 0) throw new Error("restore payload invalid");
+      const colors = Object.fromEntries(Object.entries(json.design.colors).filter(([, hex]) => isHexColor(hex)));
+
+      // Every artwork file (v3): fetch as a Blob and use object URLs, so the canvas stays
+      // untainted and the mockups can still be exported. views[].artwork indexes artworks[].
+      const restoredFiles: ArtworkFile[] = [];
+      for (const artwork of json.artworks) {
+        const blob = await fetch(artwork.url).then((r) => {
+          if (!r.ok) throw new Error("artwork fetch failed");
+          return r.blob();
+        });
+        const bytes = new Uint8Array(await blob.arrayBuffer());
+        const kind = detectArtworkKind(bytes);
+        const builderKind = MOCKUP_ARTWORK_KINDS.find((k) => k === kind);
+        if (!builderKind) throw new Error("artwork not drawable");
+        const fileName = safeUrlFileName(artwork.url);
+        const file = new File([blob], fileName, { type: blob.type || "image/png" });
+        const objectUrl = URL.createObjectURL(file);
+        let img: HTMLImageElement;
+        try {
+          img = await loadTemplate(objectUrl);
+        } catch {
+          URL.revokeObjectURL(objectUrl);
+          throw new Error("artwork decode failed");
+        }
+        if (img.naturalWidth === 0) {
+          URL.revokeObjectURL(objectUrl);
+          throw new Error("artwork has no size");
+        }
+        restoredFiles.push({
+          file,
+          url: objectUrl,
+          img,
+          name: fileName,
+          kind: builderKind,
+          naturalWidth: img.naturalWidth,
+          naturalHeight: img.naturalHeight,
+        });
+      }
+      const metas = restoredFiles.map(({ name, kind, naturalWidth, naturalHeight }) => ({
+        name,
+        kind,
+        naturalWidth,
+        naturalHeight,
+      }));
       const viewEntries = views.map((v) => ({
         view: v.view as ViewId,
         printArea: v.printArea,
         transform: v.transform,
+        artwork: v.artwork,
       }));
-      const colors = Object.fromEntries(Object.entries(json.design.colors).filter(([, hex]) => isHexColor(hex)));
-
-      // The artwork is cross-origin (R2/MinIO): fetch it as a Blob and use an object
-      // URL, so the canvas stays untainted and the mockup can still be exported.
-      const blob = await fetch(json.artwork.url).then((r) => {
-        if (!r.ok) throw new Error("artwork fetch failed");
-        return r.blob();
-      });
-      const bytes = new Uint8Array(await blob.arrayBuffer());
-      const kind = detectArtworkKind(bytes);
-      const builderKind = MOCKUP_ARTWORK_KINDS.find((k) => k === kind);
-      if (!builderKind) throw new Error("artwork not drawable");
-      const fileName = safeUrlFileName(json.artwork.url);
-      const file = new File([blob], fileName, { type: blob.type || "image/png" });
-      const objectUrl = URL.createObjectURL(file);
-      let img: HTMLImageElement;
-      try {
-        img = await loadTemplate(objectUrl);
-      } catch {
-        URL.revokeObjectURL(objectUrl);
-        throw new Error("artwork decode failed");
-      }
-      if (img.naturalWidth === 0) {
-        URL.revokeObjectURL(objectUrl);
-        throw new Error("artwork has no size");
-      }
 
       dispatch({
         type: "hydrate",
         step: 3,
-        design: designFromRestore(
-          { garment: garmentId, colors, views: viewEntries, sizes: json.design.sizes },
-          {
-            name: fileName,
-            kind: builderKind,
-            naturalWidth: img.naturalWidth,
-            naturalHeight: img.naturalHeight,
-          },
-        ),
+        design: designFromRestore({ garment: garmentId, colors, views: viewEntries, sizes: json.design.sizes }, metas),
       });
-      setFile(file);
-      setFileUrl(objectUrl);
-      setArtworkImg(img);
+      setFiles(restoredFiles);
       setRestoreStatus("loaded");
     } catch {
       // Unknown id, expired link, or a hiccup: friendly message, fresh builder.
@@ -226,22 +248,34 @@ export function Builder() {
     if (step === 4 && !success) track("gate_viewed", { garment: design.garment });
   }, [step, success, design.garment]);
 
-  const hasFile = file !== null && artworkImg !== null;
-  const placedViews = toPayloadDesign(design).views;
+  const activePlacement = design.views[activeViewId];
+  const activeArtwork = activePlacement?.artwork ?? null;
+  const activeFile = activeArtwork ? files[activeArtwork.fileIndex] : undefined;
+  const hasFile = activeArtwork != null && activeFile != null;
+  const placedViews = payloadPlan(design).payload.views;
   const hasArtwork = placedViews.length > 0;
+  /** Sides whose art exists in the design but whose file needs re-picking after a refresh. */
+  const sidesNeedingFiles = (["front", "back", "left", "right"] as const)
+    .filter((v) => design.views[v]?.artwork && !files[design.views[v]!.artwork!.fileIndex])
+    .map((v) => VIEW_LABELS[v]);
+  const artByView = Object.fromEntries(
+    Object.entries(design.views).map(([view, state]) => [view, !!state?.artwork]),
+  ) as Partial<Record<ViewId, boolean>>;
+  const chooserFiles = files.map((f, index) => ({ index, url: f.url, name: f.name }));
 
-  const handleFileSelected = async (selected: File) => {
+  /** Validates + decodes an uploaded file into a new ArtworkFile entry. */
+  const decodeUpload = async (selected: File): Promise<ArtworkFile | null> => {
     setFileError(null);
     if (selected.size > ARTWORK_MAX_BYTES) {
       setFileError("That file is larger than 20 MB. Please upload a smaller image.");
-      return;
+      return null;
     }
     const bytes = new Uint8Array(await selected.arrayBuffer());
     const kind = detectArtworkKind(bytes);
     const builderKind = MOCKUP_ARTWORK_KINDS.find((k) => k === kind);
     if (!builderKind) {
       setFileError("That file type won't render on the mockup. Please use PNG, JPG, WEBP, or SVG.");
-      return;
+      return null;
     }
     const url = URL.createObjectURL(selected);
     let img: HTMLImageElement;
@@ -250,29 +284,102 @@ export function Builder() {
     } catch {
       URL.revokeObjectURL(url);
       setFileError("We couldn't read that image. If it's an SVG, re-export it with a width and height.");
-      return;
+      return null;
     }
     if (img.naturalWidth === 0) {
       URL.revokeObjectURL(url);
       setFileError("That image has no usable size. Please re-export it with real dimensions.");
-      return;
+      return null;
     }
-    if (fileUrl) URL.revokeObjectURL(fileUrl);
-    setFile(selected);
-    setFileUrl(url);
-    setArtworkImg(img);
+    return {
+      file: selected,
+      url,
+      img,
+      name: selected.name,
+      kind: builderKind,
+      naturalWidth: img.naturalWidth,
+      naturalHeight: img.naturalHeight,
+    };
+  };
+
+  /**
+   * An upload goes on the side currently shown, only (docs/04 "Artwork per side"). On a
+   * side that already has art whose file nobody else uses, the file is replaced in place;
+   * otherwise the upload becomes a new file entry (≤ 4). Computed synchronously from the
+   * render's state so the dispatch carries the right file index.
+   */
+  const handleFileSelected = async (selected: File) => {
+    const decoded = await decodeUpload(selected);
+    if (!decoded) return;
+    const currentIndex = activeArtwork?.fileIndex;
+    const sharedWithAnotherSide =
+      currentIndex != null &&
+      Object.entries(design.views).some(([view, v]) => view !== activeViewId && v?.artwork?.fileIndex === currentIndex);
+    let fileIndex: number;
+    let next: ArtworkFile[];
+    if (currentIndex != null && files[currentIndex] && !sharedWithAnotherSide) {
+      // Replace in place: this side owns the file; nobody else points at it.
+      next = [...files];
+      URL.revokeObjectURL(next[currentIndex]!.url);
+      next[currentIndex] = decoded;
+      fileIndex = currentIndex;
+    } else if (files.length < 4) {
+      fileIndex = files.length;
+      next = [...files, decoded];
+    } else {
+      // The wire format takes 4 files; reuse an unused slot if one exists.
+      const used = usedFileIndexes(design);
+      const free = files.findIndex((_, i) => !used.has(i));
+      if (free === -1) {
+        setFileError("Up to 4 designs per mockup — remove one first.");
+        URL.revokeObjectURL(decoded.url);
+        return;
+      }
+      next = [...files];
+      URL.revokeObjectURL(next[free]!.url);
+      next[free] = decoded;
+      fileIndex = free;
+    }
+    setFiles(next);
     dispatch({
       type: "placeArtwork",
-      // Only the side being edited (front by default); other sides are added on purpose.
-      views: [activeViewId],
+      view: activeViewId,
       meta: {
-        name: selected.name,
-        kind: builderKind,
-        naturalWidth: img.naturalWidth,
-        naturalHeight: img.naturalHeight,
+        name: decoded.name,
+        kind: decoded.kind,
+        naturalWidth: decoded.naturalWidth,
+        naturalHeight: decoded.naturalHeight,
+        fileIndex,
       },
     });
-    track("artwork_uploaded", { garment: design.garment, kind: builderKind });
+    track("artwork_uploaded", { garment: design.garment, kind: decoded.kind });
+  };
+
+  /** "Use the same design": put an already-uploaded file on the current, empty side. */
+  const useSameDesign = (fileIndex: number) => {
+    const entry = files[fileIndex];
+    if (!entry) return;
+    dispatch({
+      type: "placeArtwork",
+      view: activeViewId,
+      meta: {
+        name: entry.name,
+        kind: entry.kind,
+        naturalWidth: entry.naturalWidth,
+        naturalHeight: entry.naturalHeight,
+        fileIndex,
+      },
+    });
+  };
+
+  /** Remove on a side removes that side's art only; a file no side uses is dropped. */
+  const removeSideArtwork = (view: ViewId) => {
+    dispatch({ type: "removeArtwork", view });
+    const stillUsed = usedFileIndexes(design, view);
+    const dropped = files.filter((_, i) => !stillUsed.has(i));
+    if (dropped.length === 0) return;
+    setFiles(files.filter((_, i) => stillUsed.has(i)));
+    for (const file of dropped) URL.revokeObjectURL(file.url);
   };
 
   /**
@@ -323,12 +430,23 @@ export function Builder() {
     }
   };
 
-  /** Builds the multipart body and POSTs it to /api/mockups (docs/04 §5 v2). */
+  /**
+   * Builds the multipart body per the wire format (docs/04): artwork files numbered
+   * 0..n-1 in first-use order across views, one `artwork-<n>` per file, one
+   * `mockup-<view>` per side with art, and `views[].artwork` pointing at the files.
+   */
   const send = async (intent: "email" | "order", marketingOptIn: boolean) => {
     if (sending) return;
-    const payloadDesign = toPayloadDesign(design);
-    if (!file || payloadDesign.views.length === 0) {
+    const plan = payloadPlan(design);
+    if (files.length === 0 || plan.payload.views.length === 0) {
       setSendError("Add your design first — go back to step 3 and place your artwork on at least one side.");
+      return;
+    }
+    const missing = plan.payload.views
+      .filter((v) => !files[plan.filesInUse[v.artwork]])
+      .map((v) => VIEW_LABELS[v.view]);
+    if (missing.length > 0) {
+      setSendError(`Pick your artwork file again for: ${missing.join(", ")}.`);
       return;
     }
     setSending(true);
@@ -339,7 +457,7 @@ export function Builder() {
       body.append(
         "payload",
         JSON.stringify({
-          ...payloadDesign,
+          ...plan.payload,
           marketingOptIn,
           referralSource: design.referral.referralSource,
           referralOther: design.referral.referralOther,
@@ -347,11 +465,13 @@ export function Builder() {
         }),
       );
       body.append("website", honeypot);
-      body.append("artwork", file);
+      plan.filesInUse.forEach((fileIndex, i) => {
+        body.append(`artwork-${i}`, files[fileIndex]!.file);
+      });
 
       setProgress("Uploading your mockup…");
       const blobs: Partial<Record<ViewId, Blob>> = {};
-      for (const view of payloadDesign.views) {
+      for (const view of plan.payload.views) {
         const blob = await exportViewPng(view.view);
         if (!blob) throw new Error(`could not render the ${view.view} view`);
         blobs[view.view] = blob;
@@ -372,7 +492,7 @@ export function Builder() {
         }
         return;
       }
-      track("gate_submitted", { garment: design.garment, intent, views: payloadDesign.views.length });
+      track("gate_submitted", { garment: design.garment, intent, views: plan.payload.views.length });
       const urls: Partial<Record<ViewId, string>> = {};
       for (const [view, blob] of Object.entries(blobs)) {
         if (blob) urls[view as ViewId] = URL.createObjectURL(blob);
@@ -392,10 +512,8 @@ export function Builder() {
     setSuccess(null);
     setExportedUrls({});
     setSendError(null);
-    if (fileUrl) URL.revokeObjectURL(fileUrl);
-    setFile(null);
-    setFileUrl(null);
-    setArtworkImg(null);
+    for (const f of files) URL.revokeObjectURL(f.url);
+    setFiles([]);
     // The persist effect rewrites sessionStorage with the fresh state.
   };
 
@@ -425,11 +543,19 @@ export function Builder() {
           garmentName={garment.name}
           view={activeView}
           colors={design.colors}
-          placement={design.views[activeViewId]}
-          artworkImg={artworkImg}
-          onAddDesign={step === 3 ? () => void attemptUpload() : undefined}
+          placement={activePlacement}
+          artworkImg={activeFile?.img ?? null}
+          emptyState={
+            step === 3
+              ? {
+                  files: chooserFiles,
+                  onUse: useSameDesign,
+                  onUploadDifferent: () => void attemptUpload(),
+                }
+              : undefined
+          }
           onTransformCommit={(transform) => dispatch({ type: "setTransform", view: activeViewId, transform })}
-          onRemove={() => dispatch({ type: "removeArtwork", view: activeViewId })}
+          onRemove={() => removeSideArtwork(activeViewId)}
           onUndo={undo}
           onRedo={redo}
         />
@@ -483,6 +609,15 @@ export function Builder() {
                     : "We couldn't load that saved design — starting fresh."}
               </p>
             ) : null}
+            {sidesNeedingFiles.length > 0 && step === 3 ? (
+              <p
+                className="border-border bg-bg-2/60 rounded-md border p-2 text-xs"
+                data-testid="relink-sides"
+                role="note"
+              >
+                Pick your artwork file again to put it back on: {sidesNeedingFiles.join(", ")}.
+              </p>
+            ) : null}
 
             {/* Step pills (smaller) + "Step n of 4" + slim progress bar (docs/04 v2). */}
             <div className="flex flex-col gap-2" data-testid="builder-progress">
@@ -532,13 +667,13 @@ export function Builder() {
               </header>
 
               {step === 1 ? (
-                <GarmentPicker
+                <GarmentStep
                   selectedId={design.garment}
                   onSelect={(id) => {
                     dispatch({ type: "selectGarment", garmentId: id });
                     track("garment_selected", { garment: id });
-                    goStep(2);
                   }}
+                  onContinue={() => goStep(2)}
                 />
               ) : null}
               {step === 2 ? (
@@ -553,7 +688,8 @@ export function Builder() {
                   garment={garment}
                   view={activeView}
                   views={garment.views}
-                  placement={design.views[activeViewId]}
+                  placement={activePlacement}
+                  artByView={artByView}
                   hasFile={hasFile}
                   fileError={fileError}
                   onUploadClick={() => void attemptUpload()}
@@ -564,7 +700,7 @@ export function Builder() {
                     dispatch({ type: "setPrintArea", view: viewId, printAreaId: areaId })
                   }
                   onTransformCommit={(transform) => dispatch({ type: "setTransform", view: activeViewId, transform })}
-                  onRemove={() => dispatch({ type: "removeArtwork", view: activeViewId })}
+                  onRemove={() => removeSideArtwork(activeViewId)}
                   canUndo={canUndo}
                   canRedo={canRedo}
                   onUndo={undo}

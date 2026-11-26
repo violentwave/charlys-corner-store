@@ -157,7 +157,8 @@ test("an upload goes on the front only; the back starts empty", async ({ page })
 
 test("a refresh keeps the garment, colors and step", async ({ page }) => {
   await openBuilderSignedIn(page);
-  await page.getByTestId("garment-hoodie").click(); // advances to Colors
+  await page.getByTestId("garment-hoodie").click(); // selects only (v3: Continue advances)
+  await page.getByTestId("garment-continue").click();
   const bodyGroup = page.getByRole("group", { name: "Hoodie color" });
   await bodyGroup.getByRole("button", { name: "Black", exact: true }).click();
   await expect(bodyGroup.getByRole("button", { name: "Black", exact: true })).toHaveAttribute("aria-pressed", "true");

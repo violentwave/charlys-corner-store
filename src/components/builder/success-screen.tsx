@@ -108,6 +108,7 @@ export function SuccessScreen({ garmentId, summary, result, urls, onDesignAnothe
 
       {result.mockups.map(({ view }) => (
         <div key={view} className="flex flex-col gap-2">
+          <p className="font-heading text-text-1 text-xs tracking-widest uppercase">{VIEW_LABEL[view]}</p>
           {/* Canvas-rendered PNGs come from in-memory blobs; next/image can't optimize blob: URLs. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img

@@ -14,7 +14,12 @@ export interface ArtworkControlsProps {
   view: GarmentView;
   views: GarmentView[];
   placement?: BuilderViewState;
-  /** The decoded File lives in the builder; false after a refresh until re-selected. */
+  /**
+   * Which sides already carry art (v3): the side picker marks them. The same/different
+   * chooser for an empty side lives on the canvas empty state.
+   */
+  artByView: Partial<Record<ViewId, boolean>>;
+  /** The side shown has its decoded file (false after a refresh until re-selected). */
   hasFile: boolean;
   fileError: string | null;
   /** The builder gates this on a verified account before opening the file picker (v2). */
@@ -56,6 +61,7 @@ export function ArtworkControls({
   view,
   views,
   placement,
+  artByView,
   hasFile,
   fileError,
   onUploadClick,
@@ -95,7 +101,7 @@ export function ArtworkControls({
       {views.length > 1 ? (
         <div role="group" aria-label="View">
           <p className="text-text-1 mb-2 text-sm font-medium">Side</p>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {views.map((v) => (
               <button
                 key={v.id}
@@ -103,9 +109,15 @@ export function ArtworkControls({
                 aria-pressed={v.id === view.id}
                 data-testid={`view-${v.id}`}
                 onClick={() => onViewChange(v.id)}
-                className="border-border bg-bg-3 text-text-1 focus-visible:ring-neon-cyan hover:border-border-strong aria-pressed:border-neon-cyan aria-pressed:text-neon-cyan flex min-h-11 items-center rounded-full border px-4 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                className="border-border bg-bg-3 text-text-1 focus-visible:ring-neon-cyan hover:border-border-strong aria-pressed:border-neon-cyan aria-pressed:text-neon-cyan relative flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
               >
                 {v.label}
+                {artByView[v.id] ? (
+                  <>
+                    <span aria-hidden="true" className="bg-neon-pink h-1.5 w-1.5 rounded-full" />
+                    <span className="sr-only">(has a design)</span>
+                  </>
+                ) : null}
               </button>
             ))}
           </div>
@@ -144,7 +156,7 @@ export function ArtworkControls({
         ) : null}
         <Button type="button" onClick={onUploadClick} data-testid="upload-artwork" className="w-full sm:w-auto">
           {artwork ? "Replace" : "Upload"}
-        </Button>{" "}
+        </Button>
         <p className="text-text-3 mt-1.5 text-xs">{MOCKUP_ARTWORK_HELP}</p>
         {artwork ? (
           <p className="text-text-2 mt-2 truncate text-xs" data-testid="artwork-name">
