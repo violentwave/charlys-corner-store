@@ -803,8 +803,8 @@ export function Builder() {
                 />
               ) : null}
 
-              <div className="mt-6 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
+              <div className="mt-6 flex flex-col gap-2">
+                <div className="flex items-center justify-between gap-3">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -813,22 +813,29 @@ export function Builder() {
                   >
                     ← Back
                   </Button>
-                  {step > 1 ? <StartOverButton onConfirm={designAnother} /> : null}
-                  {step === 3 ? (
-                    <>
-                      <Button variant="ghost" size="sm" onClick={undo} disabled={!canUndo} data-testid="undo">
-                        Undo
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={redo} disabled={!canRedo} data-testid="redo">
-                        Redo
-                      </Button>
-                    </>
+                  {step < 4 ? (
+                    <Button size="sm" onClick={() => goStep((step + 1) as BuilderStep)}>
+                      Continue →
+                    </Button>
                   ) : null}
                 </div>
-                {step < 4 ? (
-                  <Button size="sm" onClick={() => goStep((step + 1) as BuilderStep)}>
-                    Continue →
-                  </Button>
+                {/* Secondary actions on their own row, so the footer never overflows at 360px. */}
+                {step > 1 ? (
+                  <div className="flex flex-wrap items-center gap-1">
+                    {step === 3 ? (
+                      <>
+                        <Button variant="ghost" size="sm" onClick={undo} disabled={!canUndo} data-testid="undo">
+                          Undo
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={redo} disabled={!canRedo} data-testid="redo">
+                          Redo
+                        </Button>
+                      </>
+                    ) : null}
+                    <span className="ml-auto">
+                      <StartOverButton onConfirm={designAnother} />
+                    </span>
+                  </div>
                 ) : null}
               </div>
             </div>
