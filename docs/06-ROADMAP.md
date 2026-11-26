@@ -91,9 +91,21 @@ Each page prompt is shipped by the agent (Ship section); Claude reviews every me
 - [x] UI (opencode): the perks screens — the coupon wallet, the order-stage tracker (driven by the owner's one-click links), re-send, order again with saved size sets, the Sizes & rosters tab (editor + roster + fill-from-roster), Settings (name, marketing emails, change/set password that signs out everywhere) (prompt P49-2)
 - [x] UI (opencode): saved drafts (Save draft in the builder footer with a name dialog + update / save-as-new; open via /?draft=<id>#design like the restore link; the Drafts tab with the 30-day image note, expiry warnings and delete) and the brand kit tab (inks, fonts, logo) with the builder leading from it — "Your colors", "Your fonts", "Add my logo" (prompt P49-3)
 
-## Phase 5: Shop and checkout
+## Phase 4.10: Builder + site polish (Logan, 2026-11-26)
 
-- [ ] Payments provider decision (Square vs Stripe) and catalog import of the 9 current products + variants
+- [x] Print methods: all six listed, filtered by fabric/color/area, server-checked, shown in emails (Claude)
+- [x] Performance Tee (Gildan 42000) + Performance Long Sleeve (Gildan 42400) in the builder, templates generated (Claude)
+- [ ] Header with one CTA + one menu at every size (visitor / member versions), footer with groups and back-to-top, no duplicate buttons (opencode, prompt P50-A)
+- [ ] Builder mobile layout: canvas stays in view, tools in a bottom sheet, fewer taps (Claude)
+- [ ] More realistic garments: fix sleeve views, better shading/texture on every template (Claude)
+
+## Phase 5: Shop and checkout (Square, decided 2026-11-26)
+
+- [x] Payments provider decision: Square, hosted payment links (see `02` decision log)
+- [ ] Square foundation (Claude): env config, plain-fetch client, sandbox; quote → payment link from the owner's order email; webhook (signature-checked) → paid status + coupon unlock; tests against the sandbox
+- [ ] Saved cards (Claude): Web Payments SDK "Add a card" (consent), Cards API, pay with a saved card; remove card
+- [ ] Billing UI (opencode): Pay now in order tracking, guest pay page from the email, saved cards in Account, receipts
+- [ ] Catalog import of the 9 current products + variants (Square catalog)
 - [ ] `/shop` grid (hover image swap), product pages, cart, checkout
 - [ ] Memorial/fundraiser collection with donation note
 - [ ] Order webhook → `orders` table → unlock 2nd-order coupon → "your 15% is unlocked" email
