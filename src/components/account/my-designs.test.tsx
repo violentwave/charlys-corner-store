@@ -66,7 +66,7 @@ function renderWith(items: AccountMockup[]) {
     return Promise.resolve({ ok: true, status: 200, json: async () => ({ ok: true, items }) });
   });
   vi.stubGlobal("fetch", fetchMock);
-  render(<MyDesigns />);
+  render(<MyDesigns email="me@example.com" />);
 }
 
 describe("MyDesigns (retention + delete)", () => {

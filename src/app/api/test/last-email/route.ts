@@ -23,9 +23,13 @@ export async function GET(request: Request) {
   }
   const to = new URL(request.url).searchParams.get("to")?.trim().toLowerCase();
   if (!to) return NextResponse.json({ error: "Missing ?to= address." }, { status: 400 });
+  // Optional subject filter (?subject=): the owner inbox receives many members' emails in
+  // parallel test runs — specs poll for THEIR email by a unique fragment of the subject.
+  const subject = new URL(request.url).searchParams.get("subject")?.trim().toLowerCase();
 
   const sent = _outbox()
     .filter((m) => [m.to].flat().some((address) => address.trim().toLowerCase() === to))
+    .filter((m) => (subject ? m.subject.toLowerCase().includes(subject) : true))
     .at(-1);
   if (!sent) return NextResponse.json({ error: "No email for that address." }, { status: 404 });
 
