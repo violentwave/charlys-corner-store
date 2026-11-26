@@ -5,6 +5,7 @@ import { MockupCustomerEmail } from "@/emails/mockup-customer";
 import { MockupOwnerEmail } from "@/emails/mockup-owner";
 import { OrderRequestCustomerEmail } from "@/emails/order-request-customer";
 import { zodFieldErrors } from "@/lib/action-result";
+import { isSameOrigin } from "@/lib/auth/origin";
 import { verifiedUser } from "@/lib/auth/session";
 import { ARTWORK_MAX_BYTES, checkArtwork } from "@/lib/artwork";
 import { getDb, schema } from "@/lib/db";
@@ -34,6 +35,8 @@ const fail = (error: string, status: number, fieldErrors?: Record<string, string
   NextResponse.json({ ok: false, error, ...(fieldErrors ? { fieldErrors } : {}) }, { status });
 
 export async function POST(request: Request) {
+  // Cookie-authenticated POST: refuse cross-site requests (CSRF), like the /api/auth routes.
+  if (!isSameOrigin(request)) return fail("Invalid request.", 403);
   // v2: an account with a verified email is required before anything is sent (docs/04 Flow).
   const db = getDb();
   const auth = await verifiedUser(db);

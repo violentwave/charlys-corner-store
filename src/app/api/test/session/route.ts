@@ -1,6 +1,8 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
+import { testHooksEnabled } from "@/lib/test-hooks";
+
 import { markEmailVerified } from "@/lib/auth/email-tokens";
 import { hashPassword } from "@/lib/auth/password";
 import { SESSION_COOKIE, startSession } from "@/lib/auth/session";
@@ -14,9 +16,10 @@ import { upsertLead } from "@/lib/leads";
  * like /api/test/last-email:
  * - EMAIL_DRIVER=console (dev/CI driver)
  * - ENABLE_TEST_HOOKS=1 (set only in the CI e2e job and playwright.config.ts webServer)
+ * - DATABASE_URL on localhost (see src/lib/test-hooks.ts)
  */
 export async function POST(request: Request) {
-  if (process.env.EMAIL_DRIVER !== "console" || process.env.ENABLE_TEST_HOOKS !== "1") {
+  if (!testHooksEnabled()) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
   let body: { email?: unknown; name?: unknown };
