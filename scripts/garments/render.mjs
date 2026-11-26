@@ -4,7 +4,7 @@
 //   mask-<z>  – opaque white where zone <z> is, transparent elsewhere (zones partition the silhouette)
 // Garments are deliberately neutral and realistic: no theme colors, gradients, or glow.
 
-const BLURS = { fold: 9, crease: 2, inner: 3, tone: 22, ridge: 12, edge: 26 };
+const BLURS = { fold: 9, crease: 2, inner: 3, tone: 22, ridge: 12, edge: 26, shadow: 15 };
 
 function svg(width, height, defs, body) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
@@ -65,6 +65,7 @@ export function shadingSvg(view) {
   const body = `<g clip-path="url(#sil)">
 <rect width="${W}" height="${H}" fill="#fff"/>
 <path d="${silhouette}" fill="none" stroke="#000" stroke-opacity="${view.edgeOpacity ?? 0.17}" stroke-width="${view.edgeWidth ?? 70}" filter="url(#b-edge)"/>
+<path d="${silhouette}" fill="none" stroke="#000" stroke-opacity="${((view.edgeOpacity ?? 0.17) + 0.08).toFixed(3)}" stroke-width="${Math.round((view.edgeWidth ?? 70) * 0.4)}" filter="url(#b-edge)"/>
 ${
   view.texture === false
     ? ""
@@ -73,6 +74,7 @@ ${
 }
 ${shade.map(shadeElement).join("\n")}
 </g>
+<path d="${silhouette}" fill="#000" fill-opacity="${view.shadow ?? 0.2}" transform="translate(0, 14)" filter="url(#b-shadow)"/>
 <path d="${silhouette}" fill="none" stroke="#000" stroke-opacity="0.5" stroke-width="2.6" stroke-linejoin="round"/>`;
   return svg(W, H, defs, body);
 }

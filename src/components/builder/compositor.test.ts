@@ -4,6 +4,7 @@ import { getGarment } from "@/lib/garments";
 
 import {
   activeZoneColor,
+  blendShadingIntoPixels,
   composeGarment,
   garmentLayers,
   maskCacheKey,
@@ -87,6 +88,60 @@ describe("maskCacheKey", () => {
     );
     expect(maskCacheKey("/a.png", "#111111")).not.toBe(maskCacheKey("/b.png", "#111111"));
     expect(maskCacheKey("/a.png", "#111111")).not.toBe(maskCacheKey("/a.png", "#222222"));
+  });
+});
+
+describe("blendShadingIntoPixels (text layers get the fabric's folds, P51-2)", () => {
+  const textPixel = (r: number, g: number, b: number, a = 255) => [r, g, b, a];
+  const shading = (rgbs: number[][]) => ({
+    width: rgbs.length,
+    height: 1,
+    data: new Uint8ClampedArray(rgbs.flatMap(([r, g, b]) => [r, g, b, 255])),
+  });
+
+  it("a text pixel over a dark fold lands darker than over flat fabric", () => {
+    // two identical red text pixels; the shading is a black fold under the first, flat white under the second
+    const text = {
+      width: 2,
+      height: 1,
+      data: new Uint8ClampedArray([...textPixel(230, 57, 70), ...textPixel(230, 57, 70)]),
+    };
+    const s = shading([
+      [10, 10, 12], // dark fold
+      [250, 250, 252], // flat fabric
+    ]);
+    blendShadingIntoPixels(text, s, 0, 0, SHADING_OVER_ARTWORK_OPACITY);
+    const fold = [text.data[0], text.data[1], text.data[2]];
+    const flat = [text.data[4], text.data[5], text.data[6]];
+    expect(flat[0]).toBeGreaterThanOrEqual(224); // (near-)white fabric barely darkens the ink
+    expect(fold[0]).toBeLessThan(flat[0] - 40); // the fold pulls the ink down toward the fabric
+    expect(text.data[3]).toBe(255); // fully opaque text stays fully opaque
+  });
+
+  it("keeps transparent pixels transparent (the shading never spills outside the letters)", () => {
+    const text = {
+      width: 2,
+      height: 1,
+      data: new Uint8ClampedArray([...textPixel(0, 0, 0), ...textPixel(9, 9, 9, 0)]),
+    };
+    const s = shading([
+      [0, 0, 0],
+      [0, 0, 0],
+    ]);
+    blendShadingIntoPixels(text, s, 0, 0, SHADING_OVER_ARTWORK_OPACITY);
+    expect(text.data[7]).toBe(0); // the transparent pixel's alpha is untouched
+  });
+
+  it("samples the shading at the layer's template offset", () => {
+    const text = { width: 1, height: 1, data: new Uint8ClampedArray([...textPixel(200, 200, 200)]) };
+    const s = shading([
+      [250, 250, 250],
+      [30, 30, 30],
+    ]);
+    s.height = 2;
+    s.data = new Uint8ClampedArray([250, 250, 250, 255, 30, 30, 30, 255, 250, 250, 250, 255, 30, 30, 30, 255]);
+    blendShadingIntoPixels(text, s, 1, 1, SHADING_OVER_ARTWORK_OPACITY); // the layer sits at (1,1) → samples (1,1)
+    expect(text.data[0]).toBeLessThan(100); // it found the dark fold at (1,1), not the white at (0,1)
   });
 });
 

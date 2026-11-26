@@ -16,18 +16,18 @@
  */
 import Konva from "konva";
 import { forwardRef, Fragment, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { Group, Image as KonvaImage, Layer, Line, Rect, Stage, Text, TextPath, Transformer } from "react-konva";
+import { Group, Image as KonvaImage, Layer, Line, Rect, Stage, Transformer } from "react-konva";
 
 import { getTextFont } from "@/lib/text-fonts";
 import type { GarmentView, ViewId } from "@/lib/garments";
 import type { MockupColors } from "@/lib/mockup-schema";
 import { Button } from "@/components/ui/button";
 
-import { composeArtworkLayer, composeGarment, type TemplateImages } from "./compositor";
+import { composeArtworkLayer, composeGarment, composeTextLayer, type TemplateImages } from "./compositor";
 import { centerToTopLeft, nudgeTransform, rotateAroundCenter, scaleAroundCenter, topLeftToCenter } from "./geometry";
 import { SideArtworkChooser } from "./side-artwork-chooser";
 import { TEXT_BASE_FONT_SIZE, textGeometry } from "./text-measure";
-import type { BuilderLayer, BuilderTransform } from "./use-builder-state";
+import type { BuilderLayer, BuilderTextLayer, BuilderTransform } from "./use-builder-state";
 
 /** The builder-side images the canvas draws with, keyed by file index. */
 export type StageImages = Partial<Record<number, HTMLImageElement>>;
@@ -158,6 +158,96 @@ function cachedArtworkLayer(
     if (entries.size > 8) entries.delete(entries.keys().next().value!);
   }
   return canvas;
+}
+
+/**
+ * Text layers get the same fold-shading treatment as images (P51-2): the lettering is
+ * rendered once per (content, box, position) into an offscreen canvas with Konva — the
+ * same node config the stage draws, so on-screen and exported pixels match — then the
+ * shading is multiplied in (composeTextLayer). Cached like the image path so typing
+ * stays smooth; `fontTick` is part of the key so late font loads re-render.
+ */
+const textLayerCache = new Map<string, HTMLCanvasElement>();
+function cachedTextLayer(
+  layer: BuilderTextLayer,
+  shading: HTMLImageElement,
+  fontTick: number,
+  view: GarmentView,
+): HTMLCanvasElement {
+  const t = layer.transform;
+  const w = Math.max(1, Math.round(t.width));
+  const h = Math.max(1, Math.round(t.height));
+  const key = [
+    layer.text,
+    layer.font,
+    layer.letterSpacing,
+    layer.curve,
+    layer.color,
+    layer.outline.color,
+    layer.outline.width,
+    layer.align,
+    t.flipX,
+    w,
+    h,
+    Math.round(t.x),
+    Math.round(t.y),
+    fontTick,
+    view.id,
+  ].join("|");
+  const cached = textLayerCache.get(key);
+  if (cached) return cached;
+  const geo = textGeometry(layer.text, layer.font, layer.letterSpacing, layer.curve);
+  const font = getTextFont(layer.font);
+  const container = document.createElement("div");
+  const stage = new Konva.Stage({ container, width: w, height: h });
+  const offLayer = new Konva.Layer();
+  stage.add(offLayer);
+  const node = geo.path
+    ? new Konva.TextPath({
+        data: geo.path,
+        text: layer.text,
+        fontSize: TEXT_BASE_FONT_SIZE,
+        fontFamily: font?.family ?? "sans-serif",
+        fontStyle: font ? `${font.weight}` : "normal",
+        letterSpacing: layer.letterSpacing,
+        fill: layer.color,
+        stroke: layer.outline.width > 0 ? layer.outline.color : undefined,
+        strokeWidth: textStrokeWidth(layer.outline.width, t.width / geo.width, t.height / geo.height),
+        fillAfterStrokeEnabled: true,
+        align: "center",
+        x: w / 2,
+        y: h / 2,
+        offsetX: geo.offsetX,
+        offsetY: geo.offsetY,
+        scaleX: t.width / geo.width,
+        scaleY: t.height / geo.height,
+      })
+    : new Konva.Text({
+        text: layer.text,
+        fontSize: TEXT_BASE_FONT_SIZE,
+        fontFamily: font?.family ?? "sans-serif",
+        fontStyle: font ? `${font.weight}` : "normal",
+        letterSpacing: layer.letterSpacing,
+        fill: layer.color,
+        stroke: layer.outline.width > 0 ? layer.outline.color : undefined,
+        strokeWidth: textStrokeWidth(layer.outline.width, t.width / geo.width, t.height / geo.height),
+        fillAfterStrokeEnabled: true,
+        align: layer.align,
+        x: w / 2,
+        y: h / 2,
+        offsetX: geo.offsetX,
+        offsetY: geo.offsetY,
+        scaleX: t.width / geo.width,
+        scaleY: t.height / geo.height,
+      });
+  offLayer.add(node);
+  const flat = stage.toCanvas({ pixelRatio: 1 });
+  stage.destroy();
+  container.remove();
+  const composed = composeTextLayer(flat, shading, t);
+  textLayerCache.set(key, composed);
+  if (textLayerCache.size > 48) textLayerCache.delete(textLayerCache.keys().next().value!);
+  return composed;
 }
 
 /**
@@ -631,6 +721,14 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
                   if (node) copyRefs.current.set(layer.id, node);
                   else copyRefs.current.delete(layer.id);
                 };
+                // Image and text layers alike: one composed canvas (the fabric shading
+                // baked in), drawn twice — a faded interactive ghost plus the clipped copy.
+                const composed =
+                  layer.type === "image"
+                    ? artworkCanvas(layer)
+                    : images
+                      ? cachedTextLayer(layer, images.shading, fontTick, view)
+                      : undefined;
                 const layerHandlers = {
                   draggable: true,
                   onClick: () => {
@@ -682,45 +780,20 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
                   const extra = interactive
                     ? { ref: attachRef, ...layerHandlers }
                     : { ref: attachCopyRef, listening: false };
-                  if (layer.type === "image") {
-                    return (
-                      <KonvaImage
-                        image={artworkCanvas(layer)}
-                        {...position}
-                        offsetX={layer.transform.width / 2}
-                        offsetY={layer.transform.height / 2}
-                        width={layer.transform.width}
-                        height={layer.transform.height}
-                        scaleX={layer.transform.flipX ? -1 : 1}
-                        {...extra}
-                      />
-                    );
-                  }
-                  const geo = textGeometry(layer.text, layer.font, layer.letterSpacing, layer.curve);
-                  const font = getTextFont(layer.font);
-                  const sx = layer.transform.width / geo.width;
-                  const sy = layer.transform.height / geo.height;
-                  const textProps = {
-                    text: layer.text,
-                    fontSize: TEXT_BASE_FONT_SIZE,
-                    fontFamily: font?.family ?? "sans-serif",
-                    fontStyle: font ? `${font.weight}` : "normal",
-                    letterSpacing: layer.letterSpacing,
-                    fill: layer.color,
-                    stroke: layer.outline.width > 0 ? layer.outline.color : undefined,
-                    strokeWidth: textStrokeWidth(layer.outline.width, sx, sy),
-                    fillAfterStrokeEnabled: true,
-                    ...position,
-                    offsetX: geo.offsetX,
-                    offsetY: geo.offsetY,
-                    scaleX: sx * (layer.transform.flipX ? -1 : 1),
-                    scaleY: sy,
-                  };
-                  // Arched text runs along an arc path (text-measure.ts); straight text is one line.
-                  return geo.path ? (
-                    <TextPath {...textProps} data={geo.path} align="center" {...extra} />
-                  ) : (
-                    <Text {...textProps} align={layer.align} {...extra} />
+                  // Text draws through the same composed canvas as images (fold shading
+                  // baked in); the box, rotation and flip stay node transforms, so the
+                  // Transformer and the export behave identically for both layer types.
+                  return (
+                    <KonvaImage
+                      image={composed}
+                      {...position}
+                      offsetX={layer.transform.width / 2}
+                      offsetY={layer.transform.height / 2}
+                      width={layer.transform.width}
+                      height={layer.transform.height}
+                      scaleX={layer.transform.flipX ? -1 : 1}
+                      {...extra}
+                    />
                   );
                 };
                 // Two copies: the interactive one is drawn faded and unclipped, so a design that
