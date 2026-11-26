@@ -82,3 +82,24 @@ export const reorderSchema = z.object({
 });
 
 export const sizesTotal = (sizes: Record<string, number>) => Object.values(sizes).reduce((a, b) => a + b, 0);
+
+/**
+ * "Use saved sizes": the grid a set fills — the set's `sizes` plus ONE piece per roster
+ * row (a roster row is a person; their `number` field is just a jersey number). When
+ * `validSizes` is given, sizes the garment doesn't come in are skipped.
+ */
+export function combineSizesAndRoster(
+  sizes: Record<string, number>,
+  roster: { size: string }[],
+  validSizes?: readonly string[],
+): Record<string, number> {
+  const ok = (size: string) => !validSizes || validSizes.includes(size);
+  const counts: Record<string, number> = {};
+  for (const [size, qty] of Object.entries(sizes)) {
+    if (ok(size)) counts[size] = (counts[size] ?? 0) + qty;
+  }
+  for (const row of roster) {
+    if (ok(row.size)) counts[row.size] = (counts[row.size] ?? 0) + 1;
+  }
+  return counts;
+}

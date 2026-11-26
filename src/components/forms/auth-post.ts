@@ -6,10 +6,14 @@ export type AuthFail = { ok: false; error: string; fieldErrors?: Record<string, 
 export type AuthOk = { ok: true } & Record<string, unknown>;
 export type AuthResponse = AuthOk | AuthFail;
 
-export async function postJson(path: string, body?: unknown): Promise<{ status: number; data: AuthResponse | null }> {
+export async function postJson(
+  path: string,
+  body?: unknown,
+  method: "POST" | "PUT" | "PATCH" = "POST",
+): Promise<{ status: number; data: AuthResponse | null }> {
   try {
     const res = await fetch(path, {
-      method: "POST",
+      method,
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body ?? {}),
     });

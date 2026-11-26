@@ -87,8 +87,8 @@ Each page prompt is shipped by the agent (Ship section); Claude reviews every me
 - [x] Foundation (Claude): Google sign-in/sign-up (OIDC + PKCE, no SDK; links by verified email); 2FA (authenticator app or email code, 10 backup codes) at every sign-in incl. Google and password reset; security routes (set up, turn off, new backup codes, unlink Google) (migration 0006)
 - [x] Members stay signed in: sliding 365-day sessions; 2FA only at sign-in after sign-out or a password reset/change (Logan)
 - [x] Foundation (Claude): coupon wallet; order tracking (owner one-click signed links → customer email); account settings (name, marketing emails) + change password (signs out everywhere); re-send a mockup; order again; saved drafts (images under `mockups/drafts/`, 30-day rule); brand kit (logo under `brand/`, kept); saved sizes / team rosters (migration 0007)
-- [x] UI (opencode): account tabs (My designs, Security — hash-linked, Drafts and Brand kit to come), delete/remove buttons with 30-day warnings and Save links, sign-in screens with Google (when configured) and the 2FA code step incl. backup codes (prompt P49-1)
-- [ ] UI (opencode): the perks screens — drafts, brand kit, coupon wallet, order tracking, account settings (P49-2)
+- [x] UI (opencode): account tabs (My designs, Sizes & rosters, Settings, Security — hash-linked, Drafts and Brand kit to come), delete/remove buttons with 30-day warnings and Save links, sign-in screens with Google (when configured) and the 2FA code step incl. backup codes (prompt P49-1)
+- [x] UI (opencode): the perks screens — the coupon wallet, the order-stage tracker (driven by the owner's one-click links), re-send, order again with saved size sets, the Sizes & rosters tab (editor + roster + fill-from-roster), Settings (name, marketing emails, change/set password that signs out everywhere) (prompt P49-2)
 
 ## Phase 5: Shop and checkout
 

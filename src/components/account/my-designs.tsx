@@ -1,21 +1,26 @@
 "use client";
 /**
- * "My designs" (docs/02 Members v2): saved mockups and order requests. Emailed mockups'
- * files are deleted after MOCKUP_FILES_RETENTION_DAYS (an R2 lifecycle rule) — each card
- * shows the deletion date, a low-time warning, and Save links while the files exist.
- * Deleting a mockup removes it for good; an order request is only hidden here (the shop
- * keeps it).
+ * "My designs" (docs/02 Member perks): the coupon wallet on top, saved mockups and order
+ * requests. Emailed mockups' files are deleted after MOCKUP_FILES_RETENTION_DAYS (an R2
+ * lifecycle rule) — each card shows the deletion date, a low-time warning, Save links
+ * while the files exist, and Re-send. Order requests carry the shop's stage tracker,
+ * "Order again", and hide-only removal.
  */
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import type { AccountMockup } from "@/app/api/account/mockups/route";
 import { MOCKUP_FILES_RETENTION_DAYS } from "@/lib/retention";
+import { Wallet } from "./wallet";
+import { OrderStageTracker } from "./order-stage-tracker";
+import { OrderAgainDialog } from "./order-again-dialog";
+import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { NETWORK_ERROR, postJson } from "@/components/forms/auth-post";
 
 /** Friendly labels for the request_status enum (db/schema.ts). */
 const STATUS_LABELS: Record<string, { label: string; variant: "neutral" | "cyan" | "yellow" | "green" }> = {
@@ -32,9 +37,50 @@ const dateLabel = (iso: string) =>
 
 const daysLeft = (iso: string) => Math.ceil((new Date(iso).getTime() - Date.now()) / (24 * 60 * 60 * 1000));
 
-function DesignCard({ item, onRemoved }: { item: AccountMockup; onRemoved: (item: AccountMockup) => void }) {
+/** Re-sends the mockup email (same attachment as the first time); the API's messages surface as toasts. */
+function ResendButton({ itemId, email }: { itemId: string; email: string }) {
+  const [pending, setPending] = useState(false);
+
+  const send = async () => {
+    setPending(true);
+    const { data: res } = await postJson(`/api/account/mockups/${itemId}/resend`);
+    setPending(false);
+    if (res?.ok) {
+      toast({ title: `Sent to ${email}` });
+      return;
+    }
+    // 410 (files gone) / 429 (3 a day) carry friendly messages — show them as-is.
+    toast({ title: res?.error ?? NETWORK_ERROR, variant: "error" });
+  };
+
+  return (
+    <Button
+      type="button"
+      variant="secondary"
+      size="sm"
+      onClick={() => void send()}
+      loading={pending}
+      data-testid="resend-mockup"
+    >
+      Re-send email
+    </Button>
+  );
+}
+
+function DesignCard({
+  item,
+  email,
+  onRemoved,
+  onListChanged,
+}: {
+  item: AccountMockup;
+  email: string;
+  onRemoved: (item: AccountMockup) => void;
+  onListChanged: () => void;
+}) {
   const status = STATUS_LABELS[item.status];
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [orderAgain, setOrderAgain] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -150,10 +196,28 @@ function DesignCard({ item, onRemoved }: { item: AccountMockup; onRemoved: (item
         </ul>
       </div>
 
+      {item.orderStage ? (
+        <div className="border-border border-t pt-3">
+          <OrderStageTracker stage={item.orderStage} />
+        </div>
+      ) : null}
+
       <div className="mt-auto flex flex-wrap items-center gap-2">
         <Button asChild variant="secondary" size="sm">
           <Link href={item.restorePath}>Open in builder</Link>
         </Button>
+        {item.canResend ? <ResendButton itemId={item.id} email={email} /> : null}
+        {item.canReorder ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => setOrderAgain(true)}
+            data-testid="order-again"
+          >
+            Order again
+          </Button>
+        ) : null}
         <Button
           type="button"
           variant="ghost"
@@ -168,6 +232,17 @@ function DesignCard({ item, onRemoved }: { item: AccountMockup; onRemoved: (item
           {isMockup ? "Delete" : "Remove"}
         </Button>
       </div>
+
+      {orderAgain ? (
+        <OrderAgainDialog
+          item={item}
+          onClose={() => setOrderAgain(false)}
+          onOrdered={() => {
+            setOrderAgain(false);
+            onListChanged();
+          }}
+        />
+      ) : null}
 
       <Dialog open={confirmOpen} onOpenChange={(next) => !next && setConfirmOpen(false)}>
         {confirmOpen ? (
@@ -239,7 +314,7 @@ function EmptyState({ kind }: { kind: "mockup" | "order" }) {
   );
 }
 
-export function MyDesigns() {
+export function MyDesigns({ email }: { email: string }) {
   const [items, setItems] = useState<AccountMockup[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState<string | null>(null);
@@ -285,6 +360,9 @@ export function MyDesigns() {
     );
   };
 
+  /** "Order again" adds a card server-side: refetch so the list reflects it. */
+  const onListChanged = () => setReloadKey((k) => k + 1);
+
   if (error) {
     return (
       <div role="alert" className="flex flex-col items-start gap-4">
@@ -308,7 +386,8 @@ export function MyDesigns() {
   const orders = items.filter((item) => item.kind === "order");
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
+      <Wallet />
       <p
         role="note"
         className="border-border bg-bg-2/60 text-text-2 rounded-xl border p-3 text-sm"
@@ -333,7 +412,13 @@ export function MyDesigns() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {mockups.map((item) => (
-                <DesignCard key={item.id} item={item} onRemoved={onRemoved} />
+                <DesignCard
+                  key={item.id}
+                  item={item}
+                  email={email}
+                  onRemoved={onRemoved}
+                  onListChanged={onListChanged}
+                />
               ))}
             </div>
           )}
@@ -345,7 +430,13 @@ export function MyDesigns() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {orders.map((item) => (
-                <DesignCard key={item.id} item={item} onRemoved={onRemoved} />
+                <DesignCard
+                  key={item.id}
+                  item={item}
+                  email={email}
+                  onRemoved={onRemoved}
+                  onListChanged={onListChanged}
+                />
               ))}
             </div>
           )}

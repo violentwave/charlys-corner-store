@@ -12,15 +12,22 @@ import { useEffect, useState } from "react";
 import { useForm, type Resolver } from "react-hook-form";
 
 import { ReferralFields } from "@/components/forms/referral-fields";
+import { NETWORK_ERROR, postJson } from "@/components/forms/auth-post";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, fieldControlProps } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { GarmentConfig } from "@/lib/garments";
 import { referralSchema, type ReferralInput } from "@/lib/schemas";
 
 import type { BuilderDesign } from "./use-builder-state";
+import { SizeGrid } from "@/components/forms/size-grid";
+import type { SizeSet } from "@/lib/size-sets";
+import { combineSizesAndRoster, sizesTotal } from "@/lib/member-schemas";
+import { toast } from "@/components/ui/toast";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
 export interface SendStepProps {
   garment: GarmentConfig;
@@ -62,6 +69,10 @@ export function SendStep({
 }: SendStepProps) {
   const [optIn, setOptIn] = useState(false);
   const [needsQuantity, setNeedsQuantity] = useState(false);
+  // Saved size sets (Member perks): "Use saved sizes" fills the grid; "Save these sizes"
+  // stores the current grid under a name. Only for signed-in members.
+  const [sizeSets, setSizeSets] = useState<SizeSet[] | null>(null);
+  const [saveSizesOpen, setSaveSizesOpen] = useState(false);
 
   const referralForm = useForm<ReferralInput>({
     resolver: zodResolver(referralSchema) as unknown as Resolver<ReferralInput>,
@@ -78,6 +89,28 @@ export function SendStep({
     });
     return () => sub.unsubscribe();
   }, [referralForm, onReferral]);
+
+  useEffect(() => {
+    if (!accountEmail) return;
+    let alive = true;
+    fetch("/api/account/size-sets", { cache: "no-store" })
+      .then(async (res) => {
+        const data = (await res.json().catch(() => null)) as { sizeSets?: SizeSet[] } | null;
+        if (alive && res.ok) setSizeSets(data?.sizeSets ?? []);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [accountEmail]);
+
+  const applySizeSet = (id: string) => {
+    const set = sizeSets?.find((s) => s.id === id);
+    if (!set) return;
+    for (const [size, qty] of Object.entries(combineSizesAndRoster(set.sizes, set.roster, garment.sizes))) {
+      onSize(size, qty);
+    }
+  };
 
   const blocked = !hasArtwork;
   const send = (intent: "email" | "order") => {
@@ -200,27 +233,41 @@ export function SendStep({
             Tell us sizes and quantities. We&apos;ll confirm the price and send you an invoice. Nothing is charged now.
           </p>
 
-          <fieldset className="flex flex-col gap-2">
-            <legend className="text-text-1 text-sm font-medium">Sizes and quantities</legend>
-            <div className="grid grid-cols-3 gap-2">
-              {garment.sizes.map((size) => (
-                <Field key={size} label={size} controlId={`size-${size}`} className="gap-1">
-                  <Input
-                    id={`size-${size}`}
-                    name={`size-${size}`}
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    max={10000}
-                    step={1}
-                    value={design.sizes[size] ?? 0}
-                    onChange={(e) => onSize(size, Number(e.target.value))}
-                    className="h-11 w-full text-sm"
-                  />
-                </Field>
-              ))}
-            </div>
-          </fieldset>
+          {sizeSets && sizeSets.length > 0 ? (
+            <Field label="Use saved sizes" hint="Fills the grid from a set you saved." controlId="use-sizes">
+              <Select onValueChange={applySizeSet}>
+                <SelectTrigger id="use-sizes" className="h-11 w-full" data-testid="use-saved-sizes">
+                  <SelectValue placeholder="Pick a saved size set" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sizeSets.map((set) => (
+                    <SelectItem key={set.id} value={set.id}>
+                      {set.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          ) : null}
+
+          <SizeGrid
+            sizes={garment.sizes}
+            values={design.sizes}
+            onChange={onSize}
+            idPrefix="order"
+            label="Sizes and quantities"
+          />
+
+          {accountEmail ? (
+            <button
+              type="button"
+              onClick={() => setSaveSizesOpen(true)}
+              data-testid="save-sizes"
+              className="text-neon-cyan focus-visible:ring-neon-cyan self-start rounded-sm text-xs underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+            >
+              Save these sizes for next time
+            </button>
+          ) : null}
 
           <ReferralFields control={referralForm.control} />
 
@@ -248,6 +295,94 @@ export function SendStep({
       <p className="text-text-3 text-xs" role="note">
         We only use your artwork to make your mockup and quote your order. Ask us anytime to delete it.
       </p>
+
+      {saveSizesOpen ? (
+        <SaveSizesDialog
+          sizes={design.sizes}
+          onClose={() => setSaveSizesOpen(false)}
+          onSaved={() => {
+            setSaveSizesOpen(false);
+            // Re-read so "Use saved sizes" offers the new set right away.
+            fetch("/api/account/size-sets", { cache: "no-store" })
+              .then(async (res) => {
+                const data = (await res.json().catch(() => null)) as { sizeSets?: SizeSet[] } | null;
+                if (res.ok) setSizeSets(data?.sizeSets ?? []);
+              })
+              .catch(() => undefined);
+          }}
+        />
+      ) : null}
     </div>
+  );
+}
+
+/** "Save these sizes": a name, and the current grid becomes a saved set (zeros dropped). */
+function SaveSizesDialog({
+  sizes,
+  onClose,
+  onSaved,
+}: {
+  sizes: Record<string, number>;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [fieldError, setFieldError] = useState<string | undefined>(undefined);
+  const [pending, setPending] = useState(false);
+
+  const save = async () => {
+    setError(null);
+    setFieldError(undefined);
+    setPending(true);
+    const { data: res } = await postJson("/api/account/size-sets", {
+      name: name.trim(),
+      sizes: Object.fromEntries(Object.entries(sizes).filter(([, qty]) => qty > 0)),
+      roster: [],
+    });
+    setPending(false);
+    if (res?.ok) {
+      toast({ title: "Sizes saved." });
+      onSaved();
+      return;
+    }
+    if (res && !res.ok && res.fieldErrors) setFieldError(Object.values(res.fieldErrors)[0] ?? undefined);
+    setError(res && !res.ok ? res.error : NETWORK_ERROR);
+  };
+
+  return (
+    <Dialog open onOpenChange={(next) => !next && onClose()}>
+      <DialogContent aria-describedby="save-sizes-body" data-testid="save-sizes-dialog">
+        <DialogTitle className="font-heading text-text-1 pr-6 text-lg tracking-wide uppercase">
+          Save these sizes
+        </DialogTitle>
+        <DialogDescription id="save-sizes-body" className="text-text-2 text-sm">
+          {sizesTotal(sizes)} pieces — you&apos;ll drop them straight into any order.
+        </DialogDescription>
+        <Field label="Name this size set" required error={fieldError ?? undefined} controlId="save-sizes-name">
+          <Input
+            id="save-sizes-name"
+            value={name}
+            maxLength={60}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Fall fundraiser 2027"
+            data-testid="save-sizes-name"
+          />
+        </Field>
+        {error ? (
+          <p role="alert" className="text-danger text-sm" data-testid="save-sizes-error">
+            {error}
+          </p>
+        ) : null}
+        <div className="flex items-center gap-2">
+          <Button type="button" onClick={() => void save()} loading={pending} data-testid="save-sizes-submit">
+            Save
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+            Cancel
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
