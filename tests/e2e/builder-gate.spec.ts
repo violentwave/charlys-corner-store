@@ -111,8 +111,11 @@ test("sign up, verify and upload without ever leaving the builder", async ({ pag
   await expect(page.getByTestId("artwork-name")).toContainText("art.png", { timeout: 15_000 });
   await expect(page).toHaveURL(/\/design$/);
   await expect(page.getByTestId("sign-in-dialog")).toHaveCount(0);
-  // The header noticed the new session without a reload.
-  await expect(page.getByRole("banner").getByRole("link", { name: "My designs" }).first()).toBeAttached();
+  // The header noticed the new session without a reload (desktop: the link sits in the bar;
+  // on phones it lives in the menu drawer, covered by the accounts spec).
+  if (test.info().project.name === "desktop") {
+    await expect(page.getByRole("banner").getByRole("link", { name: "My designs" })).toBeVisible();
+  }
 });
 
 test("full flow: sign up → verify → color strip → upload → email path → coupon + download", async ({ page }) => {
