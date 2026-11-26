@@ -33,7 +33,7 @@ export default function Home() {
         actions={
           <>
             <Button asChild>
-              <Link href="#business">Get a Quote</Link>
+              <Link href="#quote">Get a Quote</Link>
             </Button>
             <Button asChild variant="secondary">
               <Link href="#upload">Upload Artwork</Link>

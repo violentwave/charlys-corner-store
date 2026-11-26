@@ -79,7 +79,7 @@ Sizes and quantities grid (XS–5XL / OSFA for hats) · "How did you hear about 
 - **Email path:** mockup images + **Download** buttons + coupon ticket (code, copy button, rules: "15% off your 2nd order · $30 minimum · expires {date, 1 year} · one per email") + CTAs: "Order this design" (returns to the order card, design intact), "Design another." Charly the dog celebrates.
 - **Order path:** "Order request sent! We'll email you the price." + design summary + coupon ticket + "View in My designs" + "Design another".
 
-**File retention (2026-11-26):** emailed-mockup files live under `mockups/` and are deleted after 3 days (R2 lifecycle rule; `src/lib/retention.ts`). The customer keeps the PNGs attached to the email; the owner email warns to download within 3 days; after that, a restore link brings back colors and text (images must be added again) and "My designs" shows "Images deleted after 3 days". Order requests are stored under `orders/` and kept.
+**File retention (2026-11-26):** emailed-mockup files live under `mockups/` and are deleted after 30 days (R2 lifecycle rule `delete-mockups-30-days`; `src/lib/retention.ts`). The customer keeps the PNGs attached to the email; the owner email warns to download within 30 days; after that, a restore link brings back colors and text (images must be added again) and "My designs" shows "Images deleted after 30 days". Order requests are stored under `orders/` and kept.
 
 ## Emails
 **To customer** (React Email, neon on dark with light-mode fallback): subject "Your Charly's mockup is ready 🐾 + 15% off inside" · inline mockup image(s) plus attached PNGs · garment/color/location summary · coupon code with terms · CTA "Order this design" (deep link restoring the design via mockup id) · "Have a Ruffin awesome day."
