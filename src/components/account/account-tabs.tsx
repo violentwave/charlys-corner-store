@@ -42,7 +42,8 @@ export function AccountTabs({ email }: { email: string }) {
         history.replaceState(null, "", `#${value}`);
       }}
     >
-      <TabsList aria-label="Your account">
+      {/* Six tabs: wrap onto two rows on phones instead of hiding some behind a sideways scroll. */}
+      <TabsList aria-label="Your account" className="flex-wrap overflow-visible">
         <TabsTrigger value="designs">My designs</TabsTrigger>
         <TabsTrigger value="drafts">Drafts</TabsTrigger>
         <TabsTrigger value="brand">Brand kit</TabsTrigger>

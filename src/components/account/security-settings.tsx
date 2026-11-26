@@ -192,7 +192,7 @@ export function SecuritySettings({ email }: { email: string }) {
       case "delete-account":
         return {
           title: "Delete your account?",
-          body: "Your account, saved mockups and their files are deleted for good. Order requests stay with the shop.",
+          body: "Your account, saved mockups, drafts, brand kit and saved sizes are deleted for good, files included. Order requests stay with the shop.",
           actionLabel: "Delete my account",
           danger: true,
           confirmWord: true,
@@ -229,7 +229,13 @@ export function SecuritySettings({ email }: { email: string }) {
             </p>
           </div>
           {security.hasPassword ? (
-            <p className="text-text-3 text-xs">Keep it somewhere safe.</p>
+            <a
+              href="#settings"
+              className="text-neon-cyan text-sm underline-offset-4 hover:underline"
+              data-testid="change-password-link"
+            >
+              Change password
+            </a>
           ) : (
             <Button asChild size="sm" data-testid="set-password">
               <a href={`/forgot-password?email=${encodeURIComponent(email)}`}>Set a password</a>
@@ -480,8 +486,8 @@ export function SecuritySettings({ email }: { email: string }) {
           Delete account
         </h3>
         <p className="text-text-2 text-sm">
-          This deletes your account, your saved mockups and their files, for good. Order requests stay with the shop —
-          we keep working on them.
+          This deletes your account, your saved mockups, drafts, brand kit and saved sizes (files included), for good.
+          Order requests stay with the shop — we keep working on them.
         </p>
         <Button
           type="button"

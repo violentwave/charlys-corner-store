@@ -76,7 +76,7 @@ test("sign up → verify → /account empty state", async ({ page }) => {
 
   // Signed in: header entry flips to "My designs", and both tabs show empty states.
   await expect(headerLink(page)).toHaveText("My designs");
-  await expect(page.getByRole("heading", { name: /your designs/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /your account/i })).toBeVisible();
   await expect(page.getByRole("tab", { name: /saved mockups/i })).toBeVisible();
   await expect(page.getByRole("tab", { name: /order requests/i })).toBeVisible();
   await expect(page.getByTestId("empty-state")).toBeVisible();

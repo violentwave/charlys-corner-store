@@ -330,6 +330,7 @@ export function BrandKitTab() {
                 Remove logo
               </Button>
             ) : null}
+            <p className="text-text-3 text-xs">PNG, JPG, WEBP, or SVG up to 10 MB.</p>
           </div>
         </div>
       </section>
@@ -344,7 +345,6 @@ export function BrandKitTab() {
         <Button type="button" onClick={() => void save()} loading={pending} data-testid="brand-kit-save">
           Save brand kit
         </Button>
-        <p className="text-text-3 text-xs">PNG, JPG, WEBP, or SVG up to 10 MB.</p>
       </div>
     </div>
   );
