@@ -16,7 +16,7 @@ export interface MockupCustomerEmailProps {
   coupon: { code: string; expiresAt: Date; isNew: boolean };
   /** Rendered mockups, inlined via 7-day signed storage URLs (the PNGs are also attached, so they outlive the links). */
   mockups: { view: string; signedUrl: string }[];
-  /** Deep link: /design?mockup=<id> restores this design in the builder (design data only, no PII). */
+  /** Deep link: /?mockup=<id>#design restores this design in the builder (design data only, no PII). */
   mockupId: string;
 }
 
@@ -68,7 +68,7 @@ export function MockupCustomerEmail(p: MockupCustomerEmailProps) {
           </Text>
           <Text>{terms}</Text>
           <Button
-            href={`${site.url}/design?mockup=${p.mockupId}`}
+            href={`${site.url}/?mockup=${p.mockupId}#design`}
             style={{
               backgroundColor: "#FF2E97",
               borderRadius: "999px",

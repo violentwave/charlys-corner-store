@@ -85,4 +85,19 @@ Contact info · address/map · hours · social links · testimonials/reviews · 
 ## Migration tasks
 - [ ] Scrape and download all product and gallery images at full resolution (Weebly CDN)
 - [ ] Export any existing customer/order data from Weebly/Square
-- [x] Permanent (308) redirects in `next.config.ts`: `/product.html` → `/shop`, `/about.html` → `/about`, `/custom-image-uploader.html` → `/upload`, `/business--promotional-products.html` → `/business`, `/design-your-own-shirt.html` → `/design`
+- [x] Permanent (308) redirects in `next.config.ts`: `/product.html` → `/shop`, `/about.html` → `/about`, `/business--promotional-products.html` → `/business`; since the hybrid one-page Home (2026-11-26): `/custom-image-uploader.html` → `/#upload`, `/design-your-own-shirt.html` → `/#design`, and `/design` → `/#design`, `/upload` → `/#upload` (query strings survive: `/design?mockup=<id>` → `/?mockup=<id>#design`)
+
+## One-page Home mapping (Logan, 2026-11-26)
+
+The hybrid one-page Home keeps every old page either as a Home section or as its own full page:
+
+| Old page | Now |
+| --- | --- |
+| `/` (home) | One scrolling page: `#design` → `#upload` → Hero → `#services` → `#how-it-works` → `#business` → `#past-work` → `#about` → `#contact` |
+| `/design` | Home `#design` section (308 redirect, keeps `?mockup=` restore links) |
+| `/upload` | Home `#upload` section (308 redirect) |
+| `/business` | Still a full page (SEO). Home `#business` is a summary: pitch + first 6 of the merged product grid + quote form + "See all products & services →" |
+| `/about` | Still a full page (SEO). Home `#about` is a summary: 2 sentences of the story + audiences + "Read our story →" |
+| `/contact` | Still a full page (SEO). Home `#contact` is a summary: contact details + contact form + survey + "More ways to reach us →" |
+
+Parity notes: the old Home "featured products" strip and the Business "Products" grid merged into one list (`src/components/sections/business-products.ts` — no duplicates); the home past-work strip and the Business gallery share one portfolio (Home shows a 6-photo slice, `/business` the full gallery). The header's Business/About/Contact tabs keep real URLs and scroll to the Home sections when already on `/`.

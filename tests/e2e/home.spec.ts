@@ -38,19 +38,21 @@ test("referral validation shows error and valid submit shows notice", async ({ p
   await page.setExtraHTTPHeaders({ "x-forwarded-for": `198.51.100.${test.info().workerIndex + 100}` });
   await page.goto("/");
   // choose Other without specifying -> error
-  await page.getByRole("combobox").last().click();
+  await page.getByTestId("survey").getByRole("combobox").click();
   await page.getByRole("option", { name: "Other" }).click();
-  await page.getByRole("button", { name: "Submit" }).click();
+  await page.getByTestId("survey").getByRole("button", { name: "Submit" }).click();
   await expect(page.getByText("Please tell us how you heard about us")).toBeVisible();
 
   // valid submit
   await page.getByPlaceholder("Tell us how").fill("Friend");
-  await expect(page.getByTestId("turnstile-token")).not.toHaveValue("");
-  await page.getByRole("button", { name: "Submit" }).click();
-  await expect(page.getByText("Thanks!", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("survey").getByTestId("turnstile-token")).not.toHaveValue("");
+  await page.getByTestId("survey").getByRole("button", { name: "Submit" }).click();
+  await expect(page.getByTestId("survey").getByText("Thanks!", { exact: true })).toBeVisible();
 });
 
 test("referral dropdown is labelled for assistive tech", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("combobox", { name: /how did you hear about us/i })).toBeVisible();
+  // The contact form embeds its own optional referral field; the standalone survey is the
+  // lightweight one in its own block.
+  await expect(page.getByTestId("survey").getByRole("combobox", { name: /how did you hear about us/i })).toBeVisible();
 });

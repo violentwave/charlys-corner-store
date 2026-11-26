@@ -150,7 +150,7 @@ test("sign up, verify and upload without ever leaving the builder", async ({ pag
   await dialog.getByTestId("dialog-add-design").click();
   await (await chooser).setFiles("tests/e2e/fixtures/art.png");
   await expect(page.getByTestId("layers-panel")).toContainText("art.png", { timeout: 15_000 });
-  await expect(page).toHaveURL(/\/design$/);
+  await expect(page).toHaveURL(/\/#design$/);
   await expect(page.getByTestId("sign-in-dialog")).toHaveCount(0);
 });
 

@@ -110,7 +110,7 @@ function EmptyState({ kind }: { kind: "mockup" | "order" }) {
       </p>
       <p className="text-text-2 mx-auto mt-2 max-w-sm text-sm">{copy.body}</p>
       <Button asChild className="mt-6">
-        <Link href="/design">{copy.cta}</Link>
+        <Link href="/#design">{copy.cta}</Link>
       </Button>
       <p className="text-text-3 mt-6 text-xs">Have a Ruffin awesome day 🐾</p>
     </Card>

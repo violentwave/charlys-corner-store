@@ -13,7 +13,7 @@ export interface OrderRequestCustomerEmailProps {
   /** "2 × M" entries for the sizes the customer ordered. */
   sizes: string[];
   coupon: { code: string; expiresAt: Date; isNew: boolean };
-  /** Deep link: /design?mockup=<id> reopens the design in the builder (design data only, no PII). */
+  /** Deep link: /?mockup=<id>#design reopens the design in the builder (design data only, no PII). */
   mockupId: string;
 }
 
@@ -53,7 +53,7 @@ export function OrderRequestCustomerEmail(p: OrderRequestCustomerEmailProps) {
           </Text>
           <Text>{terms}</Text>
           <Button
-            href={`${site.url}/design?mockup=${p.mockupId}`}
+            href={`${site.url}/?mockup=${p.mockupId}#design`}
             style={{
               backgroundColor: "#FF2E97",
               borderRadius: "999px",

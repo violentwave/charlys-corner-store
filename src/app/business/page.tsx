@@ -4,28 +4,15 @@ import { PageHeader } from "@/components/sections/page-header";
 import { Section } from "@/components/sections/section";
 import { ProductGrid } from "@/components/sections/product-grid";
 import { PortfolioGallery } from "@/components/sections/portfolio-gallery";
+import { businessProducts } from "@/components/sections/business-products";
 import { QuoteForm } from "@/components/forms/quote-form";
-import { catalog, legacyPromoItems } from "@/content/catalog";
+import { legacyPromoItems } from "@/content/catalog";
 import { site } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Business & Promotional Products",
   description: `Brand your business with custom hats, koozies, totes, mouse pads, pop sockets, cards, flyers, stickers, lanyards, pillows, and banners in ${site.city}, ${site.region}.`,
 };
-
-const businessProducts = catalog.filter((product) =>
-  [
-    "business-cards",
-    "custom-foam-koozies",
-    "banners",
-    "custom-hats",
-    "polos",
-    "flyers",
-    "stickers",
-    "lanyards",
-    "pillows",
-  ].includes(product.slug),
-);
 
 export default function BusinessPage() {
   return (

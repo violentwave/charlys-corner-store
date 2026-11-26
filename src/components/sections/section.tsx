@@ -19,7 +19,13 @@ export function Section({ id, eyebrow, title, description, className, children, 
               <p className="font-heading text-neon-cyan text-xs tracking-[0.3em] uppercase">{eyebrow}</p>
             ) : null}
             {title ? (
-              <h2 className="font-heading text-text-1 text-2xl tracking-wide uppercase sm:text-3xl">{title}</h2>
+              <h2
+                tabIndex={-1}
+                data-section-heading
+                className="font-heading text-text-1 text-2xl tracking-wide uppercase sm:text-3xl"
+              >
+                {title}
+              </h2>
             ) : null}
             {description ? <p className="text-text-2 max-w-2xl">{description}</p> : null}
           </header>

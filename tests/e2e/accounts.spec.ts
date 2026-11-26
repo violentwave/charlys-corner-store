@@ -97,8 +97,11 @@ test("log out → log in", async ({ page }) => {
   }
   await headerLink(page).click();
   await expect(page).toHaveURL(/\/login$/);
-  await page.getByLabel("Email").fill(email);
-  await page.getByRole("textbox", { name: "Password" }).fill(password);
+  await expect(page.getByRole("heading", { name: /log in/i })).toBeVisible();
+  // Next keeps the previous page mounted but hidden after a client-side nav — scope to
+  // the fields you can actually see (Home carries four forms).
+  await page.getByLabel("Email").filter({ visible: true }).fill(email);
+  await page.getByRole("textbox", { name: "Password" }).filter({ visible: true }).fill(password);
   await page.getByRole("button", { name: /^log in$/i }).click();
   await expect(page).toHaveURL(/\/account$/);
   await expect(page.getByTestId("empty-state")).toBeVisible();
