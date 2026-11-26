@@ -34,6 +34,9 @@ const mockup = (over: Partial<AccountMockup> = {}): AccountMockup => ({
   filesExpireAt: expireAt(29),
   removal: "delete",
   restorePath: "/?mockup=m1",
+  orderStage: null,
+  canResend: false,
+  canReorder: false,
   ...over,
 });
 
@@ -50,6 +53,9 @@ const order: AccountMockup = {
   filesExpireAt: null,
   removal: "hide",
   restorePath: "/?mockup=o1",
+  orderStage: null,
+  canResend: false,
+  canReorder: false,
 };
 
 function renderWith(items: AccountMockup[]) {
