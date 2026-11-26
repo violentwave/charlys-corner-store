@@ -57,6 +57,13 @@
       "when": 1795687584325,
       "tag": "0007_member_perks",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1795726615513,
+      "tag": "0008_steady_morlun",
+      "breakpoints": true
     }
   ]
 }

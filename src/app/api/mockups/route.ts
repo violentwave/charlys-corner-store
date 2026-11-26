@@ -13,7 +13,7 @@ import { clip, BodyTooLargeError, readFormDataLimited } from "@/lib/http";
 import { issueCoupon } from "@/lib/coupon-store";
 import { upsertLead } from "@/lib/leads";
 import { describeLayers, mockupSummary } from "@/lib/mockup-summary";
-import { ownerStageLinks } from "@/lib/order-stage";
+import { ownerStageLinks, ownerQuoteUrl } from "@/lib/order-stage";
 import { MOCKUP_FILES_RETENTION_DAYS, mockupStoragePrefix } from "@/lib/retention";
 import { VIEW_LABELS } from "@/lib/garments";
 import {
@@ -270,6 +270,7 @@ export async function POST(request: Request) {
       mockups: mockupUrls,
       filesKeptDays: data.intent === "order" ? undefined : MOCKUP_FILES_RETENTION_DAYS,
       stageLinks: data.intent === "order" ? ownerStageLinks(mockupId) : undefined,
+      quoteUrl: data.intent === "order" ? ownerQuoteUrl(mockupId) : undefined,
     }),
     user.email,
     { mockupId, leadId },
