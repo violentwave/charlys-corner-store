@@ -18,14 +18,19 @@ A single page with a stepper (mobile: bottom-sheet steps; desktop: canvas left, 
 ### 1. Choose garment
 | Garment | Views | Print locations |
 |---|---|---|
-| **T-shirt** | Front, Back | Front Chest, Left Chest, Full Front, Full Back |
-| **Baseball tee (3/4 raglan)** | Front, Back | Front Chest, Left Chest, Full Front, Full Back |
-| **Hoodie** | Front, Back | Left Chest, Full Front (above pocket), Full Back |
-| **Hat** | Front (+ side, optional) | Hat Front |
+| **T-shirt** (Gildan 5000) | Front, Back | Front Chest, Left Chest, Full Front, Full Back |
+| **Long sleeve tee** (Gildan 5400, added 2026-11-25) | Front, Back, Left sleeve, Right sleeve | Front Chest, Left Chest, Full Front, Full Back, Upper Sleeve, Full Sleeve |
+| **Baseball tee (3/4 raglan)** (Bella+Canvas 3200) | Front, Back, Left sleeve, Right sleeve | Front Chest, Left Chest, Full Front, Full Back, Upper Sleeve, Full Sleeve |
+| **Hoodie** (Gildan 18500) | Front, Back, Left sleeve, Right sleeve | Left Chest, Full Front (above pocket), Full Back, Upper Sleeve, Full Sleeve |
+| **Hat** (Richardson 112) | Front | Hat Front |
 | **Polo** | Front, Back | Left Chest, Full Back |
 | **Tank** | Front, Back | Full Front, Full Back |
 
-All six garments are required (confirmed 2026-11-23). Default blanks are **Gildan**, which is always stocked. Add a "Have your own garment or a different brand in mind? Tell us in the notes; we'll print on it" line, because the shop prints on customer-supplied or requested garments.
+All six garments are required (confirmed 2026-11-23); the long sleeve tee was added 2026-11-25 (Logan). **Sleeve printing is offered on long-sleeve garments only** (long sleeve tee, hoodie, baseball tee), each sleeve as its own view.
+
+**Artwork per side (2026-11-25):** an upload goes on the side being edited (front by default), never on every side. Each other side (back, left sleeve, right sleeve) can get the same file or a different one. On the wire every view carries an `artwork` index into the uploaded files `artwork-0…3` (≤ 30 MB total); the server stores each original once.
+
+**Realistic colors (2026-11-25):** single-color blanks offer the style's real color list; the hoodie's hood lining and drawcords match the body (as on the 18500), so there's one hoodie color. Blanks that only come in fixed combos (baseball tee body/sleeves, trucker hat front/mesh/visor) offer **only those combos** (`src/lib/blank-combos.ts`), and the server rejects anything else. Default blanks are **Gildan**, which is always stocked. Add a "Have your own garment or a different brand in mind? Tell us in the notes; we'll print on it" line, because the shop prints on customer-supplied or requested garments.
 
 Garment config lives in data (`src/lib/garments.ts` or the DB), not hard-coded in components:
 ```ts
@@ -102,9 +107,11 @@ no horizontal scroll, ≥ 44px primary targets (step pills ≥ 24px, WCAG 2.5.8)
 Per view, in `public/garments/{garment}/{view}/`:
 | File | Use |
 |---|---|
-| `mask-<zone>.png` | Alpha mask per color zone; fill with the zone color |
-| `shading.png` | Folds, seams, stitching, texture; `multiply` over the fills. Its alpha is the garment silhouette (clip everything to it) |
-| `highlight.png` | Sheen; `screen` at `highlightOpacity(hex)` = 0.15 + 0.85 × (1 − luma), so dark fabric doesn't go flat |
-| `base.png` | White composite for thumbnails / loading |
+| `mask-<zone>.png` | Alpha mask per color zone; fill with the zone color (lossless PNG) |
+| `shading.webp` | Folds, seams, stitching, plus a subtle knit texture; `multiply` over the fills. Its alpha is the garment silhouette (clip everything to it) |
+| `highlight.webp` | Sheen; `screen` at `highlightOpacity(hex)` = 0.15 + 0.85 × (1 − luma), so dark fabric doesn't go flat |
+| `base.webp` | White composite for thumbnails / loading |
 
-Size: 1000×1200 for tops, 1000×800 for the hat. Views: front + back (hat: front only). Swap in owner photos later by keeping the same layer contract.
+The soft layers are lossy WebP (quality 82) because the knit texture compresses badly as PNG: all templates together are about 2 MB.
+
+Size: 1000×1200 for tops and sleeve views, 1000×800 for the hat. Views: front + back (hat: front only), plus `left`/`right` sleeve views on the long sleeve tee, hoodie and baseball tee. Sleeves are drawn at about 0.4× body width (realistic flat-lay proportions; fixed 2026-11-25 after the first drawings came out too thin). Swap in owner photos later by keeping the same layer contract.

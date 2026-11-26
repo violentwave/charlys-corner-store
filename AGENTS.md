@@ -77,7 +77,7 @@ A task isn't done until `lint`, `typecheck`, and `test` pass (and `e2e` for buil
 - **Design tokens:** never hard-code neon hex values in components; use tokens or Tailwind theme classes.
 - **Accessibility:** WCAG 2.2 AA, visible cyan focus rings, keyboard-operable builder, `prefers-reduced-motion` respected, color never the only signal.
 - **Mobile first:** test at 360px wide.
-- **Images:** `next/image`; garment templates live in `public/garments/{garment}/{view}/{base|shading|mask-<zone>}.png` and must be same-origin (canvas export).
+- **Images:** `next/image`; garment templates live in `public/garments/{garment}/{view}/` (`shading.webp`, `highlight.webp`, `base.webp`, `mask-<zone>.png`) and must be same-origin (canvas export).
 - **Content:** page copy and facts come from `src/content/*` and `src/lib/site.ts`. Never invent prices, hours, phone, turnaround, minimums, or testimonials; add a `TODO(content)` and leave it out of the rendered page instead.
 - **Copy voice:** fun, local, confident, a little punny (Charly is a dog: "Have a Ruffin awesome day"). No lorem ipsum in merged code; use clearly marked `TODO(content)` placeholders.
 - **Commits:** conventional commits; one logical change per commit; branch per task, created from an up-to-date `main`.
