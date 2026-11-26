@@ -109,7 +109,8 @@ test("switching the print location refits the artwork", async ({ page }) => {
   await uploadImage(page, "tests/e2e/fixtures/art.png");
   const before = await transformText(page);
   await page.getByTestId("print-location").click();
-  await page.getByRole("option", { name: "Full Front" }).click();
+  // Full Front is the default (largest first); switch to the smaller Front Chest.
+  await page.getByRole("option", { name: "Front Chest" }).click();
   const after = await transformText(page);
   expect(after).not.toEqual(before);
 });
