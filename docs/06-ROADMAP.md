@@ -81,6 +81,13 @@ Each page prompt is shipped by the agent (Ship section); Claude reviews every me
 - [x] Hybrid one-page Home: builder (`#design`) and artwork upload (`#upload`) as the first two sections, followed by summary sections for business, past work, about and contact; sticky header tabs smooth-scroll to them (scroll-spy marks the active tab); `/design` and `/upload` 308-redirect to `/#design` / `/#upload` keeping the `?mockup=` restore links; Business, About and Contact stay full pages for SEO (prompt P48-1)
 - [x] Simpler builder panel, same features: layers list only at 2+ layers, quick ink swatches + Custom, one action row (Center/Fit/Flip/Duplicate/Delete), printed-size line for every layer, outline/arch/spacing and size/rotate folded into session-remembering disclosures; notes moved above both send paths so they ride along with the email path too (prompt P48-2)
 
+## Phase 4.9: Members v2 (Logan, 2026-11-26)
+
+- [x] Foundation (Claude): delete a design (emailed mockup: row + files; order request: hidden, kept for the shop), download links, 30-day expiry dates in the list, delete account (orders kept, detached) (migration 0005)
+- [ ] Foundation (Claude): Google sign-in/sign-up; 2FA (authenticator app or email code, backup codes); 2FA at every login, incl. Google and password reset
+- [ ] Foundation (Claude): coupon wallet + order status (owner one-click status links), saved drafts, brand kit, order again
+- [ ] UI (opencode): account tabs (Designs, Drafts, Brand kit, Security), delete buttons with 30-day warnings, sign-in screens
+
 ## Phase 5: Shop and checkout
 
 - [ ] Payments provider decision (Square vs Stripe) and catalog import of the 9 current products + variants

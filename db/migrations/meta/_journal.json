@@ -36,6 +36,13 @@
       "when": 1795660263350,
       "tag": "0004_mockup_layers",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795684214047,
+      "tag": "0005_member_design_removal",
+      "breakpoints": true
     }
   ]
 }

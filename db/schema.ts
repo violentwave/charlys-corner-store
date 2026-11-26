@@ -177,8 +177,13 @@ export const mockups = pgTable(
     wantsQuote: boolean("wants_quote").notNull().default(false),
     /** "mockup" = emailed mockup; "order" = order request (owner confirms price + invoices). */
     kind: mockupKind("kind").notNull().default("mockup"),
-    /** Account that made it (null for rows from before accounts existed). */
-    userId: uuid("user_id").references(() => users.id),
+    /** Account that made it (null for rows from before accounts existed, or a deleted account's orders). */
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    /**
+     * The member removed this order request from "My designs" (2026-11-26). Orders aren't
+     * deleted (the owner still needs them); emailed mockups are deleted outright instead.
+     */
+    hiddenByUserAt: timestamp("hidden_by_user_at", { withTimezone: true }),
     /** Every original file, untouched, for production; image layers' `artwork` indexes this list. */
     artworks: jsonb("artworks").$type<MockupArtworkRecord[]>().notNull().default([]),
     /**

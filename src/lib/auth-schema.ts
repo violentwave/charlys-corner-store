@@ -49,3 +49,10 @@ export type LoginInput = z.infer<typeof loginSchema>;
 
 /** What GET /api/auth/me returns for a signed-in visitor. */
 export type AccountUser = { email: string; name: string | null; verified: boolean };
+
+/** POST /api/account/delete: the member re-enters their password and types DELETE. */
+export const deleteAccountSchema = z.object({
+  password: z.string().min(1, "Enter your password").max(200),
+  /** The member types DELETE to confirm. */
+  confirm: z.literal("DELETE", { error: "Type DELETE to confirm" }),
+});
