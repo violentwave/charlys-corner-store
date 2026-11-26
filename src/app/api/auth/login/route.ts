@@ -2,10 +2,10 @@ import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { loginSchema, type AccountUser } from "@/lib/auth-schema";
+import { loginSchema, type AccountUser, type TwoFactorPending } from "@/lib/auth-schema";
 import { dummyHash, verifyPassword } from "@/lib/auth/password";
 import { fail, readJson } from "@/lib/auth/route-helpers";
-import { startSession } from "@/lib/auth/session";
+import { signInOrChallenge } from "@/lib/auth/two-factor";
 import { getDb, schema } from "@/lib/db";
 import { clientIp, LIMITS, rateLimit } from "@/lib/rate-limit";
 
@@ -24,13 +24,20 @@ export async function POST(request: Request) {
   if (!byIp.ok || !byEmail.ok) return fail("Too many attempts. Please wait a few minutes and try again.", 429);
 
   const [user] = await db.select().from(schema.users).where(eq(schema.users.email, email));
+  // Accounts made with Google may have no password: they fail like a wrong one.
   const ok = await verifyPassword(read.data.password, user?.passwordHash ?? (await dummyHash()));
-  if (!user || !ok) return fail(WRONG, 401, { password: WRONG });
+  if (!user || !user.passwordHash || !ok) return fail(WRONG, 401, { password: WRONG });
 
+  let outcome: Awaited<ReturnType<typeof signInOrChallenge>>;
   try {
-    await startSession(db, user.id);
+    outcome = await signInOrChallenge(db, user);
   } catch {
     return fail("Something went wrong on our end. Please try again.", 500);
+  }
+  if (!outcome.signedIn) {
+    // 2FA on: no session yet. The sign-in screen asks for the code (/api/auth/2fa/verify).
+    const twoFactor: TwoFactorPending = outcome.twoFactor;
+    return NextResponse.json({ ok: true, twoFactor });
   }
   const body: AccountUser = { email: user.email, name: user.name, verified: !!user.emailVerifiedAt };
   return NextResponse.json({ ok: true, user: body });

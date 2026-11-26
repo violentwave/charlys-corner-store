@@ -12,8 +12,11 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
  */
 export interface StorageDriver {
   put(key: string, body: Uint8Array, contentType: string): Promise<void>;
-  /** Time-limited URL for the owner to open a private file (default 7 days, the S3 maximum). */
-  signedUrl(key: string, expiresInSeconds?: number): Promise<string>;
+  /**
+   * Time-limited URL for a private file (default 7 days, the S3 maximum). With `downloadName`
+   * the browser saves the file under that name instead of opening it.
+   */
+  signedUrl(key: string, expiresInSeconds?: number, options?: { downloadName?: string }): Promise<string>;
   delete(key: string): Promise<void>;
 }
 
@@ -31,8 +34,15 @@ function s3Driver(): StorageDriver {
     async put(key, body, contentType) {
       await client.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: body, ContentType: contentType }));
     },
-    async signedUrl(key, expiresInSeconds = SEVEN_DAYS) {
-      return getSignedUrl(client, new GetObjectCommand({ Bucket: bucket, Key: key }), { expiresIn: expiresInSeconds });
+    async signedUrl(key, expiresInSeconds = SEVEN_DAYS, options) {
+      const disposition = options?.downloadName
+        ? `attachment; filename="${options.downloadName.replace(/[^A-Za-z0-9._-]+/g, "-")}"`
+        : undefined;
+      return getSignedUrl(
+        client,
+        new GetObjectCommand({ Bucket: bucket, Key: key, ResponseContentDisposition: disposition }),
+        { expiresIn: expiresInSeconds },
+      );
     },
     async delete(key) {
       await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));

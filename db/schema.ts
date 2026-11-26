@@ -25,7 +25,16 @@ import { REFERRAL_SOURCES } from "../src/lib/schemas";
 export const referralSource = pgEnum("referral_source", REFERRAL_SOURCES);
 export const couponStatus = pgEnum("coupon_status", ["issued", "eligible", "redeemed", "expired"]);
 export const mockupKind = pgEnum("mockup_kind", ["mockup", "order"]);
-export const authTokenPurpose = pgEnum("auth_token_purpose", ["verify_email", "reset_password"]);
+export const authTokenPurpose = pgEnum("auth_token_purpose", [
+  "verify_email",
+  "reset_password",
+  /** 2026-11-26: a pending sign-in waiting for its second factor (cookie token, hashed). */
+  "two_factor_challenge",
+  /** 2026-11-26: a 6-digit code emailed for 2FA (sign-in or turning email 2FA on). */
+  "two_factor_email",
+]);
+/** 2FA method (2026-11-26): an authenticator app (TOTP), or a 6-digit code by email (fallback). */
+export const twoFactorMethod = pgEnum("two_factor_method", ["totp", "email"]);
 export const requestStatus = pgEnum("request_status", ["new", "contacted", "quoted", "ordered", "closed", "spam"]);
 
 const id = () => uuid("id").primaryKey().defaultRandom();
@@ -177,8 +186,13 @@ export const mockups = pgTable(
     wantsQuote: boolean("wants_quote").notNull().default(false),
     /** "mockup" = emailed mockup; "order" = order request (owner confirms price + invoices). */
     kind: mockupKind("kind").notNull().default("mockup"),
-    /** Account that made it (null for rows from before accounts existed). */
-    userId: uuid("user_id").references(() => users.id),
+    /** Account that made it (null for rows from before accounts existed, or a deleted account's orders). */
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    /**
+     * The member removed this order request from "My designs" (2026-11-26). Orders aren't
+     * deleted (the owner still needs them); emailed mockups are deleted outright instead.
+     */
+    hiddenByUserAt: timestamp("hidden_by_user_at", { withTimezone: true }),
     /** Every original file, untouched, for production; image layers' `artwork` indexes this list. */
     artworks: jsonb("artworks").$type<MockupArtworkRecord[]>().notNull().default([]),
     /**
@@ -209,15 +223,28 @@ export const users = pgTable(
   {
     id: id(),
     email: text("email").notNull(),
-    passwordHash: text("password_hash").notNull(),
+    /** Null for accounts created with Google that never set a password. */
+    passwordHash: text("password_hash"),
     name: text("name"),
+    /** Google account id ("sub") once Google sign-in is linked (2026-11-26). */
+    googleSub: text("google_sub"),
+    /** Null = 2FA off. */
+    twoFactorMethod: twoFactorMethod("two_factor_method"),
+    /** Authenticator secret, AES-256-GCM encrypted (src/lib/auth/secret-box.ts). */
+    totpSecret: text("totp_secret"),
+    /** A secret being set up, not yet confirmed with a code (encrypted). */
+    totpPendingSecret: text("totp_pending_secret"),
+    /** Last accepted TOTP time step: the same code can't be used twice. */
+    totpLastStep: integer("totp_last_step"),
+    /** SHA-256 hashes of unused one-time backup codes. */
+    recoveryCodeHashes: jsonb("recovery_code_hashes").$type<string[]>().notNull().default([]),
     emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
     /** Set on verification: the lead row for this email (coupons hang off leads). */
     leadId: uuid("lead_id").references(() => leads.id),
     createdAt: createdAt(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex("users_email_unique").on(t.email)],
+  (t) => [uniqueIndex("users_email_unique").on(t.email), uniqueIndex("users_google_sub_unique").on(t.googleSub)],
 );
 
 /** Login sessions. Only a SHA-256 of the cookie token is stored. */

@@ -70,6 +70,13 @@ export const LIMITS = {
   resendCode: { limit: 3, windowSeconds: 60 * 60 },
   forgotPassword: { limit: 3, windowSeconds: 60 * 60 },
   resetPassword: { limit: 10, windowSeconds: 60 * 60 },
+  /** 2FA (2026-11-26): second-step codes per IP; Google sign-in starts per IP; security changes per user. */
+  twoFactorVerify: { limit: 10, windowSeconds: 15 * 60 },
+  googleStart: { limit: 20, windowSeconds: 60 * 60 },
+  securityChange: { limit: 20, windowSeconds: 60 * 60 },
+  /** Members deleting designs / their account (per user). */
+  accountDesignDelete: { limit: 60, windowSeconds: 60 * 60 },
+  accountDelete: { limit: 5, windowSeconds: 60 * 60 },
   /** Customer confirmation emails per recipient address: stops the forms being used to mail strangers. */
   confirmation: { limit: 3, windowSeconds: 24 * 60 * 60 },
 } as const;
