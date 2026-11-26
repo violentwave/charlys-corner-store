@@ -83,6 +83,11 @@ export const textLayerSchema = z.object({
   align: z.enum(["left", "center", "right"]).default("center"),
   /** Extra space between letters, template px. */
   letterSpacing: finite.min(-5).max(40).default(0),
+  /**
+   * Arch (2026-11-26): 0 = straight; 1 = arched up into a half circle (rainbow); -1 = arched down
+   * (smile). The line keeps its length along the curve.
+   */
+  curve: finite.min(-1).max(1).default(0),
   transform: artworkTransformSchema,
 });
 

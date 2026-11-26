@@ -15,7 +15,7 @@ import { isOutsideArea } from "./geometry";
 import { InspectorSection } from "./inspector-section";
 import { LayersPanel } from "./layers-panel";
 import { LayerControls } from "./layer-controls";
-import type { BuilderLayer, BuilderViewState } from "./use-builder-state";
+import type { BuilderLayer, BuilderViewState, TextPatch } from "./use-builder-state";
 
 export interface DesignInspectorProps {
   view: GarmentView;
@@ -40,17 +40,7 @@ export interface DesignInspectorProps {
   onSetPrintArea: (viewId: ViewId, areaId: string) => void;
   onSelectLayer: (layerId: string | null) => void;
   onTransform: (layerId: string, transform: BuilderLayer["transform"], mergeKey?: string) => void;
-  onTextChange: (
-    layerId: string,
-    patch: {
-      text?: string;
-      font?: import("@/lib/text-fonts").TextFontId;
-      color?: string;
-      align?: "left" | "center" | "right";
-      letterSpacing?: number;
-    },
-    mergeKey?: string,
-  ) => void;
+  onTextChange: (layerId: string, patch: TextPatch, mergeKey?: string) => void;
   onOutlineChange: (layerId: string, outline: { color: string; width: number }, mergeKey?: string) => void;
   onRemoveLayer: (layerId: string) => void;
   onDuplicateLayer: (layerId: string) => void;

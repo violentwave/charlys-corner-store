@@ -420,6 +420,7 @@ describe("designFromRestore (deep link, v4: layers)", () => {
               outline: { color: "#000000", width: 0 },
               align: "center",
               letterSpacing: 0,
+              curve: 0,
               transform: fitTransform({ x: 344, y: 292, w: 312, h: 364 }, 300, 100),
             },
           ],
@@ -448,6 +449,7 @@ describe("designFromRestore (deep link, v4: layers)", () => {
                 outline: { color: "#000000", width: 2 },
                 align: "center",
                 letterSpacing: 4,
+                curve: 0.5,
                 transform: {
                   x: 425,
                   y: 300,

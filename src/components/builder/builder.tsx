@@ -32,14 +32,15 @@ import {
   type BuilderLayer,
   type BuilderStep,
   type RestoredDesign,
+  type TextPatch,
 } from "./use-builder-state";
 import { SendStep } from "./send-step";
+import { StartOverButton } from "./start-over-dialog";
 import { SuccessScreen, type MockupResult } from "./success-screen";
 import { uploadGateFor } from "./upload-gate";
 import "./text-fonts.css";
 import { loadTextFont } from "./load-text-font";
 import { initialTextTransform, refitTextBox } from "./text-measure";
-import type { TextFontId } from "@/lib/text-fonts";
 
 const STEPS: { id: BuilderStep; label: string; headline: string; helper: string }[] = [
   {
@@ -421,23 +422,17 @@ export function Builder() {
   };
 
   /**
-   * Text edits. Changing the words, font or spacing resizes the box so the letters keep their
+   * Text edits. Changing the words, font, spacing or arch resizes the box so the letters keep their
    * current proportions (text-measure.ts refitTextBox) instead of squashing into the old box.
    */
-  const changeText = async (
-    layerId: string,
-    patch: {
-      text?: string;
-      font?: TextFontId;
-      color?: string;
-      align?: "left" | "center" | "right";
-      letterSpacing?: number;
-    },
-    mergeKey?: string,
-  ) => {
+  const changeText = async (layerId: string, patch: TextPatch, mergeKey?: string) => {
     const viewId = activeViewId;
     const layer = activeViewState.layers.find((l) => l.id === layerId);
-    const reshapes = patch.text !== undefined || patch.font !== undefined || patch.letterSpacing !== undefined;
+    const reshapes =
+      patch.text !== undefined ||
+      patch.font !== undefined ||
+      patch.letterSpacing !== undefined ||
+      patch.curve !== undefined;
     if (!layer || layer.type !== "text" || !reshapes) {
       dispatch({ type: "updateLayer", view: viewId, layerId, patch, mergeKey });
       return;
@@ -449,6 +444,7 @@ export function Builder() {
       text: patch.text ?? layer.text,
       font: patch.font ?? layer.font,
       letterSpacing: patch.letterSpacing ?? layer.letterSpacing,
+      curve: patch.curve ?? layer.curve,
     };
     const transform = refitTextBox(layer, next, rect);
     dispatch({ type: "updateLayer", view: viewId, layerId, patch: { ...patch, transform }, mergeKey });
@@ -566,6 +562,8 @@ export function Builder() {
 
   const designAnother = () => {
     dispatch({ type: "hydrate", step: 1, design: initialDesign(GARMENTS[0]!.id) });
+    setRequestedView("front");
+    setFileError(null);
     setSuccess(null);
     setExportedUrls({});
     setSendError(null);
@@ -815,6 +813,7 @@ export function Builder() {
                   >
                     ← Back
                   </Button>
+                  {step > 1 ? <StartOverButton onConfirm={designAnother} /> : null}
                   {step === 3 ? (
                     <>
                       <Button variant="ghost" size="sm" onClick={undo} disabled={!canUndo} data-testid="undo">

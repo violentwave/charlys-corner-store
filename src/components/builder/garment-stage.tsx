@@ -16,7 +16,7 @@
  */
 import Konva from "konva";
 import { forwardRef, Fragment, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { Group, Image as KonvaImage, Layer, Rect, Stage, Text, Transformer } from "react-konva";
+import { Group, Image as KonvaImage, Layer, Line, Rect, Stage, Text, TextPath, Transformer } from "react-konva";
 
 import { getTextFont } from "@/lib/text-fonts";
 import type { GarmentView, ViewId } from "@/lib/garments";
@@ -24,16 +24,9 @@ import type { MockupColors } from "@/lib/mockup-schema";
 import { Button } from "@/components/ui/button";
 
 import { composeArtworkLayer, composeGarment, type TemplateImages } from "./compositor";
-import {
-  centerToTopLeft,
-  nudgeTransform,
-  rotateAroundCenter,
-  scaleAroundCenter,
-  SKEW_LIMIT,
-  topLeftToCenter,
-} from "./geometry";
+import { centerToTopLeft, nudgeTransform, rotateAroundCenter, scaleAroundCenter, topLeftToCenter } from "./geometry";
 import { SideArtworkChooser } from "./side-artwork-chooser";
-import { measureText, TEXT_BASE_FONT_SIZE } from "./text-measure";
+import { TEXT_BASE_FONT_SIZE, textGeometry } from "./text-measure";
 import type { BuilderLayer, BuilderTransform } from "./use-builder-state";
 
 /** The builder-side images the canvas draws with, keyed by file index. */
@@ -124,6 +117,11 @@ export interface GarmentStageProps {
   onRedo?: () => void;
 }
 
+/** How close (CSS px on screen) a dragged layer's center gets to the print area's middle before it snaps. */
+const SNAP_SCREEN_PX = 6;
+/** Neutral magenta-free guide color: the canvas stays off-theme (docs/04), like the dashed box. */
+const SNAP_GUIDE_COLOR = "#2f6fd6";
+
 /** Konva name of the faded, unclipped (interactive) copy of each layer; hidden in exports. */
 const GHOST_NAME = "layer-ghost";
 
@@ -154,12 +152,6 @@ function cachedArtworkLayer(
   }
   return canvas;
 }
-
-/** The Transformer may re-decompose a rotated + skewed node: keep what it shows, within the schema. */
-const nodeSkew = (node: Konva.Node) => ({
-  skewX: Math.max(-SKEW_LIMIT, Math.min(SKEW_LIMIT, node.skewX())),
-  skewY: Math.max(-SKEW_LIMIT, Math.min(SKEW_LIMIT, node.skewY())),
-});
 
 /**
  * Konva strokes are centered on the glyph edge and scaled with the node. With the fill drawn
@@ -215,6 +207,8 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
   };
   const transformerRef = useRef<Konva.Transformer>(null);
   const guideRef = useRef<Konva.Rect>(null);
+  const vGuideRef = useRef<Konva.Line>(null);
+  const hGuideRef = useRef<Konva.Line>(null);
   const layerRef = useRef<Konva.Layer>(null);
   const pinchRef = useRef<{ dist: number; angle: number } | null>(null);
   const [containerWidth, setContainerWidth] = useState(0);
@@ -298,12 +292,11 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
         height,
         rotation,
         flipX: scaleX < 0,
-        ...nodeSkew(node),
       });
       return;
     }
     // Text: the node renders at the base font size; the box is what got stretched.
-    const natural = measureText(layer.text, layer.font, layer.letterSpacing);
+    const natural = textGeometry(layer.text, layer.font, layer.letterSpacing, layer.curve);
     const width = natural.width * Math.abs(node.scaleX());
     const height = natural.height * Math.abs(node.scaleY());
     const rotation = node.rotation();
@@ -315,8 +308,29 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
       width,
       height,
       rotation,
-      ...nodeSkew(node),
     });
+  };
+
+  /**
+   * Snap to center while dragging: within a few screen pixels of the print area's middle, the
+   * layer's center locks onto it and a guide line shows (vertical, horizontal or both).
+   */
+  const snapToCenter = (layerId: string) => {
+    const node = nodeRefs.current.get(layerId);
+    if (!node || scale <= 0) return;
+    const threshold = SNAP_SCREEN_PX / scale;
+    const cx = activeArea.rect.x + activeArea.rect.w / 2;
+    const cy = activeArea.rect.y + activeArea.rect.h / 2;
+    const snapX = Math.abs(node.x() - cx) <= threshold;
+    const snapY = Math.abs(node.y() - cy) <= threshold;
+    if (snapX) node.x(cx);
+    if (snapY) node.y(cy);
+    vGuideRef.current?.visible(snapX);
+    hGuideRef.current?.visible(snapY);
+  };
+  const hideSnapGuides = () => {
+    vGuideRef.current?.visible(false);
+    hGuideRef.current?.visible(false);
   };
 
   const handleTouchMove = (e: Konva.KonvaEventObject<TouchEvent>, layer: BuilderLayer) => {
@@ -437,6 +451,7 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
       const selectedNodes = transformerRef.current?.nodes() ?? [];
       const ghosts = stage.find(`.${GHOST_NAME}`);
       ghosts.forEach((g) => g.visible(false));
+      hideSnapGuides();
       guideRef.current?.visible(false);
       transformerRef.current?.visible(false);
       transformerRef.current?.nodes([]);
@@ -530,9 +545,13 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
                   selectThisView();
                   onSelectLayer(layer.id);
                 },
-                onDragMove: () => syncCopy(layer.id),
+                onDragMove: () => {
+                  snapToCenter(layer.id);
+                  syncCopy(layer.id);
+                },
                 onTransform: () => syncCopy(layer.id),
                 onDragEnd: () => {
+                  hideSnapGuides();
                   selectThisView();
                   const node = nodeRefs.current.get(layer.id);
                   if (node) commitTransform(layer, node);
@@ -581,29 +600,31 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
                     />
                   );
                 }
-                const natural = measureText(layer.text, layer.font, layer.letterSpacing);
+                const geo = textGeometry(layer.text, layer.font, layer.letterSpacing, layer.curve);
                 const font = getTextFont(layer.font);
-                const sx = layer.transform.width / natural.width;
-                const sy = layer.transform.height / natural.height;
-                return (
-                  <Text
-                    text={layer.text}
-                    fontSize={TEXT_BASE_FONT_SIZE}
-                    fontFamily={font?.family ?? "sans-serif"}
-                    fontStyle={font ? `${font.weight}` : "normal"}
-                    letterSpacing={layer.letterSpacing}
-                    align={layer.align}
-                    fill={layer.color}
-                    stroke={layer.outline.width > 0 ? layer.outline.color : undefined}
-                    strokeWidth={textStrokeWidth(layer.outline.width, sx, sy)}
-                    fillAfterStrokeEnabled
-                    {...position}
-                    offsetX={natural.width / 2}
-                    offsetY={natural.height / 2}
-                    scaleX={sx * (layer.transform.flipX ? -1 : 1)}
-                    scaleY={sy}
-                    {...extra}
-                  />
+                const sx = layer.transform.width / geo.width;
+                const sy = layer.transform.height / geo.height;
+                const textProps = {
+                  text: layer.text,
+                  fontSize: TEXT_BASE_FONT_SIZE,
+                  fontFamily: font?.family ?? "sans-serif",
+                  fontStyle: font ? `${font.weight}` : "normal",
+                  letterSpacing: layer.letterSpacing,
+                  fill: layer.color,
+                  stroke: layer.outline.width > 0 ? layer.outline.color : undefined,
+                  strokeWidth: textStrokeWidth(layer.outline.width, sx, sy),
+                  fillAfterStrokeEnabled: true,
+                  ...position,
+                  offsetX: geo.offsetX,
+                  offsetY: geo.offsetY,
+                  scaleX: sx * (layer.transform.flipX ? -1 : 1),
+                  scaleY: sy,
+                };
+                // Arched text runs along an arc path (text-measure.ts); straight text is one line.
+                return geo.path ? (
+                  <TextPath {...textProps} data={geo.path} align="center" {...extra} />
+                ) : (
+                  <Text {...textProps} align={layer.align} {...extra} />
                 );
               };
               // Two copies: the interactive one is drawn faded and unclipped, so a design that
@@ -655,6 +676,33 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
               stroke="#4b4b57"
               strokeWidth={1.5}
               dash={[8, 6]}
+              listening={false}
+            />
+            {/* Snap-to-center guides: shown only while a layer is locked onto the middle. */}
+            <Line
+              ref={vGuideRef}
+              points={[
+                activeArea.rect.x + activeArea.rect.w / 2,
+                activeArea.rect.y,
+                activeArea.rect.x + activeArea.rect.w / 2,
+                activeArea.rect.y + activeArea.rect.h,
+              ]}
+              stroke={SNAP_GUIDE_COLOR}
+              strokeWidth={1.5}
+              visible={false}
+              listening={false}
+            />
+            <Line
+              ref={hGuideRef}
+              points={[
+                activeArea.rect.x,
+                activeArea.rect.y + activeArea.rect.h / 2,
+                activeArea.rect.x + activeArea.rect.w,
+                activeArea.rect.y + activeArea.rect.h / 2,
+              ]}
+              stroke={SNAP_GUIDE_COLOR}
+              strokeWidth={1.5}
+              visible={false}
               listening={false}
             />
           </Layer>

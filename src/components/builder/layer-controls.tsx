@@ -2,7 +2,8 @@
 /**
  * Selected-layer controls (docs/04 §3 v4). Text layers get the text tool (text, font, ink
  * color, outline, letter spacing); every layer gets size in inches (with a lock-ratio
- * toggle), rotate, skew (±31°) and the Flip / Center / Fit / Reset-skew actions.
+ * toggle), rotate and the Flip / Center / Fit actions. Text can also arch up or down
+ * (2026-11-26). Skew was removed (Logan, 2026-11-26).
  *
  * Text is one line scaled to fill its box, so alignment would do nothing: the schema keeps
  * `align` (default center) but there is no control for it.
@@ -14,13 +15,13 @@
 import { useState } from "react";
 
 import { TEXT_FONTS, type TextFontId } from "@/lib/text-fonts";
-import { printedInches, type PrintArea } from "@/lib/garments";
+import { luma, printedInches, type PrintArea } from "@/lib/garments";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { centerInRect, fitIntoRect, resizeAroundCenter, setRotationAroundCenter } from "./geometry";
-import type { BuilderImageLayer, BuilderTextLayer, BuilderTransform } from "./use-builder-state";
+import type { BuilderImageLayer, BuilderTextLayer, BuilderTransform, TextPatch } from "./use-builder-state";
 
 /**
  * A number field with a local draft: typing "1." or clearing the box doesn't snap the value;
@@ -79,16 +80,6 @@ function HexInput({ value, onCommit, label }: { value: string; onCommit: (hex: s
   );
 }
 
-/** Degrees → Konva skew (tan), clamped to the schema's ±0.6. */
-function degToSkew(deg: number): number {
-  const skew = Math.tan((deg * Math.PI) / 180);
-  return Math.max(-0.6, Math.min(0.6, skew));
-}
-/** Konva skew → degrees for display. */
-function skewToDeg(skew: number): number {
-  return Math.round((Math.atan(skew) * 180) / Math.PI);
-}
-
 const OUTLINE_WIDTHS = [
   { label: "None", width: 0 },
   { label: "Thin", width: 2 },
@@ -105,49 +96,8 @@ export interface LayerControlsProps {
   onLockRatioChange: (lock: boolean) => void;
   /** `mergeKey` groups a run of changes from one control into one undo step. */
   onTransform: (transform: BuilderTransform, mergeKey?: string) => void;
-  onTextChange: (
-    patch: {
-      text?: string;
-      font?: TextFontId;
-      color?: string;
-      align?: "left" | "center" | "right";
-      letterSpacing?: number;
-    },
-    mergeKey?: string,
-  ) => void;
+  onTextChange: (patch: TextPatch, mergeKey?: string) => void;
   onOutlineChange: (outline: { color: string; width: number }, mergeKey?: string) => void;
-}
-
-/** Sliders with aria-valuetext carrying their unit (WCAG 2.2). */
-function SkewSlider({
-  id,
-  label,
-  deg,
-  onDeg,
-}: {
-  id: string;
-  label: string;
-  deg: number;
-  onDeg: (deg: number) => void;
-}) {
-  return (
-    <label className="flex min-h-9 flex-1 items-center gap-2 text-xs">
-      <span className="text-text-2 shrink-0">{label}</span>
-      <input
-        id={id}
-        type="range"
-        min={-31}
-        max={31}
-        step={1}
-        value={deg}
-        aria-valuetext={`${deg} degrees`}
-        onChange={(e) => onDeg(Number(e.target.value))}
-        className="w-full accent-[var(--neon-cyan)]"
-        data-testid={`skew-${id}`}
-      />
-      <span className="text-text-3 w-10 shrink-0 text-right font-mono">{deg}°</span>
-    </label>
-  );
 }
 
 export function LayerControls({
@@ -163,18 +113,12 @@ export function LayerControls({
   const transform = (imageLayer ?? textLayer)!.transform;
   const layerId = (imageLayer ?? textLayer)!.id;
   const inches = printedInches(area, { w: transform.width, h: transform.height });
-  // Skew readouts derive from the transform, so Undo / Reset skew / the canvas keep them in sync.
-  const skewXDeg = skewToDeg(transform.skewX);
-  const skewYDeg = skewToDeg(transform.skewY);
   /** The text box's draft: may be empty while typing; only non-blank text is committed. */
   const [textDraft, setTextDraft] = useState<{ layerId: string; text: string } | null>(null);
   const textValue = textDraft?.layerId === layerId ? textDraft.text : (textLayer?.text ?? "");
   const textBlank = textValue.trim() === "";
 
   const key = (control: string) => `${layerId}:${control}`;
-  const setSkew = (axis: "skewX" | "skewY", deg: number) => {
-    onTransform({ ...transform, [axis]: degToSkew(deg) }, key(axis));
-  };
 
   /** Scales the layer (shape, rotation and skew kept) so all of it fits the print area, centered. */
   const fitToArea = () => onTransform(fitIntoRect(transform, area.rect));
@@ -274,7 +218,18 @@ export function LayerControls({
             </label>
             <Select
               value={String(textLayer.outline.width)}
-              onValueChange={(width) => onOutlineChange({ color: textLayer.outline.color, width: Number(width) })}
+              onValueChange={(width) =>
+                onOutlineChange({
+                  // An outline the same color as the letters is invisible: start it in a contrasting color.
+                  color:
+                    textLayer.outline.color.toLowerCase() === textLayer.color.toLowerCase()
+                      ? luma(textLayer.color) < 0.5
+                        ? "#ffffff"
+                        : "#000000"
+                      : textLayer.outline.color,
+                  width: Number(width),
+                })
+              }
             >
               <SelectTrigger id="text-layer-outline" data-testid="text-layer-outline" className="h-9 flex-1">
                 <SelectValue />
@@ -318,6 +273,31 @@ export function LayerControls({
               className="w-full accent-[var(--neon-cyan)]"
               data-testid="text-layer-spacing"
             />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <label htmlFor="text-layer-curve" className="text-text-2 w-14 shrink-0 text-xs">
+              Arch
+            </label>
+            <input
+              id="text-layer-curve"
+              type="range"
+              min={-100}
+              max={100}
+              step={5}
+              value={Math.round(textLayer.curve * 100)}
+              aria-valuetext={
+                Math.abs(textLayer.curve) < 0.01
+                  ? "Straight"
+                  : `Arched ${textLayer.curve > 0 ? "up" : "down"} ${Math.round(Math.abs(textLayer.curve) * 100)} percent`
+              }
+              onChange={(e) => onTextChange({ curve: Number(e.target.value) / 100 }, key("curve"))}
+              className="w-full accent-[var(--neon-cyan)]"
+              data-testid="text-layer-curve"
+            />
+            <span className="text-text-3 w-14 shrink-0 text-right text-xs">
+              {Math.abs(textLayer.curve) < 0.01 ? "Straight" : textLayer.curve > 0 ? "Up" : "Down"}
+            </span>
           </div>
         </>
       ) : null}
@@ -403,11 +383,6 @@ export function LayerControls({
         </span>
       </div>
 
-      <div className="flex flex-col gap-1">
-        <SkewSlider id="horizontal" label="Skew ⇄" deg={skewXDeg} onDeg={(deg) => setSkew("skewX", deg)} />
-        <SkewSlider id="vertical" label="Skew ⇅" deg={skewYDeg} onDeg={(deg) => setSkew("skewY", deg)} />
-      </div>
-
       <div className="flex flex-wrap gap-2">
         <Button
           type="button"
@@ -427,15 +402,6 @@ export function LayerControls({
         </Button>
         <Button type="button" variant="secondary" size="sm" onClick={fitToArea} data-testid="fit-area">
           Fit to area
-        </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          onClick={() => onTransform({ ...transform, skewX: 0, skewY: 0 })}
-          data-testid="reset-skew"
-        >
-          Reset skew
         </Button>
       </div>
     </div>
