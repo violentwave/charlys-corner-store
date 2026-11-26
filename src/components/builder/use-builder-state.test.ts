@@ -307,8 +307,7 @@ describe("payloadPlan (the /api/mockups artwork plan)", () => {
       {
         view: "front",
         printArea: "left-chest",
-        transform: state.design.views.front!.artwork!.transform,
-        artwork: 0,
+        layers: [{ type: "image", artwork: 0, transform: state.design.views.front!.artwork!.transform }],
       },
     ]);
     expect(result.success && result.data.notes).toBe("Gildan please");
@@ -334,7 +333,7 @@ describe("payloadPlan (the /api/mockups artwork plan)", () => {
     });
 
     const { payload, filesInUse } = payloadPlan(state.design);
-    expect(payload.views.map((v) => [v.view, v.artwork])).toEqual([
+    expect(payload.views.map((v) => [v.view, (v.layers[0] as { artwork: number }).artwork])).toEqual([
       ["front", 0],
       ["back", 1],
     ]);
@@ -355,7 +354,7 @@ describe("payloadPlan (the /api/mockups artwork plan)", () => {
     });
 
     const { payload, filesInUse } = payloadPlan(state.design);
-    expect(payload.views.map((v) => v.artwork)).toEqual([0, 0]);
+    expect(payload.views.map((v) => (v.layers[0] as { artwork: number }).artwork)).toEqual([0, 0]);
     expect(filesInUse).toEqual([0]);
   });
 });
@@ -379,13 +378,13 @@ describe("designFromRestore (deep link, v3: artwork per side)", () => {
           {
             view: "front",
             printArea: "full-front",
-            transform: { x: 344, y: 292, width: 312, height: 364, rotation: 15, flipX: false },
+            transform: { x: 344, y: 292, width: 312, height: 364, rotation: 15, flipX: false, skewX: 0, skewY: 0 },
             artwork: 0,
           },
           {
             view: "back",
             printArea: "full-back",
-            transform: { x: 344, y: 262, width: 312, height: 364, rotation: 0, flipX: false },
+            transform: { x: 344, y: 262, width: 312, height: 364, rotation: 0, flipX: false, skewX: 0, skewY: 0 },
             artwork: 1,
           },
         ],
@@ -399,7 +398,7 @@ describe("designFromRestore (deep link, v3: artwork per side)", () => {
     expect(design.views.front?.artwork).toMatchObject({
       name: "front.png",
       fileIndex: 0,
-      transform: { rotation: 15, flipX: false },
+      transform: { rotation: 15, flipX: false, skewX: 0, skewY: 0 },
     });
     expect(design.views.back?.artwork).toMatchObject({ name: "back.png", fileIndex: 1 });
     expect(design.sizes).toEqual({ M: 2 });
@@ -416,13 +415,13 @@ describe("designFromRestore (deep link, v3: artwork per side)", () => {
           {
             view: "front",
             printArea: "full-front",
-            transform: { x: 344, y: 292, width: 312, height: 364, rotation: 0, flipX: false },
+            transform: { x: 344, y: 292, width: 312, height: 364, rotation: 0, flipX: false, skewX: 0, skewY: 0 },
             artwork: 0,
           },
           {
             view: "back",
             printArea: "full-back",
-            transform: { x: 344, y: 262, width: 312, height: 364, rotation: 0, flipX: false },
+            transform: { x: 344, y: 262, width: 312, height: 364, rotation: 0, flipX: false, skewX: 0, skewY: 0 },
             artwork: 0,
           },
         ],

@@ -175,6 +175,8 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
       height,
       rotation,
       flipX: scaleX < 0,
+      skewX: artwork.transform.skewX,
+      skewY: artwork.transform.skewY,
     });
   };
 

@@ -10,6 +10,8 @@ export interface MockupOwnerEmailProps {
   colors: { label: string; hex: string; name: string }[];
   /** View label + print-location label for every view with artwork. */
   views: { view: string; area: string }[];
+  /** Per side, what's printed (bottom → top), from describeLayers(). Optional for older callers. */
+  layers?: { view: string; items: string[] }[];
   /** "2 × M" entries for sizes the customer entered (empty when none). */
   sizes: string[];
   notes?: string;
@@ -57,10 +59,24 @@ export function MockupOwnerEmail(p: MockupOwnerEmailProps) {
               </React.Fragment>
             ))}
           </Text>
+          {p.layers?.map((side) => (
+            <Text key={side.view}>
+              {side.view} layers:
+              {side.items.map((item, i) => (
+                <React.Fragment key={i}>
+                  <br />
+                  {item}
+                </React.Fragment>
+              ))}
+            </Text>
+          ))}
           {p.sizes.length > 0 ? <Text>Sizes: {p.sizes.join(", ")}</Text> : null}
           {p.notes ? <Text>Notes: {p.notes}</Text> : null}
           <Text>Coupon code: {p.couponCode}</Text>
-          <Text>Original artwork{p.artworks.length > 1 ? ` (${p.artworks.length} files)` : ""}:</Text>
+          {p.artworks.length === 0 ? <Text>Original artwork: none (text only)</Text> : null}
+          {p.artworks.length > 0 ? (
+            <Text>Original artwork{p.artworks.length > 1 ? ` (${p.artworks.length} files)` : ""}:</Text>
+          ) : null}
           {p.artworks.map((a) => (
             <Text key={a.signedUrl}>
               {a.name} ({a.usedOn.join(", ")}): {(a.size / 1024).toFixed(1)} KB, {a.contentType} —{" "}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { effectiveDpi, mockupPayloadSchema } from "./mockup-schema";
+import { artworkCount, effectiveDpi, MAX_LAYERS_PER_VIEW, mockupPayloadSchema } from "./mockup-schema";
 
 const base = {
   garment: "raglan",
@@ -69,5 +69,60 @@ describe("effectiveDpi", () => {
   it("divides pixels by inches", () => {
     expect(effectiveDpi(1800, 12)).toBe(150);
     expect(effectiveDpi(100, 0)).toBe(Infinity);
+  });
+});
+
+describe("layers (image + text, stretch, skew)", () => {
+  const t = { x: 350, y: 300, width: 300, height: 120, rotation: 0, flipX: false };
+  const text = { type: "text", text: "CHARLY'S", font: "anton", color: "#ff2e97", transform: t };
+  const layered = (layers: unknown[]) => ({ ...base, views: [{ view: "front", printArea: "full-front", layers }] });
+
+  it("normalizes the old single-artwork view to one image layer with zero skew", () => {
+    const r = mockupPayloadSchema.parse(base);
+    expect(r.views[0]).toEqual({
+      view: "front",
+      printArea: "full-front",
+      layers: [{ type: "image", artwork: 0, transform: { ...base.views[0]!.transform, skewX: 0, skewY: 0 } }],
+    });
+  });
+
+  it("accepts image + text layers and fills text defaults", () => {
+    const r = mockupPayloadSchema.parse(layered([{ type: "image", artwork: 0, transform: t }, text]));
+    expect(r.views[0]!.layers[1]).toMatchObject({
+      type: "text",
+      outline: { width: 0 },
+      align: "center",
+      letterSpacing: 0,
+      transform: { skewX: 0, skewY: 0 },
+    });
+    expect(artworkCount(r.views)).toBe(1);
+  });
+
+  it("allows a text-only design (no artwork files)", () => {
+    const r = mockupPayloadSchema.parse(layered([text]));
+    expect(artworkCount(r.views)).toBe(0);
+  });
+
+  it("allows stretched + skewed placement within bounds", () => {
+    const stretched = { ...t, width: 60, height: 600, rotation: -35, skewX: 0.3, skewY: -0.2 };
+    expect(issues(layered([{ ...text, transform: stretched }]))).toEqual([]);
+    expect(issues(layered([{ ...text, transform: { ...t, skewX: 0.9 } }])).length).toBeGreaterThan(0);
+  });
+
+  it("rejects unknown fonts, bad colors, empty or long text", () => {
+    expect(issues(layered([{ ...text, font: "comic-sans" }])).length).toBeGreaterThan(0);
+    expect(issues(layered([{ ...text, color: "pink" }])).length).toBeGreaterThan(0);
+    expect(issues(layered([{ ...text, text: "   " }])).length).toBeGreaterThan(0);
+    expect(issues(layered([{ ...text, text: "x".repeat(61) }])).length).toBeGreaterThan(0);
+    expect(issues(layered([{ ...text, outline: { color: "#000000", width: 30 } }])).length).toBeGreaterThan(0);
+  });
+
+  it("caps layers per side and needs at least one", () => {
+    expect(issues(layered(Array.from({ length: MAX_LAYERS_PER_VIEW + 1 }, () => text))).length).toBeGreaterThan(0);
+    expect(issues(layered([])).length).toBeGreaterThan(0);
+  });
+
+  it("still requires dense artwork indexes across layers", () => {
+    expect(issues(layered([{ type: "image", artwork: 1, transform: t }])).length).toBeGreaterThan(0);
   });
 });

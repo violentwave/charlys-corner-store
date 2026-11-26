@@ -123,6 +123,8 @@ export function fitTransform(rect: PrintArea["rect"], naturalWidth: number, natu
     height: h,
     rotation: 0,
     flipX: false,
+    skewX: 0,
+    skewY: 0,
   };
 }
 
@@ -519,8 +521,8 @@ export function payloadPlan(design: BuilderDesign): {
     views.push({
       view: view.id,
       printArea: saved.printArea,
-      transform: saved.artwork.transform,
-      artwork: dense,
+      // One image layer per side for now; text layers + a layer stack come with the P47 UI.
+      layers: [{ type: "image", artwork: dense, transform: saved.artwork.transform }],
     });
   }
   return {

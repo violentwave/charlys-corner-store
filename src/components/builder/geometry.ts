@@ -29,6 +29,9 @@ export function topLeftToCenter(t: Pick<BuilderTransform, "x" | "y" | "width" | 
   return { cx: t.x + (dx * Math.cos(r) - dy * Math.sin(r)), cy: t.y + (dx * Math.sin(r) + dy * Math.cos(r)) };
 }
 
+/** artworkTransformSchema skew bound (≈ ±31°). */
+export const SKEW_LIMIT = 0.6;
+
 /** Clamps a transform into the payload schema's bounds. */
 export function clampTransform(t: BuilderTransform): BuilderTransform {
   const width = Math.min(SIZE_MAX, Math.max(SIZE_MIN, t.width));
@@ -40,6 +43,8 @@ export function clampTransform(t: BuilderTransform): BuilderTransform {
     height,
     rotation: Math.min(360, Math.max(-360, t.rotation)),
     flipX: t.flipX,
+    skewX: Math.min(SKEW_LIMIT, Math.max(-SKEW_LIMIT, t.skewX ?? 0)),
+    skewY: Math.min(SKEW_LIMIT, Math.max(-SKEW_LIMIT, t.skewY ?? 0)),
   };
 }
 

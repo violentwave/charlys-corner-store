@@ -373,7 +373,7 @@ describe.skipIf(!hasTestDb)("POST /api/mockups (real Postgres)", () => {
       expect(res.status).toBe(200);
       const [row] = await db.select().from(schema.mockups);
       expect(row!.artworks).toHaveLength(2);
-      expect(row!.views.map((v) => v.artwork)).toEqual([0, 1]);
+      expect(row!.views.map((v) => (v.layers[0] as { artwork: number }).artwork)).toEqual([0, 1]);
       expect(row!.artworkKey).toBe(row!.artworks[0]!.key);
       expect(_memoryKeys()).toHaveLength(2 + 2); // two originals + two renders
       const owner = _outbox().find((m) => m.to !== "sides@example.com")!;
@@ -440,6 +440,70 @@ describe.skipIf(!hasTestDb)("POST /api/mockups (real Postgres)", () => {
         }),
       );
       expect(real.status).toBe(200);
+    });
+  });
+  describe("layers: text + stretch/skew (2026-11-25)", () => {
+    const t = { x: 344, y: 292, width: 200, height: 80, rotation: -30, flipX: false, skewX: 0.25, skewY: 0 };
+    const textLayer = { type: "text", text: "RUFFIN-TEXT-42", font: "graduate", color: "#ff2e97", transform: t };
+
+    it("stores a text-only design with no files and tells only the owner what the text says", async () => {
+      await createVerifiedUser("text@example.com");
+      const res = await postMockup(
+        buildRequest({
+          payload: { views: [{ view: "front", printArea: "full-front", layers: [textLayer] }] },
+          views: ["front"],
+          artworkFields: {},
+        }),
+      );
+      expect(res.status).toBe(200);
+      const [row] = await db.select().from(schema.mockups);
+      expect(row!.artworks).toEqual([]);
+      expect(row!.artworkKey).toBeNull();
+      expect(row!.views[0]!.layers[0]).toMatchObject({ type: "text", text: "RUFFIN-TEXT-42", font: "graduate" });
+
+      const owner = _outbox().find((m) => m.to !== "text@example.com")!;
+      expect(owner.text).toContain('Text "RUFFIN-TEXT-42" — Graduate (varsity), #ff2e97');
+      expect(owner.text).toContain("rotated -30°");
+      expect(owner.text).toContain("skewed 14°/0°");
+      expect(owner.text).toContain("Original artwork: none (text only)");
+      const customer = _outbox().find((m) => m.to === "text@example.com")!;
+      expect(customer.html + customer.text).not.toContain("RUFFIN-TEXT-42");
+    });
+
+    it("stores image + text layers on one side, bottom to top", async () => {
+      await createVerifiedUser("both@example.com");
+      const res = await postMockup(
+        buildRequest({
+          payload: {
+            views: [
+              {
+                view: "front",
+                printArea: "full-front",
+                layers: [{ type: "image", artwork: 0, transform: { ...t, skewX: 0 } }, textLayer],
+              },
+            ],
+          },
+          views: ["front"],
+          artworkFields: { "artwork-0": blob(png) },
+        }),
+      );
+      expect(res.status).toBe(200);
+      const [row] = await db.select().from(schema.mockups);
+      expect(row!.views[0]!.layers.map((l) => l.type)).toEqual(["image", "text"]);
+      const owner = _outbox().find((m) => m.to !== "both@example.com")!;
+      expect(owner.text).toMatch(/1\. Artwork file #1[\s\S]*2\. Text "RUFFIN-TEXT-42"/);
+    });
+
+    it("rejects a stray artwork file on a text-only design", async () => {
+      await createVerifiedUser("stray@example.com");
+      const res = await postMockup(
+        buildRequest({
+          payload: { views: [{ view: "front", printArea: "full-front", layers: [textLayer] }] },
+          views: ["front"],
+          artworkFields: { "artwork-0": blob(png) },
+        }),
+      );
+      expect(res.status).toBe(400);
     });
   });
 });

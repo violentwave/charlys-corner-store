@@ -71,6 +71,11 @@ Each page prompt is shipped by the agent (Ship section); Claude reviews every me
 - [x] Foundation (Claude): wider, more realistic sleeves (hoodie, baseball tee) + knit texture; Long Sleeve Tee; left/right sleeve views; WebP layers (18 MB → 2 MB); real combos for baseball tee + trucker hat; hoodie one color; per-side artwork on the wire, in the DB (migration 0003) and in the restore link
 - [x] Builder UI: Continue-only garment step, combo strip polish, front-only uploads with "same image / different image" for back and sleeves, sleeve picker (prompt P46-1)
 
+## Phase 4.7: Builder v4: layers, text, stretch/skew, pro controls (Logan, 2026-11-25)
+
+- [x] Foundation (Claude): layer wire format (image + text), skew + free stretch, 8 self-hosted text fonts, text-only designs (migration 0004), owner email lists every layer, restore returns layers
+- [ ] Builder UI: layers panel, text tool, stretch/skew handles + sliders, cleaner professional controls layout (prompt P47-1)
+
 ## Phase 5: Shop and checkout
 
 - [ ] Payments provider decision (Square vs Stripe) and catalog import of the 9 current products + variants

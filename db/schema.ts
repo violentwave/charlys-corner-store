@@ -179,13 +179,16 @@ export const mockups = pgTable(
     kind: mockupKind("kind").notNull().default("mockup"),
     /** Account that made it (null for rows from before accounts existed). */
     userId: uuid("user_id").references(() => users.id),
-    /** Every original file, untouched, for production; views[].artwork indexes this list. */
+    /** Every original file, untouched, for production; image layers' `artwork` indexes this list. */
     artworks: jsonb("artworks").$type<MockupArtworkRecord[]>().notNull().default([]),
-    /** First original artwork (= artworks[0]); kept for rows from before per-view files. */
-    artworkKey: text("artwork_key").notNull(),
-    artworkName: text("artwork_name").notNull(),
-    artworkContentType: text("artwork_content_type").notNull(),
-    artworkSizeBytes: integer("artwork_size_bytes").notNull(),
+    /**
+     * First original artwork (= artworks[0]); kept for rows from before per-view files.
+     * Null for text-only designs (2026-11-25).
+     */
+    artworkKey: text("artwork_key"),
+    artworkName: text("artwork_name"),
+    artworkContentType: text("artwork_content_type"),
+    artworkSizeBytes: integer("artwork_size_bytes"),
     status: requestStatus("status").notNull().default("new"),
     createdAt: createdAt(),
   },

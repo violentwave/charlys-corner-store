@@ -18,6 +18,7 @@ import { z } from "zod";
 
 import { findCombo, GARMENT_IDS, getGarment, isHexColor, isPaletteColor, VIEW_IDS, type GarmentId } from "./garments";
 import { REFERRAL_SOURCES } from "./schemas";
+import { TEXT_FONT_IDS } from "./text-fonts";
 
 /** Formats the builder can draw on a canvas (a subset of src/lib/artwork.ts kinds). */
 export const MOCKUP_ARTWORK_KINDS = ["png", "jpeg", "webp", "svg"] as const;
@@ -34,7 +35,11 @@ export const MOCKUP_INTENTS = ["email", "order"] as const;
 export type MockupIntent = (typeof MOCKUP_INTENTS)[number];
 const finite = z.number().finite();
 
-/** Artwork placement in template pixels (the view's width × height), Konva-style: x/y = top-left before rotation. */
+/**
+ * Placement in template pixels (the view's width × height), Konva-style: x/y = top-left before
+ * rotation. width and height are independent, so a layer can be stretched (2026-11-25: e.g.
+ * lettering running down a sleeve); skewX/skewY slant it (Konva skew, -0.6…0.6 ≈ ±31°).
+ */
 export const artworkTransformSchema = z.object({
   x: finite.min(-5000).max(5000),
   y: finite.min(-5000).max(5000),
@@ -42,20 +47,65 @@ export const artworkTransformSchema = z.object({
   height: finite.positive().max(5000),
   rotation: finite.min(-360).max(360),
   flipX: z.boolean(),
+  skewX: finite.min(-0.6).max(0.6).default(0),
+  skewY: finite.min(-0.6).max(0.6).default(0),
 });
 
-export const mockupViewSchema = z.object({
-  view: z.enum(VIEW_IDS),
-  printArea: z.string().min(1).max(40),
-  transform: artworkTransformSchema,
-  /** Which uploaded file (artwork-<n>) is printed on this view. Defaults to the first. */
+/** Max items (images + text) on one side. */
+export const MAX_LAYERS_PER_VIEW = 8;
+export const MAX_TEXT_LENGTH = 60;
+
+const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, "Invalid color");
+
+export const imageLayerSchema = z.object({
+  type: z.literal("image"),
+  /** Which uploaded file (artwork-<n>) this layer shows. */
   artwork: z
     .number()
     .int()
     .min(0)
-    .max(MOCKUP_MAX_ARTWORKS - 1)
-    .default(0),
+    .max(MOCKUP_MAX_ARTWORKS - 1),
+  transform: artworkTransformSchema,
 });
+
+/**
+ * Lettering. Ink colors can be any color (screen-print ink is mixed/Pantone-matched); the
+ * owner confirms the match. The text is visitor-typed free text: it goes to the owner, never
+ * into customer emails.
+ */
+export const textLayerSchema = z.object({
+  type: z.literal("text"),
+  text: z.string().trim().min(1, "Type some text").max(MAX_TEXT_LENGTH),
+  font: z.enum(TEXT_FONT_IDS),
+  color: hexColor,
+  /** Outline (stroke) around the letters; width 0 = none. Template px. */
+  outline: z.object({ color: hexColor, width: finite.min(0).max(12) }).default({ color: "#000000", width: 0 }),
+  align: z.enum(["left", "center", "right"]).default("center"),
+  /** Extra space between letters, template px. */
+  letterSpacing: finite.min(-5).max(40).default(0),
+  transform: artworkTransformSchema,
+});
+
+export const layerSchema = z.discriminatedUnion("type", [imageLayerSchema, textLayerSchema]);
+
+/**
+ * One side. Canonical form: `layers` (bottom → top). The single-artwork form used before
+ * 2026-11-25 ({ transform, artwork }) is still accepted and normalized to one image layer.
+ */
+export const mockupViewSchema = z.preprocess(
+  (value) => {
+    if (value && typeof value === "object" && !("layers" in value) && "transform" in value) {
+      const { transform, artwork, ...rest } = value as Record<string, unknown>;
+      return { ...rest, layers: [{ type: "image", artwork: artwork ?? 0, transform }] };
+    }
+    return value;
+  },
+  z.object({
+    view: z.enum(VIEW_IDS),
+    printArea: z.string().min(1).max(40),
+    layers: z.array(layerSchema).min(1, "Add something to this side").max(MAX_LAYERS_PER_VIEW),
+  }),
+);
 
 export const mockupPayloadSchema = z
   .object({
@@ -110,7 +160,7 @@ export const mockupPayloadSchema = z
       }
     });
     // Artwork indexes must be dense (0..n-1) so every uploaded file is used.
-    const used = [...new Set(v.views.map((e) => e.artwork))].sort((a, b) => a - b);
+    const used = [...artworkIndexes(v.views)].sort((a, b) => a - b);
     if (used.some((n, i) => n !== i)) {
       ctx.addIssue({ code: "custom", path: ["views"], message: "Artwork files must be numbered from 0" });
     }
@@ -126,17 +176,26 @@ export type MockupPayload = z.infer<typeof mockupPayloadSchema>;
 export type MockupColors = Record<string, string>;
 export type MockupSizes = Record<string, number>;
 export type MockupView = z.infer<typeof mockupViewSchema>;
+export type MockupLayer = z.infer<typeof layerSchema>;
+export type MockupImageLayer = z.infer<typeof imageLayerSchema>;
+export type MockupTextLayer = z.infer<typeof textLayerSchema>;
 /**
- * What the mockups.views column stores: the submitted view plus the rendered PNG's storage key.
- * `artwork` indexes mockups.artworks (rows from before 2026-11-25 have no index: treat as 0).
+ * What the mockups.views column stores: the normalized view (layers) plus the rendered PNG's
+ * storage key. Older rows hold { transform, artwork? } instead of layers; read them through
+ * mockupViewSchema, which normalizes both.
  */
-export type MockupViewRecord = Omit<MockupView, "artwork"> & { artwork?: number; mockupKey: string };
+export type MockupViewRecord = MockupView & { mockupKey: string };
 /** One stored original file (mockups.artworks). */
 export type MockupArtworkRecord = { key: string; name: string; contentType: string; size: number };
 
-/** How many artwork files a payload references (artwork-0 … artwork-(n-1)). */
-export function artworkCount(views: Pick<MockupView, "artwork">[]): number {
-  return new Set(views.map((v) => v.artwork)).size;
+/** Every artwork index used by image layers across the views. */
+export function artworkIndexes(views: Pick<MockupView, "layers">[]): Set<number> {
+  return new Set(views.flatMap((v) => v.layers.flatMap((l) => (l.type === "image" ? [l.artwork] : []))));
+}
+
+/** How many artwork files a payload references (artwork-0 … artwork-(n-1)). May be 0 (text only). */
+export function artworkCount(views: Pick<MockupView, "layers">[]): number {
+  return artworkIndexes(views).size;
 }
 
 /** Effective DPI of artwork `pixelWidth` px wide printed `inchesWide` inches wide. */
