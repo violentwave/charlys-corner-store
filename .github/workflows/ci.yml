@@ -1,5 +1,11 @@
 name: CI
 
+# Runs on a self-hosted runner (Logan's box, systemd user service `github-runner`):
+# the account's included Actions minutes (free plan, private repo) are exhausted and
+# the $0 spending limit blocks hosted runners, so CI runs locally at no cost. Postgres
+# comes from the local podman container `charly-db` (same one local dev uses), with a
+# throwaway per-run database so CI never touches the `charly` dev database.
+
 on:
   pull_request:
   push:
@@ -11,21 +17,12 @@ concurrency:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: charly
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres" --health-interval 2s --health-timeout 5s --health-retries 20
+    runs-on: self-hosted
+    timeout-minutes: 20
     env:
-      DATABASE_URL: postgres://postgres:postgres@localhost:5432/charly
-      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/charly
+      CI_DB: charly_ci_${{ github.run_id }}
+      DATABASE_URL: postgres://postgres:postgres@localhost:5433/charly_ci_${{ github.run_id }}
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5433/charly_ci_${{ github.run_id }}
       STORAGE_DRIVER: memory
       EMAIL_DRIVER: console
       OWNER_NOTIFY_EMAIL: owner@example.com
@@ -33,37 +30,37 @@ jobs:
       TURNSTILE_SECRET_KEY: 1x0000000000000000000000000000000AA
     steps:
       - uses: actions/checkout@v4
+      - name: Start Postgres (podman)
+        run: |
+          podman start charly-db >/dev/null 2>&1 || podman run -d --name charly-db \
+            -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=charly \
+            -p 5433:5432 docker.io/library/postgres:16-alpine
+          until podman exec charly-db pg_isready -U postgres >/dev/null 2>&1; do sleep 1; done
+      - name: Fresh CI database (unit tests migrate it themselves)
+        run: podman exec charly-db psql -U postgres -c "drop database if exists ${CI_DB}" -c "create database ${CI_DB}"
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # A throwaway key per run for 2FA secrets (production sets its own AUTH_ENCRYPTION_KEY).
-      - run: echo "AUTH_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+      - name: Drop CI database
+        if: always()
+        run: podman exec charly-db psql -U postgres -c "drop database if exists ${CI_DB}"
 
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
+    timeout-minutes: 20
     needs: check
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: charly
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres" --health-interval 2s --health-timeout 5s --health-retries 20
     env:
-      DATABASE_URL: postgres://postgres:postgres@localhost:5432/charly
-      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/charly
+      CI_DB: charly_ci_${{ github.run_id }}
+      DATABASE_URL: postgres://postgres:postgres@localhost:5433/charly_ci_${{ github.run_id }}
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5433/charly_ci_${{ github.run_id }}
       STORAGE_DRIVER: memory
       EMAIL_DRIVER: console
       OWNER_NOTIFY_EMAIL: owner@example.com
@@ -71,20 +68,31 @@ jobs:
       TURNSTILE_SECRET_KEY: 1x0000000000000000000000000000000AA
       # Test-only email helper (/api/test/last-email) for the account e2e specs.
       ENABLE_TEST_HOOKS: "1"
+      # The built app must not collide with a dev server on 3000 (same box runs local dev).
+      PORT: 4310
     steps:
       - uses: actions/checkout@v4
+      - name: Start Postgres (podman)
+        run: |
+          podman start charly-db >/dev/null 2>&1 || podman run -d --name charly-db \
+            -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=charly \
+            -p 5433:5432 docker.io/library/postgres:16-alpine
+          until podman exec charly-db pg_isready -U postgres >/dev/null 2>&1; do sleep 1; done
+      - name: Fresh CI database
+        run: podman exec charly-db psql -U postgres -c "drop database if exists ${CI_DB}" -c "create database ${CI_DB}"
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # A throwaway key per run for 2FA secrets (production sets its own AUTH_ENCRYPTION_KEY).
-      - run: echo "AUTH_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
-      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec playwright install chromium
       - run: pnpm db:migrate
       - run: pnpm build
       - run: pnpm e2e
+      - name: Drop CI database
+        if: always()
+        run: podman exec charly-db psql -U postgres -c "drop database if exists ${CI_DB}"
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
