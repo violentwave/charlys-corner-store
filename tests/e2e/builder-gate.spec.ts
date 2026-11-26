@@ -118,14 +118,28 @@ test("sign up, verify and upload without ever leaving the builder", async ({ pag
   }
 });
 
+test("garment step: picking selects but only Continue advances (v3)", async ({ page }) => {
+  await openBuilder(page);
+  await page.getByTestId("garment-hoodie").click();
+  // Visible selected state, still on step 1.
+  await expect(page.getByTestId("garment-hoodie")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByText("Step 1 of 4", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("garment-picker")).toBeVisible();
+
+  await page.getByTestId("garment-continue").click();
+  await expect(page.getByText("Step 2 of 4", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("color-strip-body")).toBeVisible();
+});
+
 test("full flow: sign up → verify → color strip → upload → email path → coupon + download", async ({ page }) => {
   const email = `builder-v2-${Date.now()}-${test.info().workerIndex}@example.com`;
   await signUpAndVerify(page, email);
   await freshIp(page);
   await openBuilder(page);
 
-  // 1. Garment → 2. Colors: the strip shows the selected name above it.
+  // 1. Garment (Continue-only) → 2. Colors: the strip shows the selected name above it.
   await page.getByTestId("garment-hoodie").click();
+  await page.getByTestId("garment-continue").click();
   const bodyStrip = page.getByTestId("color-strip-body");
   await expect(bodyStrip).toBeVisible();
   await expect(page.getByTestId("color-name-body")).toBeVisible();
@@ -210,4 +224,146 @@ test("oversized artwork shows the size error and sends nothing", async ({ page }
   });
   await expect(page.getByText(/larger than 20 MB/i)).toBeVisible();
   await expect(page.getByTestId("artwork-name")).toHaveCount(0);
+});
+
+/**
+ * Waits for the /api/mockups POST to complete, then reads the stored row out of Postgres —
+ * the source of truth for what the server received (Chromium doesn't expose fetch+FormData
+ * bodies to postDataBuffer). `artworks` is the mockups.artworks jsonb array; `views[].artwork`
+ * indexes it.
+ */
+async function sentMockupRow(page: Page, email: string, trigger: () => Promise<void>) {
+  const responsePromise = page.waitForResponse(
+    (r) => r.url().includes("/api/mockups") && r.request().method() === "POST",
+  );
+  await trigger();
+  const response = await responsePromise;
+  await expect(response.status()).toBe(200);
+
+  const { Pool } = await import("pg");
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  try {
+    const { rows } = await pool.query(
+      "select artworks, views from mockups m join leads l on l.id = m.lead_id where lower(l.email) = $1 order by m.created_at desc limit 1",
+      [email],
+    );
+    expect(rows).toHaveLength(1);
+    return { artworks: rows[0]!.artworks as unknown[], views: rows[0]!.views as { view: string; artwork: number }[] };
+  } finally {
+    await pool.end();
+  }
+}
+
+test("same design on front and back: one artwork file, both views point at it", async ({ page }) => {
+  const email = `same-${Date.now()}@example.com`;
+  await freshIp(page);
+  await page.request.post("/api/test/session", { data: { email } });
+  await openBuilder(page);
+  await page.getByRole("button", { name: "Step 3: Design" }).click();
+
+  await page.getByTestId("upload-artwork").click();
+  await page.locator("[data-testid='builder-file-input']").setInputFiles("tests/e2e/fixtures/art.png");
+  await expect(page.getByTestId("artwork-name")).toContainText("art.png", { timeout: 15_000 });
+
+  // The back has no art yet: the empty state offers the same design.
+  await page.getByTestId("view-back").click();
+  await expect(page.getByTestId("canvas-empty")).toBeVisible();
+  await expect(page.getByTestId("side-chooser")).toBeVisible();
+  await page.getByTestId("use-design-0").click();
+  await expect(page.getByTestId("artwork-name")).toContainText("art.png");
+
+  // Side picker marks sides that have a design (visible dot + screen-reader text).
+  await page.getByTestId("view-back").getByText("(has a design)", { exact: false }).isVisible();
+
+  const { artworks, views } = await sentMockupRow(page, email, async () => {
+    await page.getByRole("button", { name: "Step 4: Send" }).click();
+    await page.getByTestId("send-email").click();
+  });
+  // One shared file: one stored original, both views printing artwork 0.
+  expect(artworks).toHaveLength(1);
+  expect(views.map((v) => [v.view, v.artwork])).toEqual([
+    ["front", 0],
+    ["back", 0],
+  ]);
+
+  const success = page.getByTestId("builder-success");
+  await expect(success).toBeVisible({ timeout: 30_000 });
+  await expect(success.getByTestId("mockup-image-front")).toBeVisible();
+  await expect(success.getByTestId("mockup-image-back")).toBeVisible();
+});
+
+test("a different design on the back: two artwork files, front and back each their own", async ({ page }) => {
+  const email = `diff-${Date.now()}@example.com`;
+  await freshIp(page);
+  await page.request.post("/api/test/session", { data: { email } });
+  await openBuilder(page);
+  await page.getByRole("button", { name: "Step 3: Design" }).click();
+
+  await page.getByTestId("upload-artwork").click();
+  await page.locator("[data-testid='builder-file-input']").setInputFiles("tests/e2e/fixtures/art.png");
+  await expect(page.getByTestId("artwork-name")).toContainText("art.png", { timeout: 15_000 });
+
+  await page.getByTestId("view-back").click();
+  await expect(page.getByTestId("side-chooser")).toBeVisible();
+  // "Upload a different design" opens the picker for a second file.
+  await page.getByTestId("upload-different").click();
+  await page.locator("[data-testid='builder-file-input']").setInputFiles("tests/e2e/fixtures/art-lowdpi.png");
+  await expect(page.getByTestId("artwork-name")).toContainText("art-lowdpi.png", { timeout: 15_000 });
+
+  const { artworks, views } = await sentMockupRow(page, email, async () => {
+    await page.getByRole("button", { name: "Step 4: Send" }).click();
+    await page.getByTestId("send-email").click();
+  });
+  // Two different files: two stored originals; front prints artwork 0, back artwork 1.
+  expect(artworks).toHaveLength(2);
+  expect((artworks as { name: string }[]).map((a) => a.name)).toEqual(["art.png", "art-lowdpi.png"]);
+  expect(views.map((v) => [v.view, v.artwork])).toEqual([
+    ["front", 0],
+    ["back", 1],
+  ]);
+
+  const success = page.getByTestId("builder-success");
+  await expect(success).toBeVisible({ timeout: 30_000 });
+  await expect(success.getByTestId("mockup-download-back")).toBeVisible();
+});
+
+test("long sleeve tee: a design on the left sleeve shows its own mockup", async ({ page }) => {
+  const email = `sleeve-${Date.now()}@example.com`;
+  await freshIp(page);
+  await page.request.post("/api/test/session", { data: { email } });
+  await openBuilder(page);
+
+  await page.getByTestId("garment-longsleeve").click();
+  await page.getByTestId("garment-continue").click();
+  await page.getByRole("button", { name: "Step 3: Design" }).click();
+
+  // Sleeve options exist on the long sleeve (Front, Back, Left sleeve, Right sleeve).
+  await expect(page.getByTestId("view-left")).toBeVisible();
+  await expect(page.getByTestId("view-right")).toBeVisible();
+
+  await page.getByTestId("view-left").click();
+  await page.getByTestId("upload-artwork").click();
+  await page.locator("[data-testid='builder-file-input']").setInputFiles("tests/e2e/fixtures/art.png");
+  await expect(page.getByTestId("artwork-name")).toContainText("art.png", { timeout: 15_000 });
+  await page.getByTestId("print-area-full-sleeve").click();
+
+  const { views } = await sentMockupRow(page, email, async () => {
+    await page.getByRole("button", { name: "Step 4: Send" }).click();
+    await page.getByTestId("send-email").click();
+  });
+  expect(views).toEqual([expect.objectContaining({ view: "left", printArea: "full-sleeve", artwork: 0 })]);
+
+  const success = page.getByTestId("builder-success");
+  await expect(success).toBeVisible({ timeout: 30_000 });
+  await expect(success.getByTestId("mockup-image-left")).toBeVisible();
+  await expect(success.getByTestId("mockup-download-left")).toBeVisible();
+});
+
+test("t-shirt shows no sleeve options", async ({ page }) => {
+  await openBuilder(page);
+  await page.getByRole("button", { name: "Step 3: Design" }).click();
+  await expect(page.getByTestId("view-front")).toBeVisible();
+  await expect(page.getByTestId("view-back")).toBeVisible();
+  await expect(page.getByTestId("view-left")).toHaveCount(0);
+  await expect(page.getByTestId("view-right")).toHaveCount(0);
 });

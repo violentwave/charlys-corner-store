@@ -24,20 +24,26 @@ type StripItem = { key: string; name: string; swatch: string[] };
  */
 export function ColorPicker({ garment, colors, onZoneColor }: ColorPickerProps) {
   const zones = garment.colorZones.map((z) => z.id);
+  const combo = garment.combos.length > 0 ? (findCombo(garment, colors) ?? garment.combos[0]!) : null;
   return (
     <div className="flex flex-col gap-6">
-      {garment.combos.length > 0 ? (
+      {combo ? (
         <ColorStrip
           id="combo"
           label="Color combo"
           items={garment.combos.map((c) => ({ key: c.name, name: c.name, swatch: zones.map((z) => c.colors[z]!) }))}
-          selectedKey={(findCombo(garment, colors) ?? garment.combos[0]!).name}
+          selectedKey={combo.name}
           countLabel={`${garment.combos.length} combos`}
           onPick={(key) => {
-            const combo = garment.combos.find((c) => c.name === key)!;
-            for (const zone of zones) onZoneColor(zone, combo.colors[zone]!);
+            const picked = garment.combos.find((c) => c.name === key)!;
+            for (const zone of zones) onZoneColor(zone, picked.colors[zone]!);
           }}
-        />
+        >
+          {/* The combo's parts in words, in zone order ("Body: White · Sleeves: Navy"). */}
+          <p className="text-text-2 text-xs" data-testid="combo-parts" aria-live="polite">
+            {garment.colorZones.map((zone, i) => `${zone.label}: ${combo.name.split(" / ")[i] ?? ""}`).join(" · ")}
+          </p>
+        </ColorStrip>
       ) : (
         garment.colorZones.map((zone) => {
           const current = colors[zone.id] ?? garment.defaultColors[zone.id];
@@ -77,6 +83,7 @@ function ColorStrip({
   selectedKey,
   countLabel,
   onPick,
+  children,
 }: {
   id: string;
   label: string;
@@ -84,6 +91,7 @@ function ColorStrip({
   selectedKey: string;
   countLabel: string;
   onPick: (key: string) => void;
+  children?: React.ReactNode;
 }) {
   const selectedIndex = Math.max(
     0,
@@ -166,6 +174,7 @@ function ColorStrip({
           );
         })}
       </div>
+      {children}
     </div>
   );
 }

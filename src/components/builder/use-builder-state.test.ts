@@ -10,8 +10,10 @@ import {
   initialDesign,
   loadPersistedBuilderState,
   PERSIST_KEY,
+  payloadPlan,
   persistBuilderState,
-  toPayloadDesign,
+  usedFileIndexes,
+  type ArtworkMeta,
   type BuilderState,
 } from "./use-builder-state";
 import { centerInRect, nudgeTransform, rotateAroundCenter, scaleAroundCenter } from "./geometry";
@@ -24,12 +26,12 @@ const start = (): BuilderState => ({
   future: [],
 });
 
-describe("builderReducer — artwork", () => {
+describe("builderReducer — artwork per side", () => {
   it("places artwork fitted and centered in the active print area", () => {
     const state = builderReducer(start(), {
       type: "placeArtwork",
-      views: ["front"],
-      meta: { name: "art.png", kind: "png", naturalWidth: 600, naturalHeight: 300 },
+      view: "front",
+      meta: { name: "art.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 0 },
     });
     const front = state.design.views.front?.artwork;
     // The initial print area is the front view's first: Front Chest (260×130).
@@ -41,13 +43,83 @@ describe("builderReducer — artwork", () => {
     expect(front?.transform.x).toBeCloseTo(chest.x);
     expect(front?.transform.y).toBeCloseTo(chest.y);
     expect(front?.transform.rotation).toBe(0);
+    expect(front?.fileIndex).toBe(0);
+  });
+
+  it("an upload on the back doesn't touch the front (per-side files)", () => {
+    let state = builderReducer(start(), {
+      type: "placeArtwork",
+      view: "front",
+      meta: { name: "front.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 0 },
+    });
+    const frontBefore = state.design.views.front!.artwork!;
+    state = builderReducer(state, {
+      type: "placeArtwork",
+      view: "back",
+      meta: { name: "back.png", kind: "png", naturalWidth: 400, naturalHeight: 400, fileIndex: 1 },
+    });
+
+    const back = state.design.views.back!.artwork!;
+    expect(back.name).toBe("back.png");
+    expect(back.fileIndex).toBe(1);
+    // The front keeps its file, transform and print area.
+    expect(state.design.views.front!.artwork).toEqual(frontBefore);
+  });
+
+  it("reuse: placing an existing file on another side points at the same file index", () => {
+    let state = builderReducer(start(), {
+      type: "placeArtwork",
+      view: "front",
+      meta: { name: "art.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 0 },
+    });
+    state = builderReducer(state, {
+      type: "placeArtwork",
+      view: "back",
+      meta: { name: "art.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 0 },
+    });
+    expect(state.design.views.front!.artwork!.fileIndex).toBe(0);
+    expect(state.design.views.back!.artwork!.fileIndex).toBe(0);
+  });
+
+  it("removes artwork from one side only, keeping the print-area choice", () => {
+    let state = builderReducer(start(), {
+      type: "placeArtwork",
+      view: "front",
+      meta: { name: "front.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 0 },
+    });
+    state = builderReducer(state, {
+      type: "placeArtwork",
+      view: "back",
+      meta: { name: "back.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 1 },
+    });
+    state = builderReducer(state, { type: "setPrintArea", view: "front", printAreaId: "left-chest" });
+    state = builderReducer(state, { type: "removeArtwork", view: "front" });
+    expect(state.design.views.front?.artwork).toBeNull();
+    expect(state.design.views.back?.artwork).not.toBeNull();
+    expect(state.design.views.front?.printArea).toBe("left-chest");
+  });
+
+  it("usedFileIndexes tracks which files the design references, for dropping unused uploads", () => {
+    let state = builderReducer(start(), {
+      type: "placeArtwork",
+      view: "front",
+      meta: { name: "front.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 0 },
+    });
+    state = builderReducer(state, {
+      type: "placeArtwork",
+      view: "back",
+      meta: { name: "back.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 2 },
+    });
+    expect(usedFileIndexes(state.design)).toEqual(new Set([0, 2]));
+    // With the back removed, file 2 is unused and the builder may drop it.
+    expect(usedFileIndexes(state.design, "back")).toEqual(new Set([0]));
   });
 
   it("commits a transform as one undo step", () => {
     let state = builderReducer(start(), {
       type: "placeArtwork",
-      views: ["front"],
-      meta: { name: "art.png", kind: "png", naturalWidth: 600, naturalHeight: 300 },
+      view: "front",
+      meta: { name: "art.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 0 },
     });
     const before = state.design.views.front!.artwork!.transform;
     state = builderReducer(state, {
@@ -65,24 +137,11 @@ describe("builderReducer — artwork", () => {
     expect(state.design.views.front!.artwork!.transform.rotation).toBe(15);
   });
 
-  it("removes artwork from one view only, keeping the print-area choice", () => {
-    let state = builderReducer(start(), {
-      type: "placeArtwork",
-      views: ["front", "back"],
-      meta: { name: "art.png", kind: "png", naturalWidth: 600, naturalHeight: 300 },
-    });
-    state = builderReducer(state, { type: "setPrintArea", view: "front", printAreaId: "left-chest" });
-    state = builderReducer(state, { type: "removeArtwork", view: "front" });
-    expect(state.design.views.front?.artwork).toBeNull();
-    expect(state.design.views.back?.artwork).not.toBeNull();
-    expect(state.design.views.front?.printArea).toBe("left-chest");
-  });
-
   it("refits the artwork when the print location changes", () => {
     let state = builderReducer(start(), {
       type: "placeArtwork",
-      views: ["front"],
-      meta: { name: "art.png", kind: "png", naturalWidth: 1000, naturalHeight: 1000 },
+      view: "front",
+      meta: { name: "art.png", kind: "png", naturalWidth: 1000, naturalHeight: 1000, fileIndex: 0 },
     });
     state = builderReducer(state, { type: "setPrintArea", view: "front", printAreaId: "left-chest" });
     const transform = state.design.views.front!.artwork!.transform;
@@ -90,6 +149,13 @@ describe("builderReducer — artwork", () => {
     expect(transform.width).toBeCloseTo(chest.w);
     expect(transform.height).toBeCloseTo(chest.h);
     expect(transform.x).toBeCloseTo(chest.x);
+  });
+});
+
+describe("builderReducer — garment step", () => {
+  it("selecting a garment never moves the step (Continue-only, v3)", () => {
+    const state = builderReducer(start(), { type: "selectGarment", garmentId: "hoodie" });
+    expect(state.step).toBe(3); // unchanged — only setStep (Continue / pills) moves
   });
 });
 
@@ -106,8 +172,8 @@ describe("builderReducer — colors and garment switch", () => {
     state = builderReducer(state, { type: "setSize", size: "2XL", qty: 4 });
     state = builderReducer(state, {
       type: "placeArtwork",
-      views: ["front"],
-      meta: { name: "art.png", kind: "png", naturalWidth: 600, naturalHeight: 600 },
+      view: "front",
+      meta: { name: "art.png", kind: "png", naturalWidth: 600, naturalHeight: 600, fileIndex: 0 },
     });
     state = builderReducer(state, { type: "selectGarment", garmentId: "raglan" });
 
@@ -166,13 +232,18 @@ describe("builderReducer — details don't flood history", () => {
 });
 
 describe("sessionStorage round-trip (jsdom)", () => {
-  it("restores design + step and drops stale views/sizes", () => {
+  it("restores design + step, per-side file indexes included, and drops stale views/sizes", () => {
     let state = builderReducer(start(), { type: "setZoneColor", zone: "body", hex: "#d50032" });
     state = builderReducer(state, { type: "setSize", size: "2XL", qty: 2 });
     state = builderReducer(state, {
       type: "placeArtwork",
-      views: ["front"],
-      meta: { name: "art.png", kind: "png", naturalWidth: 600, naturalHeight: 300 },
+      view: "front",
+      meta: { name: "art.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 0 },
+    });
+    state = builderReducer(state, {
+      type: "placeArtwork",
+      view: "back",
+      meta: { name: "back.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 1 },
     });
     persistBuilderState(state);
 
@@ -181,6 +252,8 @@ describe("sessionStorage round-trip (jsdom)", () => {
     expect(restored!.step).toBe(3);
     expect(restored!.design.colors.body).toBe("#d50032");
     expect(restored!.design.views.front?.artwork?.name).toBe("art.png");
+    expect(restored!.design.views.front?.artwork?.fileIndex).toBe(0);
+    expect(restored!.design.views.back?.artwork?.fileIndex).toBe(1);
     expect(restored!.design.views.front?.artwork?.transform.width).toBeGreaterThan(0);
 
     // A garment that changed underneath (e.g. a stale tab) gets sanitized.
@@ -212,25 +285,23 @@ describe("sessionStorage round-trip (jsdom)", () => {
   });
 });
 
-describe("toPayloadDesign", () => {
+describe("payloadPlan (the /api/mockups artwork plan)", () => {
   it("maps the design 1:1 onto mockupPayloadSchema's design portion", () => {
     let state = builderReducer(start(), { type: "setZoneColor", zone: "body", hex: "#d50032" });
     state = builderReducer(state, {
       type: "placeArtwork",
-      views: ["front"],
-      meta: { name: "art.png", kind: "png", naturalWidth: 600, naturalHeight: 300 },
+      view: "front",
+      meta: { name: "art.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 0 },
     });
     state = builderReducer(state, { type: "setPrintArea", view: "front", printAreaId: "left-chest" });
     state = builderReducer(state, { type: "setSize", size: "XL", qty: 2 });
     state = builderReducer(state, { type: "setNotes", notes: "  Gildan please  " });
 
-    const design = toPayloadDesign(state.design);
+    const { payload } = payloadPlan(state.design);
     const result = mockupPayloadSchema.safeParse({
-      ...design,
-      email: "fan@example.com",
+      ...payload,
       referralSource: state.design.referral.referralSource,
     });
-    // The design portion alone must validate once the gate fields (P4-2) are added.
     expect(result.success).toBe(true);
     expect(result.success && result.data.views).toEqual([
       {
@@ -244,16 +315,62 @@ describe("toPayloadDesign", () => {
   });
 
   it("only includes views that carry artwork", () => {
-    const state = start();
-    const design = toPayloadDesign(state.design);
-    expect(design.views).toEqual([]);
+    const { payload, filesInUse } = payloadPlan(start().design);
+    expect(payload.views).toEqual([]);
+    expect(filesInUse).toEqual([]);
+  });
+
+  it("assigns dense artwork indexes in first-use order across views", () => {
+    // The front uses file 1, the back uses file 0 (uploaded later, but printed second).
+    let state = builderReducer(start(), {
+      type: "placeArtwork",
+      view: "front",
+      meta: { name: "front.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 1 },
+    });
+    state = builderReducer(state, {
+      type: "placeArtwork",
+      view: "back",
+      meta: { name: "back.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 0 },
+    });
+
+    const { payload, filesInUse } = payloadPlan(state.design);
+    expect(payload.views.map((v) => [v.view, v.artwork])).toEqual([
+      ["front", 0],
+      ["back", 1],
+    ]);
+    // File 1 goes on the wire first (artwork-0), then file 0 (artwork-1).
+    expect(filesInUse).toEqual([1, 0]);
+  });
+
+  it("a file used on several sides is uploaded once", () => {
+    let state = builderReducer(start(), {
+      type: "placeArtwork",
+      view: "front",
+      meta: { name: "art.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 0 },
+    });
+    state = builderReducer(state, {
+      type: "placeArtwork",
+      view: "back",
+      meta: { name: "art.png", kind: "png", naturalWidth: 600, naturalHeight: 300, fileIndex: 0 },
+    });
+
+    const { payload, filesInUse } = payloadPlan(state.design);
+    expect(payload.views.map((v) => v.artwork)).toEqual([0, 0]);
+    expect(filesInUse).toEqual([0]);
   });
 });
 
-describe("designFromRestore (deep link)", () => {
-  const meta = { name: "art.png", kind: "png", naturalWidth: 600, naturalHeight: 300 } as const;
+describe("designFromRestore (deep link, v3: artwork per side)", () => {
+  const frontMeta = { name: "front.png", kind: "png", naturalWidth: 600, naturalHeight: 300 } as Omit<
+    ArtworkMeta,
+    "transform" | "fileIndex"
+  >;
+  const backMeta = { name: "back.png", kind: "png", naturalWidth: 400, naturalHeight: 400 } as Omit<
+    ArtworkMeta,
+    "transform" | "fileIndex"
+  >;
 
-  it("rebuilds the design from the API response and keeps the saved transforms", () => {
+  it("rebuilds the design and maps each view to its artwork file", () => {
     const design = designFromRestore(
       {
         garment: "tshirt",
@@ -263,24 +380,58 @@ describe("designFromRestore (deep link)", () => {
             view: "front",
             printArea: "full-front",
             transform: { x: 344, y: 292, width: 312, height: 364, rotation: 15, flipX: false },
+            artwork: 0,
+          },
+          {
+            view: "back",
+            printArea: "full-back",
+            transform: { x: 344, y: 262, width: 312, height: 364, rotation: 0, flipX: false },
+            artwork: 1,
           },
         ],
         sizes: { M: 2 },
       },
-      meta,
+      [frontMeta, backMeta],
     );
     expect(design.garment).toBe("tshirt");
     expect(design.colors.body).toBe("#263147");
     expect(design.views.front?.printArea).toBe("full-front");
     expect(design.views.front?.artwork).toMatchObject({
-      name: "art.png",
-      kind: "png",
+      name: "front.png",
+      fileIndex: 0,
       transform: { rotation: 15, flipX: false },
     });
-    expect(design.views.back?.artwork).toBeNull();
+    expect(design.views.back?.artwork).toMatchObject({ name: "back.png", fileIndex: 1 });
     expect(design.sizes).toEqual({ M: 2 });
     // Notes are not part of the restore response; the design starts clean.
     expect(design.notes).toBe("");
+  });
+
+  it("two views sharing an artwork index share one file", () => {
+    const design = designFromRestore(
+      {
+        garment: "tshirt",
+        colors: { body: "#ffffff" },
+        views: [
+          {
+            view: "front",
+            printArea: "full-front",
+            transform: { x: 344, y: 292, width: 312, height: 364, rotation: 0, flipX: false },
+            artwork: 0,
+          },
+          {
+            view: "back",
+            printArea: "full-back",
+            transform: { x: 344, y: 262, width: 312, height: 364, rotation: 0, flipX: false },
+            artwork: 0,
+          },
+        ],
+        sizes: {},
+      },
+      [frontMeta],
+    );
+    expect(design.views.front?.artwork?.fileIndex).toBe(0);
+    expect(design.views.back?.artwork?.fileIndex).toBe(0);
   });
 
   it("falls back to garment defaults for unknown zones, print areas and sizes", () => {
@@ -293,11 +444,12 @@ describe("designFromRestore (deep link)", () => {
             view: "front",
             printArea: "made-up-area",
             transform: { ...fitTransform({ x: 0, y: 0, w: 100, h: 100 }, 600, 300), rotation: 999 },
+            artwork: 0,
           },
         ],
         sizes: { OSFA: 3, "2XL": 5 },
       },
-      meta,
+      [frontMeta],
     );
     expect(design.colors.front).toBe(getGarment("hat").defaultColors.front);
     expect(design.colors.notAZone).toBeUndefined();

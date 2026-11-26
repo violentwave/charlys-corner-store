@@ -15,15 +15,24 @@ async function openAndSubmit(page: Page, email: string) {
   await page.request.post("/api/test/session", { data: { email, name: "Charly Dog" } });
   await page.goto("/design");
   await expect(page.getByTestId("garment-picker")).toBeVisible({ timeout: 30_000 });
-  // Hoodie: a distinctive garment (own palette and print areas) so the restore
-  // assertions prove garment + colors + print location came from the link.
+  // Hoodie: a distinctive garment (own palette, print areas and sleeve views) so the
+  // restore assertions prove garment + colors + print locations came from the link.
   await page.getByTestId("garment-hoodie").click();
+  await page.getByTestId("garment-continue").click();
   await page.getByRole("group", { name: "Hoodie color" }).getByRole("button", { name: "Black", exact: true }).click();
   await page.getByRole("button", { name: "Step 3: Design" }).click();
   await expect(page.getByTestId("artwork-controls")).toBeVisible();
+
+  // Two different files (v3 per-side art): art.png on the front, art-lowdpi.png on the back.
   await page.locator("[data-testid='builder-file-input']").setInputFiles("tests/e2e/fixtures/art.png");
   await expect(page.getByTestId("artwork-name")).toContainText("art.png", { timeout: 15_000 });
   await page.getByTestId("print-area-full-front").click();
+  await page.getByTestId("view-back").click();
+  await expect(page.getByTestId("side-chooser")).toBeVisible();
+  await page.getByTestId("upload-different").click();
+  await page.locator("[data-testid='builder-file-input']").setInputFiles("tests/e2e/fixtures/art-lowdpi.png");
+  await expect(page.getByTestId("artwork-name")).toContainText("art-lowdpi.png", { timeout: 15_000 });
+
   await page.getByRole("button", { name: "Step 4: Send" }).click();
   await page.getByTestId("send-email").click();
   await expect(page.getByTestId("builder-success")).toBeVisible({ timeout: 30_000 });
@@ -50,11 +59,23 @@ test("the restore link loads garment, colors, print location and artwork at the 
 
   await page.goto(`/design?mockup=${mockupId}`);
   await expect(page.getByTestId("restore-status")).toHaveText("Loaded your saved design.", { timeout: 30_000 });
-  // Restored at the Design step with the artwork in place.
+  // Restored at the Design step with the front artwork in place. (The memory storage
+  // driver hands out data: URLs without the original file name, so the file shows the
+  // friendly fallback — the sides are told apart by their art: only the low-res back
+  // file trips the DPI warning.)
   await expect(page.getByTestId("artwork-controls")).toBeVisible();
   await expect(page.getByTestId("artwork-name")).toBeVisible();
   await expect(page.getByTestId("builder-transform")).toContainText("w=");
   await expect(page.getByTestId("print-area-full-front")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("dpi-warning")).toHaveCount(0);
+
+  // v3 per-side artwork: the back was sent with a DIFFERENT file, and the restore
+  // maps each view back to its own file via artworks[] + views[].artwork.
+  await page.getByTestId("view-back").click();
+  await expect(page.getByTestId("artwork-name")).toBeVisible();
+  await expect(page.getByTestId("print-area-full-back")).toBeVisible();
+  await expect(page.getByTestId("relink-sides")).toHaveCount(0); // both files decoded
+  await expect(page.getByTestId("dpi-warning")).toBeVisible({ timeout: 15_000 }); // the low-res back file
 
   // Garment and colors really come from the link, not a fresh builder.
   await page.getByRole("button", { name: "Step 1: Garment" }).click();

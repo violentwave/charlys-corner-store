@@ -69,7 +69,7 @@ Each page prompt is shipped by the agent (Ship section); Claude reviews every me
 ## Phase 4.6: Builder v3 (Logan, 2026-11-25)
 
 - [x] Foundation (Claude): wider, more realistic sleeves (hoodie, baseball tee) + knit texture; Long Sleeve Tee; left/right sleeve views; WebP layers (18 MB → 2 MB); real combos for baseball tee + trucker hat; hoodie one color; per-side artwork on the wire, in the DB (migration 0003) and in the restore link
-- [ ] Builder UI: Continue-only garment step, combo strip polish, front-only uploads with "same image / different image" for back and sleeves, sleeve picker (prompt P46-1)
+- [x] Builder UI: Continue-only garment step, combo strip polish, front-only uploads with "same image / different image" for back and sleeves, sleeve picker (prompt P46-1)
 
 ## Phase 5: Shop and checkout
 
