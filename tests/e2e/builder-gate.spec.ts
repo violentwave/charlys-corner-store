@@ -245,10 +245,12 @@ test("email path: the notes ride along — owner email gets them, customer email
     await pool.end();
   }
 
-  // The owner's email carries the notes (subject names the account); the customer's doesn't.
+  // The owner's email carries the notes (subject names the account); the customer's
+  // doesn't. CI points OWNER_NOTIFY_EMAIL at a test address — mirror the app's default.
+  const ownerInbox = process.env.OWNER_NOTIFY_EMAIL || "CHARLYSCORNERSTORE@GMAIL.COM";
   let owner: { subject: string; html: string } | undefined;
   await expect(async () => {
-    owner = await lastEmail(page, "CHARLYSCORNERSTORE@GMAIL.COM");
+    owner = await lastEmail(page, ownerInbox);
     expect(owner!.subject).toContain(email); // other tests email the owner in parallel
   }).toPass({ timeout: 15_000 });
   expect(owner!.html).toContain("bring my own jacket");
