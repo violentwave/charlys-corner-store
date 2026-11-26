@@ -36,7 +36,7 @@ const nextConfig: NextConfig = {
       "img-src 'self' data: blob:",
       "font-src 'self' data:",
       `frame-src 'self' ${frameSrc} https://challenges.cloudflare.com`,
-      `connect-src 'self' ${connectSrc} https://challenges.cloudflare.com${process.env.NODE_ENV === "development" ? " ws://localhost:*" : ""}`,
+      `connect-src 'self' ${connectSrc} https://challenges.cloudflare.com${process.env.NODE_ENV === "development" ? " ws://localhost:*" : ""} data: blob:`,
     ].join("; ");
     return [
       { source: "/account/:path*", headers: [{ key: "Content-Security-Policy", value: csp }] },
