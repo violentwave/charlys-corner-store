@@ -126,4 +126,39 @@ describe("DesignInspector (simple panel)", () => {
     expect(screen.getByTestId("view-front")).toBeVisible();
     expect(screen.getByTestId("print-location")).toBeVisible();
   });
+
+  it("'Add my logo' appears only when the brand kit has a logo", () => {
+    const propsFor = (logo: { name: string; url: string | null } | null) => ({
+      view,
+      views: garment.views,
+      viewState: { printArea: area.id, layers: [], selectedLayerId: null } as BuilderViewState,
+      artByView: {} as Partial<Record<string, boolean>>,
+      files: [],
+      selectedFileReady: true,
+      fileError: null,
+      capReached: false,
+      accountEmail: "pup@example.com",
+      lockRatio: false,
+      onLockRatioChange: vi.fn(),
+      onUploadClick: vi.fn(),
+      onDropFile: vi.fn(),
+      onAddText: vi.fn(),
+      onViewChange: vi.fn(),
+      onSetPrintArea: vi.fn(),
+      onSelectLayer: vi.fn(),
+      onTransform: vi.fn(),
+      onTextChange: vi.fn(),
+      onOutlineChange: vi.fn(),
+      onRemoveLayer: vi.fn(),
+      onDuplicateLayer: vi.fn(),
+      onMoveLayer: vi.fn(),
+      onAddLogo: vi.fn(),
+      logo,
+    });
+    const { unmount } = render(<DesignInspector {...propsFor({ name: "logo.png", url: "blob:x" })} />);
+    expect(screen.getByTestId("add-my-logo")).toBeVisible();
+    unmount();
+    render(<DesignInspector {...propsFor(null)} />);
+    expect(screen.queryByTestId("add-my-logo")).toBeNull();
+  });
 });

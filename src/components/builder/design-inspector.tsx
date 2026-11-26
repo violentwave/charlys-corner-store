@@ -12,6 +12,7 @@
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { GarmentView, ViewId } from "@/lib/garments";
+import type { TextFontId } from "@/lib/text-fonts";
 import { effectiveDpi } from "@/lib/mockup-schema";
 import { printedInches } from "@/lib/garments";
 
@@ -49,6 +50,11 @@ export interface DesignInspectorProps {
   onRemoveLayer: (layerId: string) => void;
   onDuplicateLayer: (layerId: string) => void;
   onMoveLayer: (layerId: string, to: "up" | "down") => void;
+  /** The member's brand kit (Member perks): inks/fonts lead the pickers, the logo is one tap. */
+  brandInks?: string[];
+  brandFonts?: TextFontId[];
+  logo?: { name: string; url: string | null } | null;
+  onAddLogo?: () => void;
 }
 
 export function DesignInspector({
@@ -75,6 +81,10 @@ export function DesignInspector({
   onRemoveLayer,
   onDuplicateLayer,
   onMoveLayer,
+  brandInks,
+  brandFonts,
+  logo,
+  onAddLogo,
 }: DesignInspectorProps) {
   const selected = viewState.layers.find((l) => l.id === viewState.selectedLayerId) ?? null;
   const area = view.printAreas.find((a) => a.id === viewState.printArea) ?? view.printAreas[0]!;
@@ -151,13 +161,25 @@ export function DesignInspector({
       </InspectorSection>
 
       <InspectorSection label="Add">
-        <div className="grid grid-cols-2 gap-2">
+        <div className={logo?.url ? "grid grid-cols-3 gap-2" : "grid grid-cols-2 gap-2"}>
           <Button type="button" onClick={onUploadClick} disabled={capReached} data-testid="upload-image">
             Upload image
           </Button>
           <Button type="button" variant="secondary" onClick={onAddText} disabled={capReached} data-testid="add-text">
             Add text
           </Button>
+          {logo?.url ? (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onAddLogo}
+              disabled={capReached}
+              data-testid="add-my-logo"
+              title={logo.name}
+            >
+              Add my logo
+            </Button>
+          ) : null}
         </div>
         {capReached ? (
           <p className="text-text-3 text-xs" role="note" data-testid="layers-cap">
@@ -203,6 +225,8 @@ export function DesignInspector({
             area={area}
             imageLayer={selected.type === "image" ? selected : undefined}
             textLayer={selected.type === "text" ? selected : undefined}
+            brandInks={brandInks}
+            brandFonts={brandFonts}
             lockRatio={lockRatio}
             onLockRatioChange={onLockRatioChange}
             onTransform={(transform, mergeKey) => onTransform(selected.id, transform, mergeKey)}

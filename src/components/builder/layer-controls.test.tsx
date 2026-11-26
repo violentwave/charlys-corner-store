@@ -174,4 +174,31 @@ describe("LayerControls (simple panel)", () => {
     expect(props.onTransform).toHaveBeenCalledTimes(1);
     expect(props.onTransform.mock.calls[0]![0].rotation).toBe(45);
   });
+
+  it("brand kit inks come first under 'Your colors', then the quick defaults", async () => {
+    const user = userEvent.setup();
+    render(
+      <LayerControls
+        {...{
+          area,
+          textLayer: textLayer(),
+          lockRatio: false,
+          onLockRatioChange: vi.fn(),
+          onTransform: vi.fn(),
+          onTextChange: vi.fn(),
+          onOutlineChange: vi.fn(),
+          onDuplicate: vi.fn(),
+          onRemove: vi.fn(),
+          brandInks: ["#123456", "#abcdef"],
+        }}
+      />,
+    );
+    expect(screen.getByTestId("brand-inks")).toBeVisible();
+    expect(screen.getByText("Your colors")).toBeVisible();
+    // The brand swatch sets the ink (lowercased).
+    await user.click(screen.getByTestId("brand-ink-123456"));
+    // The defaults row is still there, labeled.
+    expect(screen.getByText("Quick colors")).toBeVisible();
+    expect(screen.getByTestId("ink-black")).toBeVisible();
+  });
 });

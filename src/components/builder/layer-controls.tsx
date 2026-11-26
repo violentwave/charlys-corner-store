@@ -19,7 +19,7 @@ import { TEXT_FONTS, type TextFontId } from "@/lib/text-fonts";
 import { luma, printedInches, type PrintArea } from "@/lib/garments";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/cn";
 
 import { centerInRect, fitIntoRect, resizeAroundCenter, setRotationAroundCenter } from "./geometry";
@@ -153,6 +153,10 @@ export interface LayerControlsProps {
   area: PrintArea;
   imageLayer?: BuilderImageLayer;
   textLayer?: BuilderTextLayer;
+  /** The member's brand kit inks — shown before the quick defaults ("Your colors"). */
+  brandInks?: string[];
+  /** The member's brand fonts — the select's first group ("Your fonts"). */
+  brandFonts?: TextFontId[];
   /** The Transformer's lock-ratio toggle (shared with the canvas, owned by the builder). */
   lockRatio: boolean;
   onLockRatioChange: (lock: boolean) => void;
@@ -169,6 +173,8 @@ export function LayerControls({
   area,
   imageLayer,
   textLayer,
+  brandInks,
+  brandFonts,
   lockRatio,
   onLockRatioChange,
   onTransform,
@@ -272,7 +278,30 @@ export function LayerControls({
                 <SelectValue placeholder="Font" />
               </SelectTrigger>
               <SelectContent>
-                {TEXT_FONTS.map((font) => (
+                {brandFonts && brandFonts.length > 0 ? (
+                  <>
+                    <p className="text-text-3 px-2 pt-1.5 text-[10px] tracking-widest uppercase" role="presentation">
+                      Your fonts
+                    </p>
+                    <SelectGroup>
+                      {brandFonts.map((id) => {
+                        const font = TEXT_FONTS.find((f) => f.id === id);
+                        if (!font) return null;
+                        return (
+                          <SelectItem key={font.id} value={font.id}>
+                            <span style={{ fontFamily: `"${font.family}"`, fontWeight: font.weight }}>
+                              {font.label}
+                            </span>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectGroup>
+                    <p className="text-text-3 px-2 pt-1.5 text-[10px] tracking-widest uppercase" role="presentation">
+                      All fonts
+                    </p>
+                  </>
+                ) : null}
+                {TEXT_FONTS.filter((font) => !brandFonts?.includes(font.id)).map((font) => (
                   <SelectItem key={font.id} value={font.id}>
                     <span style={{ fontFamily: `"${font.family}"`, fontWeight: font.weight }}>{font.label}</span>
                   </SelectItem>
@@ -289,48 +318,84 @@ export function LayerControls({
               <div
                 role="group"
                 aria-labelledby="ink-swatches-label"
-                className="flex flex-wrap gap-1.5"
+                className="flex flex-col gap-1.5"
                 data-testid="ink-swatches"
               >
-                {QUICK_INKS.map(({ label, hex }) => {
-                  const active = textLayer.color.toLowerCase() === hex;
-                  return (
-                    <button
-                      key={hex}
-                      type="button"
-                      aria-pressed={active}
-                      aria-label={`Ink: ${label}`}
-                      title={label}
-                      data-testid={`ink-${label.toLowerCase().replace(/\s+/g, "-")}`}
-                      onClick={() => {
-                        setCustomInkOpen(false);
-                        onTextChange({ color: hex }, key("color"));
-                      }}
-                      className={cn(
-                        "focus-visible:ring-neon-cyan h-7 w-7 shrink-0 rounded-full border transition-shadow focus-visible:ring-2 focus-visible:outline-none",
-                        active
-                          ? "border-border-strong ring-neon-cyan ring-offset-bg-0 ring-2 ring-offset-2"
-                          : "border-border hover:border-border-strong",
-                      )}
-                      style={{ backgroundColor: hex }}
-                    >
-                      <span className="sr-only">{active ? " (selected)" : ""}</span>
-                    </button>
-                  );
-                })}
-                <button
-                  type="button"
-                  aria-expanded={customInkOpen}
-                  aria-label="Custom ink color"
-                  data-testid="ink-custom"
-                  onClick={() => setCustomInkOpen((v) => !v)}
-                  className={cn(
-                    "border-border bg-bg-3 text-text-2 hover:text-text-1 focus-visible:ring-neon-cyan flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs focus-visible:ring-2 focus-visible:outline-none",
-                    customInkOpen && "border-neon-cyan text-neon-cyan",
-                  )}
-                >
-                  <span aria-hidden="true">+</span>
-                </button>
+                {brandInks && brandInks.length > 0 ? (
+                  <div className="flex flex-wrap items-center gap-1.5" data-testid="brand-inks">
+                    <span className="text-text-3 w-full text-[10px] tracking-widest uppercase">Your colors</span>
+                    {brandInks.map((hex) => {
+                      const active = textLayer.color.toLowerCase() === hex.toLowerCase();
+                      return (
+                        <button
+                          key={hex}
+                          type="button"
+                          aria-pressed={active}
+                          aria-label={`Your ink ${hex}`}
+                          title={`Your color ${hex}`}
+                          data-testid={`brand-ink-${hex.replace("#", "")}`}
+                          onClick={() => {
+                            setCustomInkOpen(false);
+                            onTextChange({ color: hex.toLowerCase() }, key("color"));
+                          }}
+                          className={cn(
+                            "focus-visible:ring-neon-cyan h-7 w-7 shrink-0 rounded-full border transition-shadow focus-visible:ring-2 focus-visible:outline-none",
+                            active
+                              ? "border-border-strong ring-neon-cyan ring-offset-bg-0 ring-2 ring-offset-2"
+                              : "border-border hover:border-border-strong",
+                          )}
+                          style={{ backgroundColor: hex }}
+                        >
+                          <span className="sr-only">{active ? " (selected)" : ""}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {brandInks && brandInks.length > 0 ? (
+                    <span className="text-text-3 w-full text-[10px] tracking-widest uppercase">Quick colors</span>
+                  ) : null}
+                  {QUICK_INKS.map(({ label, hex }) => {
+                    const active = textLayer.color.toLowerCase() === hex;
+                    return (
+                      <button
+                        key={hex}
+                        type="button"
+                        aria-pressed={active}
+                        aria-label={`Ink: ${label}`}
+                        title={label}
+                        data-testid={`ink-${label.toLowerCase().replace(/\s+/g, "-")}`}
+                        onClick={() => {
+                          setCustomInkOpen(false);
+                          onTextChange({ color: hex }, key("color"));
+                        }}
+                        className={cn(
+                          "focus-visible:ring-neon-cyan h-7 w-7 shrink-0 rounded-full border transition-shadow focus-visible:ring-2 focus-visible:outline-none",
+                          active
+                            ? "border-border-strong ring-neon-cyan ring-offset-bg-0 ring-2 ring-offset-2"
+                            : "border-border hover:border-border-strong",
+                        )}
+                        style={{ backgroundColor: hex }}
+                      >
+                        <span className="sr-only">{active ? " (selected)" : ""}</span>
+                      </button>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    aria-expanded={customInkOpen}
+                    aria-label="Custom ink color"
+                    data-testid="ink-custom"
+                    onClick={() => setCustomInkOpen((v) => !v)}
+                    className={cn(
+                      "border-border bg-bg-3 text-text-2 hover:text-text-1 focus-visible:ring-neon-cyan flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs focus-visible:ring-2 focus-visible:outline-none",
+                      customInkOpen && "border-neon-cyan text-neon-cyan",
+                    )}
+                  >
+                    <span aria-hidden="true">+</span>
+                  </button>
+                </div>
               </div>
               {customInkOpen ? (
                 <div className="flex items-center gap-2" data-testid="custom-ink">
