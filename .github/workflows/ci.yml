@@ -39,6 +39,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # A throwaway key per run for 2FA secrets (production sets its own AUTH_ENCRYPTION_KEY).
+      - run: echo "AUTH_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm typecheck
@@ -77,6 +79,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # A throwaway key per run for 2FA secrets (production sets its own AUTH_ENCRYPTION_KEY).
+      - run: echo "AUTH_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm db:migrate
       - run: pnpm build
