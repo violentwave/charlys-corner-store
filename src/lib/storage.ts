@@ -17,6 +17,8 @@ export interface StorageDriver {
    * the browser saves the file under that name instead of opening it.
    */
   signedUrl(key: string, expiresInSeconds?: number, options?: { downloadName?: string }): Promise<string>;
+  /** Reads a stored file (re-sending a mockup email attaches the PNGs). */
+  get(key: string): Promise<{ body: Uint8Array; contentType: string }>;
   delete(key: string): Promise<void>;
 }
 
@@ -44,6 +46,14 @@ function s3Driver(): StorageDriver {
         { expiresIn: expiresInSeconds },
       );
     },
+    async get(key) {
+      const res = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+      if (!res.Body) throw new Error(`No object stored under ${key}`);
+      return {
+        body: await res.Body.transformToByteArray(),
+        contentType: res.ContentType ?? "application/octet-stream",
+      };
+    },
     async delete(key) {
       await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
     },
@@ -65,6 +75,11 @@ function memoryDriver(): StorageDriver {
       if (!stored) throw new Error(`No object stored under ${key}`);
       const base64 = Buffer.from(stored.body).toString("base64");
       return `data:${stored.contentType};base64,${base64}`;
+    },
+    async get(key) {
+      const stored = memoryStore.get(key);
+      if (!stored) throw new Error(`No object stored under ${key}`);
+      return stored;
     },
     async delete(key) {
       memoryStore.delete(key);
@@ -110,7 +125,7 @@ export function getStorage(): StorageDriver {
 
 /** uploads/2026/11/<uuid>-<safe-name> — unguessable, never trusts the client's file name for paths. */
 export function buildObjectKey(
-  prefix: "uploads" | "quotes" | "mockups" | "orders",
+  prefix: "uploads" | "quotes" | "mockups" | "orders" | "mockups/drafts" | "brand",
   fileName: string,
   now = new Date(),
 ): string {

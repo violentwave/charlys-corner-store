@@ -141,6 +141,25 @@ describe.skipIf(!hasTestDb)("accounts (real Postgres)", () => {
     expect(statuses.at(-1)).toBe(429);
   });
 
+  it("members stay signed in: a used session slides a year ahead (at most once a day)", async () => {
+    await signUp();
+    const day = 24 * 60 * 60 * 1000;
+    const [fresh] = await db.select().from(schema.sessions);
+    expect(fresh!.expiresAt.getTime()).toBeGreaterThan(Date.now() + 364 * day);
+
+    // Fresh: using it doesn't rewrite the row.
+    await me();
+    const [same] = await db.select().from(schema.sessions);
+    expect(same!.expiresAt.getTime()).toBe(fresh!.expiresAt.getTime());
+
+    // Last renewed long ago: the next request pushes it a full year ahead again.
+    await db.update(schema.sessions).set({ expiresAt: new Date(Date.now() + 20 * day) });
+    const res = await json(await me());
+    expect((res.user as { email: string }).email).toBe("fan@example.com");
+    const [renewed] = await db.select().from(schema.sessions);
+    expect(renewed!.expiresAt.getTime()).toBeGreaterThan(Date.now() + 364 * day);
+  });
+
   it("logout deletes the session", async () => {
     await signUp();
     expect((await logout(post({}))).status).toBe(200);

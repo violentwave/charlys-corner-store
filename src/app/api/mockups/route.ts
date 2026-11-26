@@ -13,6 +13,7 @@ import { clip, BodyTooLargeError, readFormDataLimited } from "@/lib/http";
 import { issueCoupon } from "@/lib/coupon-store";
 import { upsertLead } from "@/lib/leads";
 import { describeLayers, mockupSummary } from "@/lib/mockup-summary";
+import { ownerStageLinks } from "@/lib/order-stage";
 import { MOCKUP_FILES_RETENTION_DAYS, mockupStoragePrefix } from "@/lib/retention";
 import { VIEW_LABELS } from "@/lib/garments";
 import {
@@ -215,6 +216,7 @@ export async function POST(request: Request) {
         sizes: data.sizes,
         notes: data.notes || null,
         kind: data.intent === "order" ? "order" : "mockup",
+        ...(data.intent === "order" ? { orderStage: "received" as const, orderStageAt: new Date() } : {}),
         artworks: artworkRecords,
         artworkKey: artworkRecords[0]?.key ?? null,
         artworkName: artworkRecords[0]?.name ?? null,
@@ -267,6 +269,7 @@ export async function POST(request: Request) {
       artworks: artworkLinks,
       mockups: mockupUrls,
       filesKeptDays: data.intent === "order" ? undefined : MOCKUP_FILES_RETENTION_DAYS,
+      stageLinks: data.intent === "order" ? ownerStageLinks(mockupId) : undefined,
     }),
     user.email,
     { mockupId, leadId },

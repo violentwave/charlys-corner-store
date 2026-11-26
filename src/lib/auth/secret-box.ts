@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, hkdfSync, randomBytes } from "node:crypto";
 
 /**
  * Encrypts small secrets stored in the database (authenticator-app secrets), so a database
@@ -39,4 +39,12 @@ export function openSecret(sealed: string): string {
   const decipher = createDecipheriv("aes-256-gcm", key(), Buffer.from(iv, "base64url"));
   decipher.setAuthTag(Buffer.from(tag, "base64url"));
   return Buffer.concat([decipher.update(Buffer.from(body, "base64url")), decipher.final()]).toString("utf8");
+}
+
+/**
+ * A separate key for another purpose (e.g. signing the owner's one-click order links),
+ * derived from AUTH_ENCRYPTION_KEY with HKDF so there's one secret to manage.
+ */
+export function derivedKey(purpose: string): Buffer {
+  return Buffer.from(hkdfSync("sha256", key(), Buffer.alloc(0), `charlys:${purpose}`, 32));
 }
