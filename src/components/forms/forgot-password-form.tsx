@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Turnstile } from "./turnstile";
 import { mapFieldErrors, NETWORK_ERROR, postJson } from "./auth-post";
 
-export function ForgotPasswordForm() {
+export function ForgotPasswordForm({ defaultEmail }: { defaultEmail?: string }) {
   const router = useRouter();
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [turnstileKey, setTurnstileKey] = useState(0);
@@ -28,7 +28,7 @@ export function ForgotPasswordForm() {
     formState: { errors, isSubmitting },
   } = useForm<{ email: string }>({
     resolver: zodResolver(forgotPasswordSchema),
-    defaultValues: { email: "" },
+    defaultValues: { email: defaultEmail ?? "" },
   });
 
   const onSubmit = async (data: { email: string }) => {

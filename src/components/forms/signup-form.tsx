@@ -10,6 +10,7 @@ import { signupSchema, type AccountUser, type SignupInput } from "@/lib/auth-sch
 import { Button } from "@/components/ui/button";
 import { Field, fieldControlProps } from "@/components/ui/field";
 import { FormStatus } from "./form-status";
+import { GoogleButton } from "./google-button";
 import { Input } from "@/components/ui/input";
 import { Turnstile } from "./turnstile";
 import { mapFieldErrors, NETWORK_ERROR, postJson } from "./auth-post";
@@ -21,9 +22,11 @@ export interface SignupFormProps {
   onDone?: (user: AccountUser) => void;
   /** Inline mode: shows "Log in" as a button that switches the dialog's tab. */
   onSwitchToLogin?: () => void;
+  /** Inline mode: where the Google handoff goes back to ("/#design" — the builder). */
+  googleNext?: string;
 }
 
-export function SignupForm({ next, onDone, onSwitchToLogin }: SignupFormProps) {
+export function SignupForm({ next, onDone, onSwitchToLogin, googleNext }: SignupFormProps) {
   const router = useRouter();
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [turnstileKey, setTurnstileKey] = useState(0);
@@ -64,95 +67,98 @@ export function SignupForm({ next, onDone, onSwitchToLogin }: SignupFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
-      <Field label="Email" required error={errors.email?.message}>
-        <Input type="email" autoComplete="email" {...register("email")} invalid={!!errors.email} />
-      </Field>
+    <div className="flex flex-col gap-4" data-testid="signup-form">
+      <GoogleButton next={googleNext ?? next} />
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+        <Field label="Email" required error={errors.email?.message}>
+          <Input type="email" autoComplete="email" {...register("email")} invalid={!!errors.email} />
+        </Field>
 
-      <Field
-        label="Password"
-        required
-        hint="At least 10 characters."
-        error={errors.password?.message}
-        controlId="signup-password"
-      >
-        <div className="relative">
-          <Input
-            type={showPassword ? "text" : "password"}
-            autoComplete="new-password"
-            className="pr-16"
-            {...register("password")}
-            {...fieldControlProps("signup-password", {
-              hint: "At least 10 characters.",
-              error: errors.password?.message,
-              required: true,
-            })}
-            invalid={!!errors.password}
-          />
-          <button
-            type="button"
-            aria-pressed={showPassword}
-            aria-label={showPassword ? "Hide password" : "Show password"}
-            onClick={() => setShowPassword((v) => !v)}
-            className="text-neon-cyan focus-visible:ring-neon-cyan absolute top-1/2 right-2 -translate-y-1/2 rounded-sm px-2 py-1 text-xs font-medium underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
-          >
-            {showPassword ? "Hide" : "Show"}
-          </button>
+        <Field
+          label="Password"
+          required
+          hint="At least 10 characters."
+          error={errors.password?.message}
+          controlId="signup-password"
+        >
+          <div className="relative">
+            <Input
+              type={showPassword ? "text" : "password"}
+              autoComplete="new-password"
+              className="pr-16"
+              {...register("password")}
+              {...fieldControlProps("signup-password", {
+                hint: "At least 10 characters.",
+                error: errors.password?.message,
+                required: true,
+              })}
+              invalid={!!errors.password}
+            />
+            <button
+              type="button"
+              aria-pressed={showPassword}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              onClick={() => setShowPassword((v) => !v)}
+              className="text-neon-cyan focus-visible:ring-neon-cyan absolute top-1/2 right-2 -translate-y-1/2 rounded-sm px-2 py-1 text-xs font-medium underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+            >
+              {showPassword ? "Hide" : "Show"}
+            </button>
+          </div>
+        </Field>
+
+        <Field label="Name" hint="Optional — we put it on your order requests." error={errors.name?.message}>
+          <Input type="text" autoComplete="name" {...register("name")} invalid={!!errors.name} />
+        </Field>
+
+        <Turnstile onToken={setTurnstileToken} resetKey={turnstileKey} />
+
+        {error ? (
+          <div role="alert">
+            <FormStatus status="error" message={error} />
+            {conflict ? (
+              <p className="text-text-2 mt-2 text-sm">
+                Already have an account?{" "}
+                {onSwitchToLogin ? (
+                  <button
+                    type="button"
+                    onClick={onSwitchToLogin}
+                    className="text-neon-cyan focus-visible:ring-neon-cyan rounded-sm underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                  >
+                    Log in instead
+                  </button>
+                ) : (
+                  <Link href="/login" className="text-neon-cyan underline-offset-4 hover:underline">
+                    Log in instead
+                  </Link>
+                )}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div>
+          <Button type="submit" loading={isSubmitting}>
+            Create my account
+          </Button>
         </div>
-      </Field>
 
-      <Field label="Name" hint="Optional — we put it on your order requests." error={errors.name?.message}>
-        <Input type="text" autoComplete="name" {...register("name")} invalid={!!errors.name} />
-      </Field>
-
-      <Turnstile onToken={setTurnstileToken} resetKey={turnstileKey} />
-
-      {error ? (
-        <div role="alert">
-          <FormStatus status="error" message={error} />
-          {conflict ? (
-            <p className="text-text-2 mt-2 text-sm">
-              Already have an account?{" "}
-              {onSwitchToLogin ? (
-                <button
-                  type="button"
-                  onClick={onSwitchToLogin}
-                  className="text-neon-cyan focus-visible:ring-neon-cyan rounded-sm underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
-                >
-                  Log in instead
-                </button>
-              ) : (
-                <Link href="/login" className="text-neon-cyan underline-offset-4 hover:underline">
-                  Log in instead
-                </Link>
-              )}
-            </p>
-          ) : null}
-        </div>
-      ) : null}
-
-      <div>
-        <Button type="submit" loading={isSubmitting}>
-          Create my account
-        </Button>
-      </div>
-
-      <p className="text-text-2 text-sm">
-        Already have an account?{" "}
-        {onSwitchToLogin ? (
-          <button
-            type="button"
-            onClick={onSwitchToLogin}
-            className="text-neon-cyan focus-visible:ring-neon-cyan rounded-sm underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
-          >
-            Log in
-          </button>
-        ) : (
-          <Link href="/login" className="text-neon-cyan underline-offset-4 hover:underline">
-            Log in
-          </Link>
-        )}
-      </p>
-    </form>
+        <p className="text-text-2 text-sm">
+          Already have an account?{" "}
+          {onSwitchToLogin ? (
+            <button
+              type="button"
+              onClick={onSwitchToLogin}
+              className="text-neon-cyan focus-visible:ring-neon-cyan rounded-sm underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+            >
+              Log in
+            </button>
+          ) : (
+            <Link href="/login" className="text-neon-cyan underline-offset-4 hover:underline">
+              Log in
+            </Link>
+          )}
+        </p>
+      </form>
+    </div>
   );
 }

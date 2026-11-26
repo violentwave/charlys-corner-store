@@ -50,6 +50,9 @@ describe("uploadGateFor (the step-3 account gate)", () => {
 describe("SignInDialog (sign up, verify and continue without leaving the builder)", () => {
   it("sign up → code → 'Add my design', never navigating away", async () => {
     vi.stubGlobal("fetch", fetchMock);
+    // The Google button probes /api/auth/me on mount (Google: off in tests) — effects
+    // flush inside render, so the response must be queued before rendering.
+    respond(200, { user: null, providers: { google: false } });
     const user = userEvent.setup();
     const h = renderDialog();
 
@@ -75,6 +78,9 @@ describe("SignInDialog (sign up, verify and continue without leaving the builder
 
   it("log in with a verified account goes straight to 'Add my design'", async () => {
     vi.stubGlobal("fetch", fetchMock);
+    // Two Google probes: the signup form's on mount, the login form's when it mounts.
+    respond(200, { user: null, providers: { google: false } });
+    respond(200, { user: null, providers: { google: false } });
     const user = userEvent.setup();
     const h = renderDialog();
     await user.click(screen.getByRole("tab", { name: "I have an account" }));
