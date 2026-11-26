@@ -21,7 +21,9 @@ test("contact submit empty shows errors", async ({ page }) => {
 });
 
 test("contact valid submit shows thank-you", async ({ page }) => {
-  await page.setExtraHTTPHeaders({ "x-forwarded-for": `192.0.2.${test.info().workerIndex + 1}` });
+  // A random per-run IP keeps the shared contact rate limit (5/hour) from tripping when
+  // the suite runs repeatedly (same pattern as accounts.spec / business-services.spec).
+  await page.setExtraHTTPHeaders({ "x-forwarded-for": `192.0.2.${1 + Math.floor(Math.random() * 254)}` });
   await page.goto("/contact");
   await page.getByLabel(/Name/i).fill("Logan");
   await page.getByLabel(/Email/i).fill("a@b.co");

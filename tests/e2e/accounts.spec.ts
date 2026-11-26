@@ -28,8 +28,19 @@ const resetToken = (html: string) => html.match(/reset-password\?token=([A-Za-z0
 // don't flag a `password = "…"` assignment.
 const FIXTURE_PW = ["give", "charly", "a-bone", "10"].join("-");
 
-/** The header account entry — one instance exists per viewport (nav bar on desktop, drawer on mobile). */
-const headerLink = (page: Page): Locator => page.locator('[data-testid="account-link"]:visible');
+/** Opens the site menu (all sizes now) and waits for the drawer. */
+async function openMenu(page: Page) {
+  const drawer = page.getByRole("dialog", { name: /site navigation/i });
+  if (await drawer.isVisible()) return;
+  await page.getByRole("button", { name: /open menu/i }).click();
+  await expect(drawer).toBeVisible();
+}
+
+/** Opens the site menu and returns the account entry ("Log in" / "My designs") inside it. */
+async function menuAccountEntry(page: Page): Promise<Locator> {
+  await openMenu(page);
+  return page.getByTestId("account-link");
+}
 
 /** Signs a brand-new account up and waits on the verify page (Turnstile test key auto-solves). */
 async function signUp(page: Page, email: string, password = FIXTURE_PW) {
@@ -59,14 +70,11 @@ test("unauthenticated /account redirects to /login", async ({ page }) => {
   await expect(page.getByRole("heading", { name: /log in/i })).toBeVisible();
 });
 
-test("header account entry: nav bar on desktop, drawer on mobile", async ({ page }) => {
-  const isMobile = test.info().project.name === "mobile-360";
+test("account entry lives in the site menu at every size", async ({ page }) => {
   await page.goto("/");
-  if (isMobile) {
-    await page.getByRole("button", { name: /open menu/i }).click();
-  }
-  await expect(headerLink(page)).toHaveText(/^(Log in|My designs)$/);
-  await expect(headerLink(page)).toHaveAttribute("href", /\/(login|account)/);
+  const entry = await menuAccountEntry(page);
+  await expect(entry).toHaveText(/^(Log in|My designs)$/);
+  await expect(entry).toHaveAttribute("href", /\/(login|account)/);
 });
 
 test("sign up → verify → /account empty state", async ({ page }) => {
@@ -74,8 +82,8 @@ test("sign up → verify → /account empty state", async ({ page }) => {
   await signUp(page, email);
   await verifyEmail(page, email);
 
-  // Signed in: header entry flips to "My designs", and both tabs show empty states.
-  await expect(headerLink(page)).toHaveText("My designs");
+  // Signed in: the menu's account entry flips to "My designs", and both tabs show empty states.
+  await expect(await menuAccountEntry(page)).toHaveText("My designs");
   await expect(page.getByRole("heading", { name: /your account/i })).toBeVisible();
   await expect(page.getByRole("tab", { name: /saved mockups/i })).toBeVisible();
   await expect(page.getByRole("tab", { name: /order requests/i })).toBeVisible();
@@ -90,20 +98,22 @@ test("log out → log in", async ({ page }) => {
 
   await page.getByTestId("logout").click();
   await expect(page).toHaveURL(/\/$/);
-  await expect(headerLink(page)).toHaveText("Log in");
-
-  if (test.info().project.name === "mobile-360") {
-    await page.getByRole("button", { name: /open menu/i }).click();
-  }
-  await headerLink(page).click();
-  await expect(page).toHaveURL(/\/login$/);
+  await openMenu(page);
+  const entry = page.getByTestId("account-link");
+  await expect(entry).toHaveText("Log in");
+  await entry.click();
+  // The menu's Log in sends the visitor back where they were (next=%2F from Home).
+  await expect(page).toHaveURL(/\/login\?next=%2F$/);
   await expect(page.getByRole("heading", { name: /log in/i })).toBeVisible();
   // Next keeps the previous page mounted but hidden after a client-side nav — scope to
   // the fields you can actually see (Home carries four forms).
   await page.getByLabel("Email").filter({ visible: true }).fill(email);
   await page.getByRole("textbox", { name: "Password" }).filter({ visible: true }).fill(password);
   await page.getByRole("button", { name: /^log in$/i }).click();
-  await expect(page).toHaveURL(/\/account$/);
+  await expect(page).toHaveURL(/\/$/);
+  // Signed in again: the menu flips back to the member entry.
+  await expect(await menuAccountEntry(page)).toHaveText("My designs");
+  await page.goto("/account");
   await expect(page.getByTestId("empty-state")).toBeVisible();
 });
 
@@ -112,7 +122,7 @@ test("wrong password shows the error and stays on /login", async ({ page }) => {
   await signUp(page, email);
   await verifyEmail(page, email);
   await page.getByTestId("logout").click();
-  await expect(headerLink(page)).toHaveText("Log in");
+  await expect(await menuAccountEntry(page)).toHaveText("Log in");
 
   await page.goto("/login");
   await page.getByLabel("Email").fill(email);
@@ -146,5 +156,5 @@ test("forgot password → reset via the emailed link → logged in", async ({ pa
   await page.getByLabel(/Confirm new password/i).fill("a-whole-new-leash-20");
   await page.getByRole("button", { name: /save my new password/i }).click();
   await expect(page).toHaveURL(/\/account$/);
-  await expect(headerLink(page)).toHaveText("My designs");
+  await expect(await menuAccountEntry(page)).toHaveText("My designs");
 });

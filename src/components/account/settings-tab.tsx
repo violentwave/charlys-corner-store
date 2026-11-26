@@ -8,7 +8,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { AUTH_CHANGED_EVENT } from "@/components/layout/account-link";
+import { AUTH_CHANGED_EVENT } from "@/components/layout/session";
 import type { AccountSecurity } from "@/lib/auth-schema";
 import { changePasswordSchema, settingsSchema } from "@/lib/member-schemas";
 import { PASSWORD_MIN } from "@/lib/auth-schema";

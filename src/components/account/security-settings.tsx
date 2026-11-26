@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 
 import { BackupCodesPanel } from "./backup-codes-panel";
 import { ConfirmDialog } from "./confirm-dialog";
-import { AUTH_CHANGED_EVENT } from "@/components/layout/account-link";
+import { AUTH_CHANGED_EVENT } from "@/components/layout/session";
 import { toast } from "@/components/ui/toast";
 import type { AccountSecurity } from "@/lib/auth-schema";
 import { Button } from "@/components/ui/button";

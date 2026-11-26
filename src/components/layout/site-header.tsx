@@ -5,38 +5,20 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 
-import { AccountLink } from "@/components/layout/account-link";
-import { navItems, type NavItem } from "@/lib/nav";
+import { jumpToSection } from "@/components/layout/section-scroll";
+import { useSession } from "@/components/layout/session";
+import { SiteMenu } from "@/components/layout/site-menu";
+import { primaryNav, type NavItem } from "@/lib/nav";
 import { site } from "@/lib/site";
-
-const primaryNavItems = navItems.filter((item) => !item.footerOnly);
 
 const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
 
 /** Home sections that mean "no specific tab" (the Home tab stays highlighted). */
 const HOME_SECTIONS = new Set(["design", "upload", "services", "how-it-works"]);
 
-/**
- * Scroll to a Home section and move focus to its heading. Called after the mobile drawer
- * closes, so it waits for the body-scroll lock to release (the unlock runs in a cleanup
- * effect) before scrolling. `scrollIntoView()` follows the CSS `scroll-behavior`, so it is
- * smooth normally and instant with reduced motion.
- */
-function scrollToSection(id: string) {
-  let tries = 0;
-  const go = () => {
-    if (document.body.style.overflow === "hidden" && tries++ < 10) {
-      requestAnimationFrame(go);
-      return;
-    }
-    document.getElementById(id)?.scrollIntoView();
-    document.querySelector<HTMLElement>(`#${id} [data-section-heading]`)?.focus({ preventScroll: true });
-  };
-  requestAnimationFrame(go);
-}
-
 export function SiteHeader() {
   const pathname = usePathname();
+  const { loading, user } = useSession();
   const [open, setOpen] = useState(false);
   // Scroll-spy (Home only): the id of the section currently in view, null for the top.
   const [activeSection, setActiveSection] = useState<string | null>(null);
@@ -118,13 +100,10 @@ export function SiteHeader() {
 
   /**
    * Progressive enhancement (hybrid one-page Home): on `/`, tabs with a Home section
-   * scroll to it instead of navigating; "Home" scrolls to the top. The href stays the
-   * real page URL for crawlers and for normal navigation from any other page.
+   * scroll to it instead of navigating; the href stays the real page URL for crawlers
+   * and for normal navigation from any other page.
    */
   const onNavClick = (event: MouseEvent<HTMLAnchorElement>, item: NavItem) => {
-    const wasOpen = open;
-    setOpen(false);
-    // Let the browser handle new-tab / new-window clicks (Ctrl/Cmd/Shift/Alt, middle button).
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     if (!isHome) return;
 
@@ -133,56 +112,40 @@ export function SiteHeader() {
       if (!el) return; // section missing — navigate normally
       event.preventDefault();
       history.replaceState(null, "", `#${item.homeSection}`);
-      if (wasOpen) scrollToSection(item.homeSection);
-      else {
-        el.scrollIntoView();
-        document
-          .querySelector<HTMLElement>(`#${item.homeSection} [data-section-heading]`)
-          ?.focus({ preventScroll: true });
-      }
-      return;
-    }
-
-    if (item.href === "/") {
-      event.preventDefault();
-      history.replaceState(null, "", window.location.pathname + window.location.search);
-      if (wasOpen) scrollToSection("design");
-      else {
-        window.scrollTo({ top: 0 });
-        document.querySelector<HTMLElement>("#design [data-section-heading]")?.focus({ preventScroll: true });
-      }
+      jumpToSection(item.homeSection);
     }
   };
 
-  const renderNavLink = (item: NavItem, inDrawer: boolean) => {
+  const renderNavLink = (item: NavItem) => {
     const active = isActive(item);
     return (
       <Link
         key={item.href}
         href={item.href}
-        aria-current={active ? (isHome ? "location" : "page") : undefined}
+        aria-current={active ? (isHome && item.homeSection ? "location" : "page") : undefined}
         onClick={(event) => onNavClick(event, item)}
-        className={
-          inDrawer
-            ? `rounded-md px-3 py-3 text-base font-medium transition-colors ${
-                active ? "bg-bg-2 text-neon-cyan" : "text-text-2 hover:bg-bg-2 hover:text-text-1"
-              }`
-            : `relative px-3 py-2 text-sm font-medium transition-colors duration-150 ${
-                active ? "text-neon-cyan" : "text-text-2 hover:text-text-1"
-              }`
-        }
+        className={`relative px-3 py-2 text-sm font-medium transition-colors duration-150 ${
+          active ? "text-neon-cyan" : "text-text-2 hover:text-text-1"
+        }`}
       >
         {item.label}
-        {!inDrawer && active ? (
+        {active ? (
           <span aria-hidden="true" className="bg-neon-cyan shadow-glow-cyan absolute inset-x-2 -bottom-0.5 h-0.5" />
         ) : null}
       </Link>
     );
   };
 
+  /** Members get a cyan status dot on the menu button; the label carries it too (not color alone). */
+  const menuButtonLabel = open
+    ? "Close menu"
+    : user
+      ? `Open menu, signed in as ${user.name ?? user.email}`
+      : "Open menu";
+
   return (
     <header className="bg-bg-0/80 sticky top-0 z-50 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6">
+      <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-4 sm:px-6">
         <Link href="/" className="flex shrink-0 items-center gap-2" aria-label={`${site.name} home`}>
           <Image
             src="/brand/logo.png"
@@ -195,27 +158,43 @@ export function SiteHeader() {
         </Link>
 
         <nav aria-label="Primary" className="hidden flex-1 items-center justify-center gap-1 lg:flex">
-          {primaryNavItems.map((item) => renderNavLink(item, false))}
+          {primaryNav.map(renderNavLink)}
         </nav>
 
         <div className="ml-auto flex items-center gap-2 lg:ml-0">
-          <AccountLink variant="nav" />
+          {/* One "Design Your Own" CTA: full pill from lg, compact pill below (the other is display:none). */}
           <Link
             href="/#design"
-            className="bg-neon-pink text-bg-0 shadow-glow-pink hidden rounded-full px-5 py-2 text-sm font-semibold transition-transform duration-150 hover:-translate-y-0.5 lg:inline-flex"
+            className="bg-neon-pink text-bg-0 shadow-glow-pink focus-visible:ring-neon-cyan hidden rounded-full px-5 py-2 text-sm font-semibold transition-transform duration-150 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:outline-none lg:inline-flex"
           >
             Design Your Own
+          </Link>
+          <Link
+            href="/#design"
+            aria-label="Design Your Own"
+            data-testid="design-cta-compact"
+            className="bg-neon-pink text-bg-0 shadow-glow-pink focus-visible:ring-neon-cyan inline-flex h-9 items-center rounded-full px-3 text-xs font-semibold transition-transform duration-150 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:outline-none lg:hidden"
+          >
+            Design
           </Link>
 
           <button
             ref={buttonRef}
             type="button"
-            className="text-text-1 hover:bg-bg-2 inline-flex h-11 w-11 items-center justify-center rounded-md transition-colors lg:hidden"
+            data-testid="menu-button"
+            className="text-text-1 hover:bg-bg-2 focus-visible:ring-neon-cyan relative inline-flex h-11 w-11 items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-none"
             aria-expanded={open}
-            aria-controls="mobile-nav-drawer"
-            aria-label={open ? "Close menu" : "Open menu"}
+            aria-controls="site-menu"
+            aria-label={menuButtonLabel}
             onClick={() => setOpen((value) => !value)}
           >
+            {user && !loading ? (
+              <span
+                aria-hidden="true"
+                data-testid="menu-member-dot"
+                className="bg-neon-cyan shadow-glow-cyan absolute top-1.5 right-1.5 h-2 w-2 rounded-full"
+              />
+            ) : null}
             <span aria-hidden="true" className="flex flex-col gap-1.5">
               <span
                 className={`block h-0.5 w-6 bg-current transition-transform duration-150 ${
@@ -239,9 +218,9 @@ export function SiteHeader() {
 
       <div aria-hidden="true" className="bg-vice h-px w-full" />
 
-      {/* Mobile drawer */}
+      {/* Site menu: slides in from the right at every screen size. */}
       <div
-        className={`fixed inset-0 z-[60] lg:hidden ${open ? "pointer-events-auto" : "pointer-events-none"}`}
+        className={`fixed inset-0 z-[60] overflow-hidden ${open ? "pointer-events-auto" : "pointer-events-none"}`}
         aria-hidden={!open}
         inert={!open}
       >
@@ -249,27 +228,27 @@ export function SiteHeader() {
           type="button"
           tabIndex={open ? 0 : -1}
           aria-label="Close menu"
-          className={`bg-bg-0/70 absolute inset-0 backdrop-blur-sm transition-opacity duration-200 ${
+          className={`bg-bg-0/70 absolute inset-0 backdrop-blur-sm transition-opacity duration-200 motion-reduce:transition-none ${
             open ? "opacity-100" : "opacity-0"
           }`}
           onClick={() => setOpen(false)}
         />
         <div
-          id="mobile-nav-drawer"
+          id="site-menu"
           ref={drawerRef}
           role="dialog"
           aria-modal="true"
           aria-label="Site navigation"
           tabIndex={-1}
-          className={`bg-bg-1 shadow-glow-cyan absolute inset-y-0 left-0 flex w-[85vw] max-w-xs flex-col transition-transform duration-200 ${
-            open ? "translate-x-0" : "-translate-x-full"
+          className={`bg-bg-1 shadow-glow-cyan absolute inset-y-0 right-0 flex w-[85vw] max-w-xs flex-col overflow-y-auto transition-transform duration-200 motion-reduce:transition-none ${
+            open ? "translate-x-0" : "translate-x-full"
           }`}
         >
           <div className="border-border flex items-center justify-between border-b px-5 py-4">
             <span className="font-heading text-text-1 text-sm tracking-widest uppercase">Menu</span>
             <button
               type="button"
-              className="text-text-2 hover:bg-bg-2 hover:text-text-1 inline-flex h-10 w-10 items-center justify-center rounded-md"
+              className="text-text-2 hover:bg-bg-2 hover:text-text-1 focus-visible:ring-neon-cyan inline-flex h-10 w-10 items-center justify-center rounded-md focus-visible:ring-2 focus-visible:outline-none"
               aria-label="Close menu"
               onClick={() => setOpen(false)}
             >
@@ -278,17 +257,7 @@ export function SiteHeader() {
               </span>
             </button>
           </div>
-          <nav aria-label="Mobile primary" className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
-            {primaryNavItems.map((item) => renderNavLink(item, true))}
-            <AccountLink variant="drawer" onNavigate={() => setOpen(false)} />
-            <Link
-              href="/#design"
-              onClick={() => setOpen(false)}
-              className="bg-neon-pink text-bg-0 shadow-glow-pink mt-4 rounded-full px-5 py-3 text-center text-sm font-semibold"
-            >
-              Design Your Own
-            </Link>
-          </nav>
+          <SiteMenu close={() => setOpen(false)} isActive={isActive} />
         </div>
       </div>
     </header>

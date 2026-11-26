@@ -7,7 +7,7 @@
  */
 import { useEffect, useState } from "react";
 
-import { AUTH_CHANGED_EVENT } from "@/components/layout/account-link";
+import { AUTH_CHANGED_EVENT } from "@/components/layout/session";
 import { confirmIdentitySchema, deleteAccountSchema } from "@/lib/auth-schema";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";

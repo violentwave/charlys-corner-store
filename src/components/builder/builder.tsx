@@ -24,7 +24,7 @@ import type { BrandKit } from "@/app/api/account/brand-kit/route";
 import { ColorPicker } from "./color-picker";
 import { GarmentStep } from "./garment-step";
 import { GarmentStage, loadTemplate, type GarmentStageHandle } from "./garment-stage";
-import { AUTH_CHANGED_EVENT } from "@/components/layout/account-link";
+import { AUTH_CHANGED_EVENT } from "@/components/layout/session";
 
 import { DesignInspector } from "./design-inspector";
 import { SignInDialog, type SignInDialogMode } from "./sign-in-dialog";

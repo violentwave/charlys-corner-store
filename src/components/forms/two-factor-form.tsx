@@ -15,7 +15,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
 import { twoFactorVerifySchema, type AccountUser, type TwoFactorPending } from "@/lib/auth-schema";
-import { AUTH_CHANGED_EVENT } from "@/components/layout/account-link";
+import { AUTH_CHANGED_EVENT } from "@/components/layout/session";
 import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
