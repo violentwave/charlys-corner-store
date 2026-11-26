@@ -81,6 +81,8 @@ export type GarmentConfig = {
   /** Blank style the colors come from (owner confirms, Brief §6). */
   blank: string;
   fabric: Fabric;
+  /** Short fabric tag on the garment card, for blanks that differ from regular cotton. */
+  badge?: string;
   colorZones: ColorZone[];
   /** Default color per zone (hex). For combo garments this is the first combo. */
   defaultColors: Record<string, string>;
@@ -233,9 +235,11 @@ export const GARMENTS: GarmentConfig[] = [
     id: "perftee",
     name: "Performance Tee",
     // TODO(content): owner confirms whether to advertise sun/UV protection (the Gildan spec sheet makes no UPF claim).
-    description: "Lightweight 100% polyester, moisture-wicking. Built for heat, sport and sun.",
+    description:
+      "Lightweight 100% polyester that wicks sweat and dries fast. A cooler pick than cotton for work, sports and days on the water.",
     blank: "Gildan 42000",
     fabric: "polyester",
+    badge: "Performance polyester",
     zoneLabel: "Shirt",
     defaultName: "White",
     palette: PERF_TEE_PALETTE,
@@ -249,9 +253,11 @@ export const GARMENTS: GarmentConfig[] = [
     id: "perflongsleeve",
     name: "Performance Long Sleeve",
     // TODO(content): same UV/UPF question as the Performance Tee.
-    description: "100% polyester long sleeve, moisture-wicking, hemmed cuffs. Full coverage for long days outside.",
+    description:
+      "Lightweight 100% polyester that wicks sweat and dries fast, not a cotton long sleeve. Full arm coverage for long days outside.",
     blank: "Gildan 42400",
     fabric: "polyester",
+    badge: "Performance polyester",
     zoneLabel: "Shirt",
     defaultName: "White",
     palette: PERF_LONGSLEEVE_PALETTE,

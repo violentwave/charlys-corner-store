@@ -8,7 +8,7 @@ import { postJson, NETWORK_ERROR } from "@/components/forms/auth-post";
 import { GoogleButton } from "@/components/forms/google-button";
 import { AUTH_CHANGED_EVENT, useSession } from "@/components/layout/session";
 import { scrollToSection } from "@/components/layout/section-scroll";
-import { accountNav, createNav, exploreNav, type NavItem } from "@/lib/nav";
+import { accountNav, exploreNav, menuCreateNav, type NavItem } from "@/lib/nav";
 import { site } from "@/lib/site";
 
 const HEADING = "font-heading text-text-3 text-xs tracking-widest uppercase";
@@ -107,7 +107,7 @@ export function SiteMenu({ close, isActive }: { close: () => void; isActive: (it
       ) : user ? (
         <MemberHeader user={user} />
       ) : (
-        <JoinCard pathname={pathname} googleEnabled={googleEnabled} />
+        <JoinCard pathname={pathname} googleEnabled={googleEnabled} close={close} />
       )}
 
       {user ? (
@@ -130,7 +130,7 @@ export function SiteMenu({ close, isActive }: { close: () => void; isActive: (it
 
       <div className="flex flex-col gap-0.5 px-3">
         <p className={`${HEADING} px-3 py-2`}>Create</p>
-        {createNav.map(menuLink)}
+        {menuCreateNav.map(menuLink)}
       </div>
 
       <div className="flex flex-col gap-0.5 px-3">
@@ -146,7 +146,7 @@ export function SiteMenu({ close, isActive }: { close: () => void; isActive: (it
 }
 
 /** Visitor card: the join pitch plus the three sign-in entry points (Google wins errors + 2FA). */
-function JoinCard({ pathname, googleEnabled }: { pathname: string; googleEnabled: boolean }) {
+function JoinCard({ pathname, googleEnabled, close }: { pathname: string; googleEnabled: boolean; close: () => void }) {
   return (
     <div className="border-border bg-bg-2 mx-3 rounded-2xl border p-4">
       <p className="font-heading text-text-1 text-sm tracking-wide uppercase">Join the pack</p>

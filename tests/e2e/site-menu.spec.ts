@@ -133,3 +133,11 @@ test("no horizontal overflow at 360px with the menu open", async ({ page }) => {
   const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
   expect(scrollWidth).toBeLessThanOrEqual(360);
 });
+
+test("Create account in the menu closes the menu and lands on /signup", async ({ page }) => {
+  await page.goto("/faq");
+  await openMenu(page);
+  await menuDialog(page).getByRole("link", { name: "Create account" }).click();
+  await expect(page).toHaveURL(/\/signup\?next=%2Ffaq$/);
+  await expect(menuDialog(page)).toBeHidden();
+});
