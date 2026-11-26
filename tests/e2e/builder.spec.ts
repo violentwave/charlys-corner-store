@@ -209,9 +209,10 @@ test("step 4 shows both send paths; the order card holds sizes, notes and referr
   // Two clearly separate paths (docs/04 §5 v2).
   await expect(page.getByTestId("path-email")).toContainText(/15% off your 2nd order/i);
   await expect(page.getByTestId("path-order")).toContainText(/Nothing is charged now/i);
-  await expect(page.getByLabel("M", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("send-step").getByLabel("M", { exact: true })).toBeVisible();
   await page.getByTestId("builder-notes").fill("Gildan, front print only");
-  await expect(page.getByLabel(/How did you hear about us\?/i)).toBeVisible();
+  // Scoped: Home (the builder's host page) also carries referral questions.
+  await expect(page.getByTestId("send-step").getByLabel(/How did you hear about us\?/i)).toBeVisible();
   // Headline instruction and progress.
   await expect(page.getByRole("heading", { name: "Send it or order it" })).toBeVisible();
   await expect(page.getByText("Step 4 of 4", { exact: true })).toBeVisible();

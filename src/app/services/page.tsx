@@ -59,7 +59,7 @@ export default function ServicesPage() {
       <Section eyebrow="Next step" title="Ready to start?">
         <div className="flex flex-wrap gap-3">
           <Button asChild>
-            <Link href="/design">Design Your Own</Link>
+            <Link href="/#design">Design Your Own</Link>
           </Button>
           <Button asChild variant="secondary">
             <Link href="/business#quote">Get a Quote</Link>

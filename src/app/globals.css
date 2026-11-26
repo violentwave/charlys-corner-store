@@ -35,6 +35,15 @@
   html {
     color-scheme: dark;
   }
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+  /* One-page Home: sections scroll to just under the sticky header (h-16). */
+  section[id] {
+    scroll-margin-top: 64px;
+  }
   body {
     background: var(--bg-0);
     color: var(--text-1);

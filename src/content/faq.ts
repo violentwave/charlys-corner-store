@@ -30,7 +30,7 @@ export const faq: readonly FaqItem[] = [
     // Source: COUPON_RULES (src/lib/coupons.ts) and docs/00-PROJECT-BRIEF.md §6 (coupon confirmed 2026-11-23).
     question: "How does the discount coupon work?",
     answer: `Use the mockup builder to email yourself a mockup and you'll get a code for ${COUPON_RULES.percentOff}% off your 2nd order. It expires after ${COUPON_RULES.expiryDays} days, one per email, with a $${COUPON_RULES.minOrderCents / 100} minimum order.`,
-    links: [{ label: "Open the mockup builder", href: "/design" }],
+    links: [{ label: "Open the mockup builder", href: "/#design" }],
   },
   {
     // Source: docs/00-PROJECT-BRIEF.md §1 and src/lib/site.ts.
@@ -48,7 +48,7 @@ export const faq: readonly FaqItem[] = [
     question: "How do I order or get a quote?",
     answer: "Use the mockup builder, send us the quote form, or just email us.",
     links: [
-      { label: "Mockup builder", href: "/design" },
+      { label: "Mockup builder", href: "/#design" },
       { label: "Quote form", href: "/business#quote" },
       { label: site.email.toLowerCase(), href: `mailto:${site.email}` },
     ],

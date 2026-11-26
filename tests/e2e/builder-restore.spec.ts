@@ -62,6 +62,8 @@ test("the restore link loads garment, colors, print locations and every side's l
   const mockupId = await mockupIdForEmail(email);
 
   await page.goto(`/design?mockup=${mockupId}`);
+  // The 308 keeps the query and lands before the hash: the builder restores from ?mockup=.
+  await expect(page).toHaveURL(new RegExp(`\\?mockup=${mockupId}#design$`));
   await expect(page.getByTestId("restore-status")).toHaveText("Loaded your saved design.", { timeout: 30_000 });
   // Restored at the Design step with the front image layer in place. (The memory storage
   // driver hands out data: URLs without the original file name, so the layer shows the

@@ -25,9 +25,9 @@ test("contact submit shows thank-you and stores a row", async ({ page }) => {
 test("home survey submit shows success", async ({ page }) => {
   await page.setExtraHTTPHeaders({ "x-forwarded-for": `198.51.100.${test.info().workerIndex + 1}` });
   await page.goto("/");
-  await page.getByRole("combobox").last().click();
+  await page.getByTestId("survey").getByRole("combobox").click();
   await page.getByRole("option", { name: "Friend" }).click();
-  await expect(page.getByTestId("turnstile-token")).not.toHaveValue("");
-  await page.getByRole("button", { name: "Submit" }).click();
-  await expect(page.getByText("Thanks!", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("survey").getByTestId("turnstile-token")).not.toHaveValue("");
+  await page.getByTestId("survey").getByRole("button", { name: "Submit" }).click();
+  await expect(page.getByTestId("survey").getByText("Thanks!", { exact: true })).toBeVisible();
 });

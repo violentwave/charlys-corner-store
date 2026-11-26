@@ -9,7 +9,7 @@ declare global {
     turnstile?: {
       render: (container: HTMLElement, options: Record<string, unknown>) => string;
       reset: (widgetId?: string) => void;
-      remove: (widgetId: string) => void;
+      remove: (widgetId?: string) => string | undefined;
     };
   }
 }
@@ -29,9 +29,38 @@ export const Turnstile = React.forwardRef<{ reset: () => void }, TurnstileProps>
     const [ready, setReady] = React.useState(false);
     const [token, setToken] = React.useState<string | null>(null);
     const [loadError, setLoadError] = React.useState(false);
+    // v4 (one-page Home): the widget renders only when its form scrolls near the viewport
+    // (or gets focus), so four forms on one page don't load four widgets up front.
+    const [nearViewport, setNearViewport] = React.useState(false);
+
+    React.useEffect(() => {
+      const container = containerRef.current;
+      if (!container || nearViewport) return;
+      if (typeof IntersectionObserver === "undefined") {
+        setNearViewport(true);
+        return;
+      }
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) setNearViewport(true);
+        },
+        { rootMargin: "200px" },
+      );
+      observer.observe(container);
+      // Focusing anything in the form also wakes the widget: a keyboard user who tabs
+      // straight to a field renders the check before they reach the submit button.
+      const form = container.closest("form") ?? container;
+      const focusIn = () => setNearViewport(true);
+      form.addEventListener("focusin", focusIn);
+      return () => {
+        observer.disconnect();
+        form.removeEventListener("focusin", focusIn);
+      };
+    }, [nearViewport]);
 
     React.useEffect(() => {
       if (typeof window === "undefined") return;
+      if (!nearViewport) return;
       if (window.turnstile) {
         setReady(true);
         return;
@@ -53,7 +82,7 @@ export const Turnstile = React.forwardRef<{ reset: () => void }, TurnstileProps>
       script.onload = () => setReady(true);
       script.onerror = () => setLoadError(true);
       document.head.appendChild(script);
-    }, []);
+    }, [nearViewport]);
 
     React.useEffect(() => {
       if (!ready || !containerRef.current || !window.turnstile) return;
@@ -119,7 +148,15 @@ export const Turnstile = React.forwardRef<{ reset: () => void }, TurnstileProps>
           role="region"
           aria-label="Anti-spam verification"
           className={className ?? "min-h-[65px]"}
-        />
+          data-testid="turnstile"
+          data-turnstile-state={loadError ? "error" : token ? "solved" : nearViewport ? "ready" : "deferred"}
+        >
+          {nearViewport ? null : (
+            <p className="text-text-3 min-h-[65px] content-center text-xs" data-testid="turnstile-deferred">
+              Anti-spam check loads here.
+            </p>
+          )}
+        </div>
         {loadError ? (
           <p role="alert" className="text-danger text-sm">
             The anti-spam check couldn&apos;t load. Try turning off ad blockers and reloading, or email us at{" "}
