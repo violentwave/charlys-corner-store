@@ -7,7 +7,7 @@ import { getDb, schema } from "@/lib/db";
 import { getGarment, type GarmentId } from "@/lib/garments";
 import { clip } from "@/lib/http";
 import { sendAccountEmail } from "@/lib/notify";
-import { checkOwnerQuoteLink, OWNER_QUOTE_DAYS, ownerQuoteUrl, payToken } from "@/lib/order-stage";
+import { checkOwnerQuoteLink, OWNER_QUOTE_DAYS, payToken } from "@/lib/order-stage";
 import { clientIp, LIMITS, rateLimit } from "@/lib/rate-limit";
 import { site } from "@/lib/site";
 import { squareConfigured } from "@/lib/square";

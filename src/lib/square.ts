@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 /**
  * Square client (plain fetch, no SDK). Hosted payment links + webhooks (P51-3).
  * Base URL pinned to the environment; every create call carries an idempotency key.

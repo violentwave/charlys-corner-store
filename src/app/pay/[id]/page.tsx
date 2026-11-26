@@ -1,15 +1,16 @@
-import { currentUser } from "@/lib/auth/session";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { Suspense } from "react";
+import { sql } from "drizzle-orm";
+
+import { currentUser } from "@/lib/auth/session";
 import { getDb, schema } from "@/lib/db";
 import { getGarment, type GarmentId } from "@/lib/garments";
 import { checkCoupon } from "@/lib/coupons";
 import { checkPayToken } from "@/lib/order-stage";
 import { squareConfigured } from "@/lib/square";
-import { site } from "@/lib/site";
 import { eq } from "drizzle-orm";
-import { sql } from "drizzle-orm";
 
 export const metadata: Metadata = { title: "Pay", robots: { index: false, follow: false } };
 
@@ -81,16 +82,8 @@ function couponReason(c: { ok: false; reason: string }): string {
   return "not available";
 }
 
-export default async function PayPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ t?: string }>;
-}) {
-  const { id } = await params;
-  const sp = await searchParams;
-  const data = await load(id, sp.t ?? null);
+async function PayGate({ id, token }: { id: string; token: string | null }) {
+  const data = await load(id, token);
   if (!data) notFound();
 
   const discount = data.couponCheck.ok ? (data.couponCheck as { discountCents: number }).discountCents : 0;
@@ -143,5 +136,31 @@ export default async function PayPage({
         Back home
       </Link>
     </main>
+  );
+}
+
+async function PayGateLoader({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ t?: string }>;
+}) {
+  const { id } = await params;
+  const sp = await searchParams;
+  return <PayGate id={id} token={sp.t ?? null} />;
+}
+
+export default function PayPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ t?: string }>;
+}) {
+  return (
+    <Suspense fallback={<p className="text-text-2 p-10">Loading…</p>}>
+      <PayGateLoader params={params} searchParams={searchParams} />
+    </Suspense>
   );
 }

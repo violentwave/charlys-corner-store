@@ -6,6 +6,9 @@ import "@fontsource/poppins/600.css";
 import "@fontsource-variable/orbitron";
 import "@fontsource-variable/jetbrains-mono";
 import "./globals.css";
+
+import { Suspense } from "react";
+
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { Toaster } from "@/components/ui/toast";
@@ -34,11 +37,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         >
           Skip to content
         </a>
-        <SiteHeader />
+        <Suspense fallback={null}>
+          <SiteHeader />
+        </Suspense>
         <main id="main" tabIndex={-1} className="flex flex-1 flex-col">
           {children}
         </main>
-        <SiteFooter />
+        <Suspense fallback={null}>
+          <SiteFooter />
+        </Suspense>
         <Toaster />
       </body>
     </html>
