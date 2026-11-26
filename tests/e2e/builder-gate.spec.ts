@@ -50,8 +50,10 @@ async function uploadImage(page: Page, fixture = "tests/e2e/fixtures/art.png") {
   await page.getByTestId("upload-image").click();
   // The picker only opens because the visitor is signed in.
   await page.locator("[data-testid='builder-file-input']").setInputFiles(fixture);
-  // The upload lands as a layer on the current side, auto-selected.
-  await expect(page.getByTestId("layers-panel")).toContainText(fixture.split("/").pop()!, { timeout: 15_000 });
+  // The upload lands as a layer on the current side, auto-selected (the layers list only
+  // appears at 2+ layers — P48-2 — so the selected-item region is the "placed" signal).
+  await expect(page.getByRole("region", { name: "Selected image" })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId("printed-size")).toBeVisible();
 }
 
 /**
@@ -149,7 +151,8 @@ test("sign up, verify and upload without ever leaving the builder", async ({ pag
   const chooser = page.waitForEvent("filechooser");
   await dialog.getByTestId("dialog-add-design").click();
   await (await chooser).setFiles("tests/e2e/fixtures/art.png");
-  await expect(page.getByTestId("layers-panel")).toContainText("art.png", { timeout: 15_000 });
+  // One layer: the selected-item region shows it (the list appears at 2+).
+  await expect(page.getByRole("region", { name: "Selected image" })).toBeVisible({ timeout: 15_000 });
   await expect(page).toHaveURL(/\/#design$/);
   await expect(page.getByTestId("sign-in-dialog")).toHaveCount(0);
 });
@@ -187,7 +190,7 @@ test("full flow: sign up → verify → color strip → upload → email path �
   await expect(page.getByTestId("signed-in-as")).toContainText(email);
   await page.getByTestId("upload-image").click();
   await page.locator("[data-testid='builder-file-input']").setInputFiles("tests/e2e/fixtures/art.png");
-  await expect(page.getByTestId("layers-panel")).toContainText("art.png", { timeout: 15_000 });
+  await expect(page.getByRole("region", { name: "Selected image" })).toBeVisible({ timeout: 15_000 });
 
   // Downloads do not exist before the design is sent.
   await expect(page.getByRole("button", { name: /download/i })).toHaveCount(0);
@@ -209,7 +212,49 @@ test("full flow: sign up → verify → color strip → upload → email path �
   await success.getByTestId("goto-order").click();
   await expect(page.getByTestId("path-order")).toBeVisible();
   await page.getByRole("button", { name: "Step 3: Design" }).click();
-  await expect(page.getByTestId("layers-panel")).toContainText("art.png");
+  await expect(page.getByRole("region", { name: "Selected image" })).toBeVisible();
+});
+
+test("email path: the notes ride along — owner email gets them, customer email doesn't", async ({ page }) => {
+  const email = `notes-${Date.now()}-${test.info().workerIndex}@example.com`;
+  const NOTES = "Different brand — I'll bring my own jacket. Please print smaller.";
+  await freshIp(page);
+  await page.request.post("/api/test/session", { data: { email } });
+  await openBuilder(page);
+  await page.getByTestId("garment-tshirt").click();
+  await page.getByTestId("garment-continue").click();
+  await page.getByRole("button", { name: "Step 3: Design" }).click();
+  await uploadImage(page);
+  await page.getByRole("button", { name: "Step 4: Send" }).click();
+
+  // The notes sit above both path cards — they apply to the email path too.
+  await page.getByTestId("builder-notes").fill(NOTES);
+  await page.getByTestId("send-email").click();
+  await expect(page.getByTestId("builder-success")).toBeVisible({ timeout: 30_000 });
+
+  const { Pool } = await import("pg");
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  try {
+    const { rows } = await pool.query(
+      "select notes from mockups m join leads l on l.id = m.lead_id where lower(l.email) = $1 order by m.created_at desc limit 1",
+      [email],
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.notes).toBe(NOTES);
+  } finally {
+    await pool.end();
+  }
+
+  // The owner's email carries the notes (subject names the account); the customer's doesn't.
+  let owner: { subject: string; html: string } | undefined;
+  await expect(async () => {
+    owner = await lastEmail(page, "CHARLYSCORNERSTORE@GMAIL.COM");
+    expect(owner!.subject).toContain(email); // other tests email the owner in parallel
+  }).toPass({ timeout: 15_000 });
+  expect(owner!.html).toContain("bring my own jacket");
+
+  const customer = await lastEmail(page, email);
+  expect(customer.html).not.toContain("bring my own jacket");
 });
 
 test("order path: sizes are required, the request lands under My designs", async ({ page }) => {
@@ -259,7 +304,8 @@ test("oversized artwork shows the size error and sends nothing", async ({ page }
     buffer: Buffer.alloc(20 * 1024 * 1024 + 1, 1),
   });
   await expect(page.getByText(/larger than 20 MB/i)).toBeVisible();
-  await expect(page.getByTestId("layers-empty")).toBeVisible();
+  // Nothing was added: the canvas empty state guides instead of a layers list (P48-2).
+  await expect(page.getByTestId("canvas-empty")).toBeVisible();
 });
 
 test("same design on front and back: one artwork file, both views point at it", async ({ page }) => {
@@ -271,14 +317,14 @@ test("same design on front and back: one artwork file, both views point at it", 
 
   await page.getByTestId("upload-image").click();
   await page.locator("[data-testid='builder-file-input']").setInputFiles("tests/e2e/fixtures/art.png");
-  await expect(page.getByTestId("layers-panel")).toContainText("art.png", { timeout: 15_000 });
+  await expect(page.getByRole("region", { name: "Selected image" })).toBeVisible({ timeout: 15_000 });
 
   // The back has no art yet: the empty state offers the same design.
   await page.getByTestId("view-back").click();
   await expect(page.getByTestId("canvas-empty")).toBeVisible();
   await expect(page.getByTestId("side-chooser")).toBeVisible();
   await page.getByTestId("use-design-0").click();
-  await expect(page.getByTestId("layers-panel")).toContainText("art.png");
+  await expect(page.getByRole("region", { name: "Selected image" })).toBeVisible();
 
   // Side picker marks sides that have a design (visible dot + screen-reader text).
   await page.getByTestId("view-back").getByText("(has a design)", { exact: false }).isVisible();
@@ -310,14 +356,16 @@ test("a different design on the back: two artwork files, front and back each the
 
   await page.getByTestId("upload-image").click();
   await page.locator("[data-testid='builder-file-input']").setInputFiles("tests/e2e/fixtures/art.png");
-  await expect(page.getByTestId("layers-panel")).toContainText("art.png", { timeout: 15_000 });
+  await expect(page.getByRole("region", { name: "Selected image" })).toBeVisible({ timeout: 15_000 });
 
   await page.getByTestId("view-back").click();
   await expect(page.getByTestId("side-chooser")).toBeVisible();
   // "Upload a different design" opens the picker for a second file.
   await page.getByTestId("upload-different").click();
   await page.locator("[data-testid='builder-file-input']").setInputFiles("tests/e2e/fixtures/art-lowdpi.png");
-  await expect(page.getByTestId("layers-panel")).toContainText("art-lowdpi.png", { timeout: 15_000 });
+  await expect(page.getByRole("region", { name: "Selected image" })).toBeVisible({ timeout: 15_000 });
+  // A low-res image surfaces the DPI warning next to the printed size.
+  await expect(page.getByTestId("dpi-warning")).toBeVisible();
 
   const { artworks, views } = await sentMockupRow(page, email, async () => {
     await page.getByRole("button", { name: "Step 4: Send" }).click();
@@ -353,16 +401,26 @@ test("text on the left sleeve: runs down the sleeve, arched, stored as a text la
   await page.getByTestId("print-location").click();
   await page.getByRole("option", { name: "Full Sleeve" }).click();
 
-  // Text layer: custom copy, font and ink.
+  // Text layer: custom copy, font and ink (the quick swatch row is always visible; the
+  // color picker and hex field fold behind "Custom").
   await page.getByTestId("add-text").click();
   await page.getByTestId("text-layer-input").fill("RUFF");
   await page.getByTestId("text-layer-font").click();
   await page.getByRole("option", { name: "Permanent Marker" }).click();
+  await page.getByTestId("ink-custom").click();
   await page.getByTestId("text-layer-color").fill("#ffffff");
   await expect(page.getByText("4/60", { exact: true })).toBeVisible(); // the live character counter
 
-  // New text on a full sleeve runs down its length; arch it and make it bigger.
+  // New text on a full sleeve runs down its length; arch it and make it bigger. Arch
+  // lives in the Text style disclosure, height in Size & rotation: open both — Text
+  // style by keyboard (real <details>: Enter on the summary toggles it).
+  const textStyle = page.getByTestId("text-style-section");
+  await textStyle.locator("summary").focus();
+  await page.keyboard.press("Enter");
+  await expect(textStyle).toHaveAttribute("open");
   await page.getByTestId("text-layer-curve").fill("40");
+  const sizeRotation = page.getByTestId("size-rotation-section");
+  await sizeRotation.locator("summary").click();
   // Number fields commit on Enter or blur (a half-typed value never snaps the layer).
   await page.getByTestId("layer-h").fill("3");
   await page.getByTestId("layer-h").press("Enter");
@@ -395,7 +453,7 @@ test("image + text on the front: two layers in stack order", async ({ page }) =>
 
   await page.getByTestId("upload-image").click();
   await page.locator("[data-testid='builder-file-input']").setInputFiles("tests/e2e/fixtures/art.png");
-  await expect(page.getByTestId("layers-panel")).toContainText("art.png", { timeout: 15_000 });
+  await expect(page.getByRole("region", { name: "Selected image" })).toBeVisible({ timeout: 15_000 });
   await page.getByTestId("add-text").click();
   await page.getByTestId("text-layer-input").fill("Front");
   await expect(page.getByTestId("layers-panel")).toContainText("Front");

@@ -33,8 +33,10 @@ async function uploadImage(page: Page, fixture = "tests/e2e/fixtures/art.png") {
   await page.getByTestId("upload-image").click();
   // The builder opened the picker because the visitor is signed in.
   await page.locator("[data-testid='builder-file-input']").setInputFiles(fixture);
-  // Upload decodes the file asynchronously; the layer row shows once it is placed.
-  await expect(page.getByTestId("layers-panel")).toContainText(fixture.split("/").pop()!, { timeout: 15_000 });
+  // Upload decodes the file asynchronously; it lands auto-selected in the selected-item
+  // panel (the layers list only appears at 2+ layers — P48-2).
+  await expect(page.getByRole("region", { name: "Selected image" })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId("printed-size")).toBeVisible();
 }
 
 test("every garment renders the canvas", async ({ page }) => {
@@ -143,7 +145,8 @@ test("keyboard rotate, scale and remove work from the focused canvas", async ({ 
   const afterScale = await transformText(page);
   expect(afterScale).not.toEqual(beforeScale);
   await page.keyboard.press("Delete");
-  await expect(page.getByTestId("layers-empty")).toBeVisible();
+  // At 0 layers the list disappears; the canvas empty state guides instead.
+  await expect(page.getByTestId("canvas-empty")).toBeVisible();
 });
 
 test("the layer row tools reorder, duplicate and delete", async ({ page }) => {
@@ -170,9 +173,9 @@ test("front/back toggle gives each side its own layer stack", async ({ page }) =
   // The back starts empty: the same design is one click away.
   await expect(page.getByTestId("side-chooser")).toBeVisible();
   await page.getByTestId("use-design-0").click();
-  await expect(page.getByTestId("layers-panel")).toContainText("art.png");
+  await expect(page.getByRole("region", { name: "Selected image" })).toBeVisible();
   await page.getByTestId("view-front").click();
-  await expect(page.getByTestId("layers-panel")).toContainText("art.png");
+  await expect(page.getByRole("region", { name: "Selected image" })).toBeVisible();
 });
 
 test("a refresh keeps the garment, colors and step", async ({ page }) => {
@@ -210,7 +213,10 @@ test("step 4 shows both send paths; the order card holds sizes, notes and referr
   await expect(page.getByTestId("path-email")).toContainText(/15% off your 2nd order/i);
   await expect(page.getByTestId("path-order")).toContainText(/Nothing is charged now/i);
   await expect(page.getByTestId("send-step").getByLabel("M", { exact: true })).toBeVisible();
-  await page.getByTestId("builder-notes").fill("Gildan, front print only");
+  // Notes sit above BOTH path cards (P48-2): one field, either path.
+  const notes = page.getByTestId("builder-notes");
+  await notes.fill("Gildan, front print only");
+  expect(page.getByTestId("path-order").getByTestId("builder-notes")).toHaveCount(0);
   // Scoped: Home (the builder's host page) also carries referral questions.
   await expect(page.getByTestId("send-step").getByLabel(/How did you hear about us\?/i)).toBeVisible();
   // Headline instruction and progress.
@@ -243,5 +249,12 @@ test.describe("mobile QA at 360px (docs/04)", () => {
       await expect(control).toBeVisible();
       expect((await control.boundingBox())!.height).toBeGreaterThanOrEqual(24);
     }
+
+    // Steps 3 and 4 (the two with the most controls) never scroll sideways at 360px.
+    await page.getByRole("button", { name: "Step 4: Send" }).click();
+    await expect(page.getByTestId("path-order")).toBeVisible();
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth))
+      .toBeLessThanOrEqual(0);
   });
 });

@@ -26,14 +26,14 @@ async function openAndSubmit(page: Page, email: string) {
   // Two different files (v4 per-side art): art.png as an image layer on the front,
   // text + a different image on the back.
   await page.locator("[data-testid='builder-file-input']").setInputFiles("tests/e2e/fixtures/art.png");
-  await expect(page.getByTestId("layers-panel")).toContainText("art.png", { timeout: 15_000 });
+  await expect(page.getByRole("region", { name: "Selected image" })).toBeVisible({ timeout: 15_000 });
   await page.getByTestId("print-location").click();
   await page.getByRole("option", { name: "Full Front" }).click();
   await page.getByTestId("view-back").click();
   await expect(page.getByTestId("side-chooser")).toBeVisible();
   await page.getByTestId("upload-different").click();
   await page.locator("[data-testid='builder-file-input']").setInputFiles("tests/e2e/fixtures/art-lowdpi.png");
-  await expect(page.getByTestId("layers-panel")).toContainText("art-lowdpi.png", { timeout: 15_000 });
+  await expect(page.getByRole("region", { name: "Selected image" })).toBeVisible({ timeout: 15_000 });
   await page.getByTestId("add-text").click();
   await page.getByTestId("text-layer-input").fill("Back print");
 
@@ -67,9 +67,9 @@ test("the restore link loads garment, colors, print locations and every side's l
   await expect(page.getByTestId("restore-status")).toHaveText("Loaded your saved design.", { timeout: 30_000 });
   // Restored at the Design step with the front image layer in place. (The memory storage
   // driver hands out data: URLs without the original file name, so the layer shows the
-  // friendly fallback name.)
+  // friendly fallback name.) One layer: the selected-item panel is empty until a layer
+  // is picked — the transform readout falls back to the bottom layer.
   await expect(page.getByTestId("artwork-controls")).toBeVisible();
-  await expect(page.getByTestId("layers-panel")).toBeVisible();
   await expect(page.getByTestId("builder-transform")).toContainText("w=");
   await expect(page.getByTestId("print-location")).toContainText("Full Front");
 

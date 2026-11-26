@@ -79,7 +79,7 @@ Each page prompt is shipped by the agent (Ship section); Claude reviews every me
 ## Phase 4.8: One-page site + simpler builder (Logan, 2026-11-26)
 
 - [x] Hybrid one-page Home: builder (`#design`) and artwork upload (`#upload`) as the first two sections, followed by summary sections for business, past work, about and contact; sticky header tabs smooth-scroll to them (scroll-spy marks the active tab); `/design` and `/upload` 308-redirect to `/#design` / `/#upload` keeping the `?mockup=` restore links; Business, About and Contact stay full pages for SEO (prompt P48-1)
-- [ ] P48-2: simplify the builder flow per Logan's walkthrough notes
+- [x] Simpler builder panel, same features: layers list only at 2+ layers, quick ink swatches + Custom, one action row (Center/Fit/Flip/Duplicate/Delete), printed-size line for every layer, outline/arch/spacing and size/rotate folded into session-remembering disclosures; notes moved above both send paths so they ride along with the email path too (prompt P48-2)
 
 ## Phase 5: Shop and checkout
 
