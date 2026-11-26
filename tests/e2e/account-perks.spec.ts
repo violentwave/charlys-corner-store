@@ -101,11 +101,11 @@ test("order tracking: the owner's 'Mark as Ready' link moves the order", async (
 
   // The owner email holds the signed one-click links; follow "Mark as Ready". Other tests
   // email the owner in parallel: the test helper filters by subject (?subject=), so this
-  // reads OUR order's email. React Email splits link text with comments and escapes
-  // ampersands — strip both.
+  // reads OUR order's email. The inbox mirrors the app's env (CI uses a test address).
+  // React Email splits link text with comments and escapes ampersands — strip both.
   let url: string | undefined;
   await expect(async () => {
-    const owner = await lastEmail(page, "CHARLYSCORNERSTORE@GMAIL.COM", email);
+    const owner = await lastEmail(page, process.env.OWNER_NOTIFY_EMAIL || "CHARLYSCORNERSTORE@GMAIL.COM", email);
     const raw = owner.html.match(/href="([^"]+)"[^>]*>Mark as (?:<!-- -->)?Ready</)?.[1];
     url = raw?.replace(/&amp;/g, "&");
     expect(url, "the owner email offers stage links").toBeTruthy();
