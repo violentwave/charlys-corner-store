@@ -10,7 +10,7 @@ import { PageHeader } from "@/components/sections/page-header";
 import { Section } from "@/components/sections/section";
 
 export const metadata: Metadata = {
-  title: "My designs",
+  title: "My account",
   robots: { index: false, follow: false },
 };
 
@@ -43,7 +43,7 @@ async function AccountGate() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <PageHeader
           eyebrow="My account"
-          title={user.name ? `Hey, ${user.name}` : "Your designs"}
+          title={user.name ? `Hey, ${user.name}` : "Your account"}
           description="Everything you've saved in the builder, every order request, and your sign-in settings."
         />
         <LogoutButton />

@@ -258,6 +258,18 @@ export function Builder() {
     }
   };
 
+  /**
+   * Takes ?mockup= / ?draft= out of the address bar once it's being loaded, keeping the hash.
+   * Otherwise a refresh would load the saved copy again over the visitor's newer edits (the
+   * builder already keeps those in sessionStorage).
+   */
+  const dropLoadParams = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("mockup");
+    url.searchParams.delete("draft");
+    history.replaceState(history.state, "", `${url.pathname}${url.search}${url.hash}`);
+  };
+
   /** Opens a saved draft (/?draft=<id>#design) — the same hydrate path as the restore link. */
   const openDraft = async (id: string) => {
     await Promise.resolve();
@@ -301,6 +313,7 @@ export function Builder() {
       const timer = setTimeout(() => {
         if (restoredRef.current) return;
         restoredRef.current = true;
+        dropLoadParams();
         void openDraft(draftIdParam);
       }, 0);
       return () => clearTimeout(timer);
@@ -314,6 +327,7 @@ export function Builder() {
     const timer = setTimeout(() => {
       if (restoredRef.current) return;
       restoredRef.current = true;
+      dropLoadParams();
       void restoreMockup(mockupId);
     }, 0);
     return () => clearTimeout(timer);
@@ -982,7 +996,7 @@ export function Builder() {
                             }
                             dialogPurposeRef.current = "draft";
                             pendingDropRef.current = null;
-                            setSignInDialog(account === undefined || account ? "signedOut" : "signedOut");
+                            setSignInDialog(account && !account.verified ? "unverified" : "signedOut");
                           }}
                           data-testid="save-draft"
                         >
