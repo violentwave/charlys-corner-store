@@ -20,7 +20,11 @@ export function describeLayers(layers: MockupLayer[]): string[] {
     if (layer.type === "image") return `${i + 1}. Artwork file #${layer.artwork + 1}${tail}`;
     const font = getTextFont(layer.font)?.label ?? layer.font;
     const outline = layer.outline.width > 0 ? `, outline ${layer.outline.color} ${layer.outline.width}px` : "";
-    return `${i + 1}. Text "${layer.text}" — ${font}, ${layer.color}${outline}${tail}`;
+    const curve =
+      Math.abs(layer.curve) >= 0.01
+        ? `, arched ${layer.curve > 0 ? "up" : "down"} ${Math.round(Math.abs(layer.curve) * 100)}%`
+        : "";
+    return `${i + 1}. Text "${layer.text}" — ${font}, ${layer.color}${outline}${curve}${tail}`;
   });
 }
 

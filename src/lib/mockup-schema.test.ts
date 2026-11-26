@@ -98,6 +98,12 @@ describe("layers (image + text, stretch, skew)", () => {
     expect(artworkCount(r.views)).toBe(1);
   });
 
+  it("text arches between -1 and 1, straight by default", () => {
+    expect(mockupPayloadSchema.parse(layered([text])).views[0]!.layers[0]).toMatchObject({ curve: 0 });
+    expect(issues(layered([{ ...text, curve: 0.6 }]))).toEqual([]);
+    expect(issues(layered([{ ...text, curve: 1.5 }])).length).toBeGreaterThan(0);
+  });
+
   it("allows a text-only design (no artwork files)", () => {
     const r = mockupPayloadSchema.parse(layered([text]));
     expect(artworkCount(r.views)).toBe(0);

@@ -77,8 +77,15 @@ export type BuilderTextLayer = {
   outline: { color: string; width: number };
   align: "left" | "center" | "right";
   letterSpacing: number;
+  /** Arch: 0 straight, 1 arched up (half circle), -1 arched down (mockup-schema textLayerSchema). */
+  curve: number;
   transform: BuilderTransform;
 };
+
+/** The text-tool fields one edit can change (the inspector's onTextChange). */
+export type TextPatch = Partial<
+  Pick<BuilderTextLayer, "text" | "font" | "color" | "align" | "letterSpacing" | "curve">
+>;
 
 export type BuilderLayer = BuilderImageLayer | BuilderTextLayer;
 
@@ -261,6 +268,7 @@ export function defaultTextLayer(
     outline: { color: "#000000", width: 0 },
     align: "center",
     letterSpacing: 0,
+    curve: 0,
     transform: transform ?? {
       x: rect.x,
       y: rect.y + (rect.h - 100) / 2,
@@ -522,6 +530,7 @@ const persistedLayerSchema = z.discriminatedUnion("type", [
     outline: z.object({ color: z.string().regex(/^#[0-9a-fA-F]{6}$/), width: z.number().min(0).max(12) }),
     align: z.enum(["left", "center", "right"]),
     letterSpacing: z.number().min(-5).max(40),
+    curve: z.number().min(-1).max(1).default(0),
     transform: artworkTransformSchema,
   }),
 ]);
@@ -763,6 +772,7 @@ function layersFromRestore(
           outline: layer.outline,
           align: layer.align,
           letterSpacing: layer.letterSpacing,
+          curve: layer.curve,
           transform,
         } as BuilderTextLayer);
   });
@@ -863,6 +873,7 @@ export function payloadPlan(design: BuilderDesign): {
           outline: layer.outline,
           align: layer.align,
           letterSpacing: layer.letterSpacing,
+          curve: layer.curve,
           transform: layer.transform,
         };
       }

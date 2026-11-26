@@ -48,18 +48,21 @@ describe("LayerControls", () => {
     expect(screen.getByTestId("text-layer-input")).toHaveAttribute("maxLength", "60");
   });
 
-  it("skew sliders follow the layer (Undo / Reset skew) and send tan(deg)", () => {
-    const { props, rerender } = setup(
-      textLayer({ transform: { ...textLayer().transform, skewX: Math.tan(Math.PI / 9) } }),
-    );
-    const slider = screen.getByTestId("skew-horizontal") as HTMLInputElement;
-    expect(slider.value).toBe("20");
+  it("has no skew controls (removed 2026-11-26)", () => {
+    setup();
+    expect(screen.queryByTestId("skew-horizontal")).toBeNull();
+    expect(screen.queryByTestId("reset-skew")).toBeNull();
+  });
+
+  it("arch slider follows the layer and sends a -1…1 curve", () => {
+    const { props, rerender } = setup(textLayer({ curve: 0.5 }));
+    const slider = screen.getByTestId("text-layer-curve") as HTMLInputElement;
+    expect(slider.value).toBe("50");
+    expect(slider).toHaveAttribute("aria-valuetext", "Arched up 50 percent");
     rerender(<LayerControls {...props} textLayer={textLayer()} />);
     expect(slider.value).toBe("0");
-    fireEvent.change(slider, { target: { value: "-31" } });
-    const [transform, key] = props.onTransform.mock.calls.at(-1)!;
-    expect(transform.skewX).toBeCloseTo(-0.6, 2);
-    expect(key).toBe("t1:skewX");
+    fireEvent.change(slider, { target: { value: "-40" } });
+    expect(props.onTextChange).toHaveBeenLastCalledWith({ curve: -0.4 }, "t1:curve");
   });
 
   it("number fields commit on Enter and ignore junk", async () => {

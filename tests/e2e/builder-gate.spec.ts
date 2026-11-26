@@ -84,7 +84,8 @@ async function sentMockupRow(page: Page, email: string, trigger: () => Promise<v
           type: string;
           artwork?: number;
           text?: string;
-          transform?: { skewX?: number; width?: number; height?: number };
+          curve?: number;
+          transform?: { skewX?: number; rotation?: number; width?: number; height?: number };
         }[];
       }[],
     };
@@ -335,7 +336,7 @@ test("a different design on the back: two artwork files, front and back each the
   await expect(success.getByTestId("mockup-download-back")).toBeVisible();
 });
 
-test("text on the left sleeve: stretched tall and skewed, stored as a text layer", async ({ page }) => {
+test("text on the left sleeve: runs down the sleeve, arched, stored as a text layer", async ({ page }) => {
   const email = `sleeve-text-${Date.now()}@example.com`;
   await freshIp(page);
   await page.request.post("/api/test/session", { data: { email } });
@@ -360,13 +361,11 @@ test("text on the left sleeve: stretched tall and skewed, stored as a text layer
   await page.getByTestId("text-layer-color").fill("#ffffff");
   await expect(page.getByText("4/60", { exact: true })).toBeVisible(); // the live character counter
 
-  // Stretch it tall (H ≫ W) and skew it down the sleeve.
+  // New text on a full sleeve runs down its length; arch it and make it bigger.
+  await page.getByTestId("text-layer-curve").fill("40");
   // Number fields commit on Enter or blur (a half-typed value never snaps the layer).
-  await page.getByTestId("layer-w").fill("3");
-  await page.getByTestId("layer-w").press("Enter");
-  await page.getByTestId("layer-h").fill("12");
+  await page.getByTestId("layer-h").fill("3");
   await page.getByTestId("layer-h").press("Enter");
-  await page.getByTestId("skew-horizontal").fill("25");
 
   const { views } = await sentMockupRow(page, email, async () => {
     await page.getByRole("button", { name: "Step 4: Send" }).click();
@@ -378,8 +377,9 @@ test("text on the left sleeve: stretched tall and skewed, stored as a text layer
   const textLayer = left.layers[0]!;
   expect(textLayer.type).toBe("text");
   expect(textLayer.text).toBe("RUFF");
-  expect(textLayer.transform?.skewX).not.toBe(0);
-  expect(textLayer.transform!.height!).toBeGreaterThan(textLayer.transform!.width!);
+  expect(textLayer.curve).toBeCloseTo(0.4);
+  expect(textLayer.transform?.rotation).toBe(90);
+  expect(textLayer.transform?.skewX).toBe(0);
 
   const success = page.getByTestId("builder-success");
   await expect(success).toBeVisible({ timeout: 30_000 });
