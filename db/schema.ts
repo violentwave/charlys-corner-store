@@ -253,6 +253,8 @@ export const users = pgTable(
     name: text("name"),
     /** Google account id ("sub") once Google sign-in is linked (2026-11-26). */
     googleSub: text("google_sub"),
+    /** Square customer id (P51-4): one per member account, created on first saved card. */
+    squareCustomerId: text("square_customer_id"),
     /** Null = 2FA off. */
     twoFactorMethod: twoFactorMethod("two_factor_method"),
     /** Authenticator secret, AES-256-GCM encrypted (src/lib/auth/secret-box.ts). */
@@ -269,7 +271,11 @@ export const users = pgTable(
     createdAt: createdAt(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex("users_email_unique").on(t.email), uniqueIndex("users_google_sub_unique").on(t.googleSub)],
+  (t) => [
+    uniqueIndex("users_email_unique").on(t.email),
+    uniqueIndex("users_google_sub_unique").on(t.googleSub),
+    uniqueIndex("users_square_customer_unique").on(t.squareCustomerId),
+  ],
 );
 
 /** Login sessions. Only a SHA-256 of the cookie token is stored. */
