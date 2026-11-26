@@ -358,11 +358,14 @@ test("text on the left sleeve: stretched tall and skewed, stored as a text layer
   await page.getByTestId("text-layer-font").click();
   await page.getByRole("option", { name: "Permanent Marker" }).click();
   await page.getByTestId("text-layer-color").fill("#ffffff");
-  await expect(page.getByText("60")).toBeVisible(); // the live character counter
+  await expect(page.getByText("4/60", { exact: true })).toBeVisible(); // the live character counter
 
   // Stretch it tall (H ≫ W) and skew it down the sleeve.
+  // Number fields commit on Enter or blur (a half-typed value never snaps the layer).
   await page.getByTestId("layer-w").fill("3");
+  await page.getByTestId("layer-w").press("Enter");
   await page.getByTestId("layer-h").fill("12");
+  await page.getByTestId("layer-h").press("Enter");
   await page.getByTestId("skew-horizontal").fill("25");
 
   const { views } = await sentMockupRow(page, email, async () => {

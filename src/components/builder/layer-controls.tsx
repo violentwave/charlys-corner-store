@@ -1,8 +1,15 @@
 "use client";
 /**
  * Selected-layer controls (docs/04 §3 v4). Text layers get the text tool (text, font, ink
- * color, outline, alignment, letter spacing); every layer gets size in inches (with a
- * lock-ratio toggle), rotate, skew (±31°) and the Flip / Center / Fit / Reset-skew actions.
+ * color, outline, letter spacing); every layer gets size in inches (with a lock-ratio
+ * toggle), rotate, skew (±31°) and the Flip / Center / Fit / Reset-skew actions.
+ *
+ * Text is one line scaled to fill its box, so alignment would do nothing: the schema keeps
+ * `align` (default center) but there is no control for it.
+ *
+ * Every change passes a `mergeKey` (layer + control) so one slider drag or one burst of
+ * typing is one undo step. Free-typed fields (text, hex, numbers) keep a local draft and
+ * only commit valid values, so the design never holds an empty text or a NaN.
  */
 import { useState } from "react";
 
@@ -12,7 +19,69 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-import type { BuilderImageLayer, BuilderTextLayer, BuilderTransform } from "./use-builder-state";
+import {
+  fitTransform,
+  type BuilderImageLayer,
+  type BuilderTextLayer,
+  type BuilderTransform,
+} from "./use-builder-state";
+
+/**
+ * A number field with a local draft: typing "1." or clearing the box doesn't snap the value;
+ * Enter or blur commits a finite number (else reverts). Follows the external value when idle.
+ */
+function DraftNumberInput({
+  value,
+  onCommit,
+  format,
+  ...rest
+}: {
+  value: number;
+  onCommit: (value: number) => void;
+  format: (value: number) => string;
+} & Omit<React.ComponentProps<typeof Input>, "value" | "onChange" | "onBlur" | "onKeyDown">) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const commit = () => {
+    if (draft === null) return;
+    const n = Number(draft);
+    if (draft.trim() !== "" && Number.isFinite(n)) onCommit(n);
+    setDraft(null);
+  };
+  return (
+    <Input
+      {...rest}
+      type="number"
+      value={draft ?? format(value)}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") commit();
+        if (e.key === "Escape") setDraft(null);
+      }}
+    />
+  );
+}
+
+/** A #rrggbb text field with a local draft (partial input is allowed while typing). */
+function HexInput({ value, onCommit, label }: { value: string; onCommit: (hex: string) => void; label: string }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  return (
+    <Input
+      type="text"
+      spellCheck={false}
+      maxLength={7}
+      value={draft ?? value}
+      aria-label={label}
+      onChange={(e) => {
+        const next = e.target.value.trim();
+        setDraft(next);
+        if (/^#[0-9a-fA-F]{6}$/.test(next)) onCommit(next.toLowerCase());
+      }}
+      onBlur={() => setDraft(null)}
+      className="h-9 w-24 font-mono text-xs"
+    />
+  );
+}
 
 /** Degrees → Konva skew (tan), clamped to the schema's ±0.6. */
 function degToSkew(deg: number): number {
@@ -38,15 +107,19 @@ export interface LayerControlsProps {
   /** The Transformer's lock-ratio toggle (shared with the canvas, owned by the builder). */
   lockRatio: boolean;
   onLockRatioChange: (lock: boolean) => void;
-  onTransform: (transform: BuilderTransform) => void;
-  onTextChange: (patch: {
-    text?: string;
-    font?: TextFontId;
-    color?: string;
-    align?: "left" | "center" | "right";
-    letterSpacing?: number;
-  }) => void;
-  onOutlineChange: (outline: { color: string; width: number }) => void;
+  /** `mergeKey` groups a run of changes from one control into one undo step. */
+  onTransform: (transform: BuilderTransform, mergeKey?: string) => void;
+  onTextChange: (
+    patch: {
+      text?: string;
+      font?: TextFontId;
+      color?: string;
+      align?: "left" | "center" | "right";
+      letterSpacing?: number;
+    },
+    mergeKey?: string,
+  ) => void;
+  onOutlineChange: (outline: { color: string; width: number }, mergeKey?: string) => void;
 }
 
 /** Sliders with aria-valuetext carrying their unit (WCAG 2.2). */
@@ -94,22 +167,23 @@ export function LayerControls({
   const transform = (imageLayer ?? textLayer)!.transform;
   const layerId = (imageLayer ?? textLayer)!.id;
   const inches = printedInches(area, { w: transform.width, h: transform.height });
-  const [skewXDeg, setSkewXDeg] = useState(skewToDeg(transform.skewX));
-  const [skewYDeg, setSkewYDeg] = useState(skewToDeg(transform.skewY));
-  const [textDraft, setTextDraft] = useState(textLayer?.text ?? "");
+  // Skew readouts derive from the transform, so Undo / Reset skew / the canvas keep them in sync.
+  const skewXDeg = skewToDeg(transform.skewX);
+  const skewYDeg = skewToDeg(transform.skewY);
+  /** The text box's draft: may be empty while typing; only non-blank text is committed. */
+  const [textDraft, setTextDraft] = useState<{ layerId: string; text: string } | null>(null);
+  const textValue = textDraft?.layerId === layerId ? textDraft.text : (textLayer?.text ?? "");
+  const textBlank = textValue.trim() === "";
 
-  // Follow the selection (the skew readout + text draft reset per layer):
-  // the "adjust state during render" pattern from react.dev, no sync effect needed.
-  const [syncedLayerId, setSyncedLayerId] = useState(layerId);
-  if (syncedLayerId !== layerId) {
-    setSyncedLayerId(layerId);
-    setSkewXDeg(skewToDeg(transform.skewX));
-    setSkewYDeg(skewToDeg(transform.skewY));
-    setTextDraft(textLayer?.text ?? "");
-  }
-
+  const key = (control: string) => `${layerId}:${control}`;
   const setSkew = (axis: "skewX" | "skewY", deg: number) => {
-    onTransform({ ...transform, [axis]: degToSkew(deg) });
+    onTransform({ ...transform, [axis]: degToSkew(deg) }, key(axis));
+  };
+
+  /** Contain-fit into the print area, keeping the box's shape; rotation and skew reset. */
+  const fitToArea = () => {
+    const fitted = fitTransform(area.rect, transform.width, transform.height);
+    onTransform({ ...fitted, flipX: transform.flipX });
   };
 
   const setSizeInches = (axis: "w" | "h", inches: number) => {
@@ -125,10 +199,15 @@ export function LayerControls({
       if (axis === "w") height = width / ratio;
       else width = height * ratio;
     }
+    // Resize around the box's center so the layer doesn't jump.
+    const w = Math.min(5000, Math.max(1, width));
+    const h = Math.min(5000, Math.max(1, height));
     onTransform({
       ...transform,
-      width: Math.min(5000, Math.max(1, width)),
-      height: Math.min(5000, Math.max(1, height)),
+      x: transform.x + (transform.width - w) / 2,
+      y: transform.y + (transform.height - h) / 2,
+      width: w,
+      height: h,
     });
   };
 
@@ -142,20 +221,29 @@ export function LayerControls({
                 Text
               </label>
               <span className="text-text-3 text-xs" aria-live="polite">
-                {textLayer.text.length}/60
+                {textValue.length}/60
               </span>
             </div>
             <Input
               id="text-layer-input"
               type="text"
-              value={textDraft}
+              value={textValue}
               maxLength={60}
+              aria-invalid={textBlank || undefined}
+              aria-describedby={textBlank ? "text-layer-empty" : undefined}
               data-testid="text-layer-input"
               onChange={(e) => {
-                setTextDraft(e.target.value);
-                onTextChange({ text: e.target.value });
+                const text = e.target.value;
+                setTextDraft({ layerId, text });
+                if (text.trim() !== "") onTextChange({ text }, key("text"));
               }}
+              onBlur={() => setTextDraft(null)}
             />
+            {textBlank ? (
+              <p id="text-layer-empty" className="text-text-3 mt-1 text-xs">
+                Type something, or delete this text from the layers list.
+              </p>
+            ) : null}
           </div>
 
           <div className="flex items-center gap-2">
@@ -168,7 +256,7 @@ export function LayerControls({
               </SelectTrigger>
               <SelectContent>
                 {TEXT_FONTS.map((font) => (
-                  <SelectItem key={font.id} value={font.id} className={`font-[family-name:${font.family}]`}>
+                  <SelectItem key={font.id} value={font.id}>
                     <span style={{ fontFamily: `"${font.family}"`, fontWeight: font.weight }}>{font.label}</span>
                   </SelectItem>
                 ))}
@@ -184,21 +272,14 @@ export function LayerControls({
               id="text-layer-color"
               type="color"
               value={textLayer.color}
-              onChange={(e) => onTextChange({ color: e.target.value })}
+              onChange={(e) => onTextChange({ color: e.target.value }, key("color"))}
               className="h-9 w-12 cursor-pointer rounded-md border p-0.5"
               data-testid="text-layer-color"
             />
-            <Input
-              type="text"
-              spellCheck={false}
-              maxLength={7}
+            <HexInput
               value={textLayer.color}
-              aria-label="Ink color hex"
-              onChange={(e) => {
-                const value = e.target.value.trim();
-                if (/^#[0-9a-fA-F]{6}$/.test(value)) onTextChange({ color: value });
-              }}
-              className="h-9 w-24 font-mono text-xs"
+              label="Ink color hex"
+              onCommit={(color) => onTextChange({ color }, key("color"))}
             />
           </div>
 
@@ -225,30 +306,15 @@ export function LayerControls({
               type="color"
               value={textLayer.outline.color}
               aria-label="Outline color"
-              onChange={(e) => onOutlineChange({ color: e.target.value, width: Math.max(1, textLayer.outline.width) })}
+              onChange={(e) =>
+                onOutlineChange(
+                  { color: e.target.value, width: textLayer.outline.width || OUTLINE_WIDTHS[1]!.width },
+                  key("outline-color"),
+                )
+              }
               className="h-9 w-12 cursor-pointer rounded-md border p-0.5"
               data-testid="text-layer-outline-color"
             />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-text-2 w-14 shrink-0 text-xs">Align</span>
-            <div role="group" aria-label="Text alignment" className="flex gap-1">
-              {(["left", "center", "right"] as const).map((align) => (
-                <Button
-                  key={align}
-                  type="button"
-                  variant={textLayer.align === align ? "primary" : "secondary"}
-                  size="sm"
-                  className="h-9"
-                  aria-pressed={textLayer.align === align}
-                  aria-label={`Align ${align}`}
-                  onClick={() => onTextChange({ align })}
-                >
-                  {align === "left" ? "⯇" : align === "right" ? "⯈" : "≡"}
-                </Button>
-              ))}
-            </div>
           </div>
 
           <div className="flex items-center gap-2">
@@ -263,23 +329,12 @@ export function LayerControls({
               step={1}
               value={textLayer.letterSpacing}
               aria-valuetext={`${textLayer.letterSpacing} pixels`}
-              onChange={(e) => onTextChange({ letterSpacing: Number(e.target.value) })}
+              onChange={(e) => onTextChange({ letterSpacing: Number(e.target.value) }, key("spacing"))}
               className="w-full accent-[var(--neon-cyan)]"
               data-testid="text-layer-spacing"
             />
           </div>
         </>
-      ) : null}
-
-      {imageLayer ? (
-        <div className="border-border flex flex-col gap-1 border-t pt-3">
-          <p className="text-text-2 text-sm" data-testid="printed-size">
-            Printed size: about{" "}
-            <span className="text-neon-yellow font-mono">
-              {inches.w.toFixed(1)}″ × {inches.h.toFixed(1)}″
-            </span>
-          </p>
-        </div>
       ) : null}
 
       <div className="flex items-center gap-2">
@@ -301,30 +356,30 @@ export function LayerControls({
         <label htmlFor="layer-w" className="text-text-2 w-14 shrink-0 text-xs">
           Size
         </label>
-        <Input
+        <DraftNumberInput
           id="layer-w"
-          type="number"
           inputMode="decimal"
           min={0.25}
           step={0.25}
-          value={inches.w.toFixed(2)}
+          value={inches.w}
+          format={(v) => v.toFixed(2)}
           aria-label="Width in inches"
-          onChange={(e) => setSizeInches("w", Number(e.target.value))}
+          onCommit={(v) => setSizeInches("w", v)}
           className="h-9 w-full text-sm"
           data-testid="layer-w"
         />
         <span aria-hidden="true" className="text-text-3 text-xs">
           ×
         </span>
-        <Input
+        <DraftNumberInput
           id="layer-h"
-          type="number"
           inputMode="decimal"
           min={0.25}
           step={0.25}
-          value={inches.h.toFixed(2)}
+          value={inches.h}
+          format={(v) => v.toFixed(2)}
           aria-label="Height in inches"
-          onChange={(e) => setSizeInches("h", Number(e.target.value))}
+          onCommit={(v) => setSizeInches("h", v)}
           className="h-9 w-full text-sm"
           data-testid="layer-h"
         />
@@ -345,17 +400,17 @@ export function LayerControls({
           step={1}
           value={Math.round(transform.rotation)}
           aria-valuetext={`${Math.round(transform.rotation)} degrees`}
-          onChange={(e) => onTransform({ ...transform, rotation: Number(e.target.value) })}
+          onChange={(e) => onTransform({ ...transform, rotation: Number(e.target.value) }, key("rotate"))}
           className="w-full accent-[var(--neon-cyan)]"
           data-testid="layer-rotate"
         />
-        <Input
-          type="number"
+        <DraftNumberInput
           min={-180}
           max={180}
-          value={Math.round(transform.rotation)}
+          value={transform.rotation}
+          format={(v) => String(Math.round(v))}
           aria-label="Rotation in degrees"
-          onChange={(e) => onTransform({ ...transform, rotation: Number(e.target.value) })}
+          onCommit={(v) => onTransform({ ...transform, rotation: Math.max(-180, Math.min(180, v)) })}
           className="h-9 w-16 text-sm"
         />
         <span aria-hidden="true" className="text-text-3 text-xs">
@@ -364,24 +419,8 @@ export function LayerControls({
       </div>
 
       <div className="flex flex-col gap-1">
-        <SkewSlider
-          id="horizontal"
-          label="Skew ⇄"
-          deg={skewXDeg}
-          onDeg={(deg) => {
-            setSkewXDeg(deg);
-            setSkew("skewX", deg);
-          }}
-        />
-        <SkewSlider
-          id="vertical"
-          label="Skew ⇅"
-          deg={skewYDeg}
-          onDeg={(deg) => {
-            setSkewYDeg(deg);
-            setSkew("skewY", deg);
-          }}
-        />
+        <SkewSlider id="horizontal" label="Skew ⇄" deg={skewXDeg} onDeg={(deg) => setSkew("skewX", deg)} />
+        <SkewSlider id="vertical" label="Skew ⇅" deg={skewYDeg} onDeg={(deg) => setSkew("skewY", deg)} />
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -406,6 +445,9 @@ export function LayerControls({
           }
         >
           Center
+        </Button>
+        <Button type="button" variant="secondary" size="sm" onClick={fitToArea} data-testid="fit-area">
+          Fit to area
         </Button>
         <Button
           type="button"

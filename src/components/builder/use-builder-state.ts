@@ -112,6 +112,11 @@ export type BuilderState = {
   design: BuilderDesign;
   past: BuilderDesign[];
   future: BuilderDesign[];
+  /**
+   * The `mergeKey` of the last updateLayer, when it had one: consecutive updates with the
+   * same key (one slider drag, typing in one field) share a single undo step.
+   */
+  mergeKey?: string;
 };
 
 export type MoveDirection = "up" | "down" | "top" | "bottom";
@@ -142,7 +147,14 @@ export type BuilderAction =
   /** Adds a text layer on top of the given side (capped at MAX_LAYERS_PER_VIEW). */
   | { type: "addTextLayer"; view: ViewId; input: TextLayerInput }
   /** Partial update of one layer: text fields and/or the transform. */
-  | { type: "updateLayer"; view: ViewId; layerId: BuilderLayerId; patch: Partial<BuilderLayer> }
+  | {
+      type: "updateLayer";
+      view: ViewId;
+      layerId: BuilderLayerId;
+      patch: Partial<BuilderLayer>;
+      /** Consecutive updates with the same key collapse into one undo step (slider drags, typing). */
+      mergeKey?: string;
+    }
   | { type: "removeLayer"; view: ViewId; layerId: BuilderLayerId }
   /** Duplicates a layer, offset +12px, selecting the copy. */
   | { type: "duplicateLayer"; view: ViewId; layerId: BuilderLayerId }
@@ -195,6 +207,7 @@ export function initialDesign(garmentId: GarmentId): BuilderDesign {
 function withHistory(state: BuilderState, design: BuilderDesign): BuilderState {
   return {
     ...state,
+    mergeKey: undefined,
     design,
     past: [...state.past, state.design].slice(-HISTORY_LIMIT),
     future: [],
@@ -373,10 +386,12 @@ export function builderReducer(state: BuilderState, action: BuilderAction): Buil
       const layers = viewState.layers.map((l) =>
         l.id === action.layerId ? ({ ...layer, ...action.patch } as BuilderLayer) : l,
       );
-      return withHistory(state, {
-        ...state.design,
-        views: { ...state.design.views, [action.view]: { ...viewState, layers } },
-      });
+      const design = { ...state.design, views: { ...state.design.views, [action.view]: { ...viewState, layers } } };
+      if (action.mergeKey && action.mergeKey === state.mergeKey) {
+        // Same control still moving: replace the design, keep the undo step from its first move.
+        return { ...state, design, future: [] };
+      }
+      return { ...withHistory(state, design), mergeKey: action.mergeKey };
     }
 
     case "removeLayer": {
@@ -456,6 +471,7 @@ export function builderReducer(state: BuilderState, action: BuilderAction): Buil
       if (!prev) return state;
       return {
         ...state,
+        mergeKey: undefined,
         design: prev,
         past: state.past.slice(0, -1),
         future: [state.design, ...state.future].slice(0, HISTORY_LIMIT),
@@ -467,6 +483,7 @@ export function builderReducer(state: BuilderState, action: BuilderAction): Buil
       if (!next) return state;
       return {
         ...state,
+        mergeKey: undefined,
         design: next,
         past: [...state.past, state.design].slice(-HISTORY_LIMIT),
         future: state.future.slice(1),
@@ -715,13 +732,26 @@ export type RestoredDesign = {
  * Wire layers → builder layers: image layers map `artwork` back to the builder's file
  * index. A corrupt transform falls back to `fallback` (the area's fit transform).
  */
-function layersFromRestore(viewLayers: MockupLayer[], fallback: BuilderTransform): BuilderLayer[] {
+function layersFromRestore(
+  viewLayers: MockupLayer[],
+  fallback: BuilderTransform,
+  files: Pick<BuilderImageLayer, "name" | "kind" | "naturalWidth" | "naturalHeight">[],
+): BuilderLayer[] {
   return viewLayers.map((layer) => {
     const transform = artworkTransformSchema.safeParse(layer.transform).success
       ? (artworkTransformSchema.parse(layer.transform) as BuilderTransform)
       : fallback;
     return layer.type === "image"
-      ? ({ id: nextLayerId(), type: "image", fileIndex: layer.artwork, transform } as BuilderImageLayer)
+      ? ({
+          id: nextLayerId(),
+          type: "image",
+          fileIndex: layer.artwork,
+          name: files[layer.artwork]?.name ?? "your-design.png",
+          kind: files[layer.artwork]?.kind ?? "png",
+          naturalWidth: files[layer.artwork]?.naturalWidth ?? 0,
+          naturalHeight: files[layer.artwork]?.naturalHeight ?? 0,
+          transform,
+        } satisfies BuilderImageLayer)
       : ({
           id: nextLayerId(),
           type: "text",
@@ -742,7 +772,11 @@ function layersFromRestore(viewLayers: MockupLayer[], fallback: BuilderTransform
  * garment defaults, and corrupt transforms re-fit to the area. Image layers keep their
  * `artwork` index as `fileIndex` into the builder's restored files array.
  */
-export function designFromRestore(restored: RestoredDesign): BuilderDesign {
+export function designFromRestore(
+  restored: RestoredDesign,
+  /** The restored files (same order as the response's `artworks[]`): names + sizes for image layers. */
+  files: Pick<BuilderImageLayer, "name" | "kind" | "naturalWidth" | "naturalHeight">[] = [],
+): BuilderDesign {
   const garment = getGarment(restored.garment);
   const byView = new Map(restored.views.map((v) => [v.view, v]));
   const views: BuilderDesign["views"] = {};
@@ -753,7 +787,12 @@ export function designFromRestore(restored: RestoredDesign): BuilderDesign {
     const area = view.printAreas.find((a) => a.id === areaId)!;
     views[view.id] = {
       printArea: areaId,
-      layers: saved ? layersFromRestore(saved.layers, fitTransform(area.rect, 600, 300)) : [],
+      layers: saved
+        ? layersFromRestore(saved.layers, fitTransform(area.rect, 600, 300), files).filter(
+            // An image layer whose file didn't come back can't be drawn or re-sent: drop it.
+            (l) => l.type === "text" || files[l.fileIndex],
+          )
+        : [],
       selectedLayerId: null,
     };
   }

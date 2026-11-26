@@ -38,7 +38,7 @@ export interface DesignInspectorProps {
   onViewChange: (view: ViewId) => void;
   onSetPrintArea: (viewId: ViewId, areaId: string) => void;
   onSelectLayer: (layerId: string | null) => void;
-  onTransform: (layerId: string, transform: BuilderLayer["transform"]) => void;
+  onTransform: (layerId: string, transform: BuilderLayer["transform"], mergeKey?: string) => void;
   onTextChange: (
     layerId: string,
     patch: {
@@ -48,8 +48,9 @@ export interface DesignInspectorProps {
       align?: "left" | "center" | "right";
       letterSpacing?: number;
     },
+    mergeKey?: string,
   ) => void;
-  onOutlineChange: (layerId: string, outline: { color: string; width: number }) => void;
+  onOutlineChange: (layerId: string, outline: { color: string; width: number }, mergeKey?: string) => void;
   onRemoveLayer: (layerId: string) => void;
   onDuplicateLayer: (layerId: string) => void;
   onMoveLayer: (layerId: string, to: "up" | "down") => void;
@@ -198,9 +199,9 @@ export function DesignInspector({
             textLayer={selected.type === "text" ? selected : undefined}
             lockRatio={lockRatio}
             onLockRatioChange={onLockRatioChange}
-            onTransform={(transform) => onTransform(selected.id, transform)}
-            onTextChange={(patch) => onTextChange(selected.id, patch)}
-            onOutlineChange={(outline) => onOutlineChange(selected.id, outline)}
+            onTransform={(transform, mergeKey) => onTransform(selected.id, transform, mergeKey)}
+            onTextChange={(patch, mergeKey) => onTextChange(selected.id, patch, mergeKey)}
+            onOutlineChange={(outline, mergeKey) => onOutlineChange(selected.id, outline, mergeKey)}
           />
           {selected.type === "image" && selectedFileReady
             ? (() => {
@@ -217,7 +218,7 @@ export function DesignInspector({
                     — 150 DPI or more prints crisp. A larger image will look better.
                   </p>
                 ) : (
-                  <p className="text-text-3 text-xs">
+                  <p className="text-text-3 text-xs" data-testid="printed-size">
                     Printed size: about{" "}
                     <span className="text-neon-yellow font-mono">
                       {printed.w.toFixed(1)}″ × {printed.h.toFixed(1)}″
