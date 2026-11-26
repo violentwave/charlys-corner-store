@@ -6,6 +6,7 @@ import { currentUser } from "@/lib/auth/session";
 import { getDb, schema } from "@/lib/db";
 import type { GarmentId } from "@/lib/garments";
 import { mockupSummary } from "@/lib/mockup-summary";
+import { mockupFilesExpired } from "@/lib/retention";
 import { getStorage } from "@/lib/storage";
 
 export type AccountMockup = {
@@ -17,6 +18,8 @@ export type AccountMockup = {
   colors: { label: string; name: string; hex: string }[];
   sizes: string[];
   views: { view: string; area: string; imageUrl: string | null }[];
+  /** Emailed mockups' files are deleted after a few days (src/lib/retention.ts). */
+  filesExpired: boolean;
   /** Reopen in the builder: /design?mockup=<id> */
   restorePath: string;
 };
@@ -55,9 +58,12 @@ export async function GET() {
           m.views.map(async (v, i) => ({
             view: viewRows[i]!.view,
             area: viewRows[i]!.area,
-            imageUrl: await storage.signedUrl(v.mockupKey, 60 * 60).catch(() => null),
+            imageUrl: mockupFilesExpired(m.kind, m.createdAt)
+              ? null
+              : await storage.signedUrl(v.mockupKey, 60 * 60).catch(() => null),
           })),
         ),
+        filesExpired: mockupFilesExpired(m.kind, m.createdAt),
         restorePath: `/design?mockup=${m.id}`,
       };
     }),

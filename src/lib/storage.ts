@@ -99,7 +99,11 @@ export function getStorage(): StorageDriver {
 }
 
 /** uploads/2026/11/<uuid>-<safe-name> — unguessable, never trusts the client's file name for paths. */
-export function buildObjectKey(prefix: "uploads" | "quotes" | "mockups", fileName: string, now = new Date()): string {
+export function buildObjectKey(
+  prefix: "uploads" | "quotes" | "mockups" | "orders",
+  fileName: string,
+  now = new Date(),
+): string {
   const safe =
     fileName
       .normalize("NFKD")

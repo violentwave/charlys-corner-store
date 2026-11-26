@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import type { AccountMockup } from "@/app/api/account/mockups/route";
+import { MOCKUP_FILES_RETENTION_DAYS } from "@/lib/retention";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -44,7 +45,9 @@ function DesignCard({ item }: { item: AccountMockup }) {
                   aria-hidden="true"
                   className="text-text-3 flex aspect-square w-full items-center justify-center rounded-md text-xs"
                 >
-                  Preview unavailable
+                  {item.filesExpired
+                    ? `Images deleted after ${MOCKUP_FILES_RETENTION_DAYS} days`
+                    : "Preview unavailable"}
                 </div>
               )}
             </div>

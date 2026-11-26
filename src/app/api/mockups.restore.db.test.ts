@@ -7,11 +7,12 @@
 import { readFileSync } from "node:fs";
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { eq } from "drizzle-orm";
 
 import { createSession } from "@/lib/auth/session";
 import { hashPassword } from "@/lib/auth/password";
 import { schema, type Db } from "@/lib/db";
-import { _memoryClear } from "@/lib/storage";
+import { _memoryClear, _memoryKeys } from "@/lib/storage";
 import { upsertLead } from "@/lib/leads";
 import { hasTestDb, setupTestDb } from "@/test/db";
 import { GET as getRestore } from "@/app/api/mockups/[id]/route";
@@ -108,7 +109,7 @@ describe.skipIf(!hasTestDb)("GET /api/mockups/[id] (real Postgres)", () => {
     };
 
     // Exact key set: nothing extra (mockupKey, mockupId, lead/coupon fields, …).
-    expect(Object.keys(json).sort()).toEqual(["artwork", "artworks", "design", "ok"]);
+    expect(Object.keys(json).sort()).toEqual(["artwork", "artworks", "design", "filesExpired", "ok"]);
     expect(Object.keys(json.design as object).sort()).toEqual(["colors", "garment", "sizes", "views"]);
     expect(Object.keys(json.artwork as object)).toEqual(["url"]);
     const views = json.design.views as Record<string, unknown>[];
@@ -152,6 +153,40 @@ describe.skipIf(!hasTestDb)("GET /api/mockups/[id] (real Postgres)", () => {
     ]) {
       expect(body).not.toContain(pii);
     }
+  });
+
+  it("after the retention window an emailed mockup comes back without its images", async () => {
+    await testDb
+      .update(schema.mockups)
+      .set({ createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000) })
+      .where(eq(schema.mockups.id, mockupId));
+    const res = await getRestore(new Request(`http://test/api/mockups/${mockupId}`), {
+      params: Promise.resolve({ id: mockupId }),
+    });
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as { filesExpired: boolean; artworks: unknown[]; design: { garment: string } };
+    expect(json.filesExpired).toBe(true);
+    expect(json.artworks).toEqual([]);
+    expect(json.design.garment).toBe("tshirt");
+  });
+
+  it("order requests keep their files: stored under orders/, never expire", async () => {
+    await reset();
+    _memoryClear();
+    await signIn("charly@example.com", "Charly Customer");
+    const res = await postMockup({ intent: "order", sizes: { M: 2 } });
+    const { mockupId: orderId } = (await res.json()) as { mockupId: string };
+    expect(_memoryKeys().every((k) => k.startsWith("orders/"))).toBe(true);
+    await testDb
+      .update(schema.mockups)
+      .set({ createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) })
+      .where(eq(schema.mockups.id, orderId));
+    const restore = await getRestore(new Request(`http://test/api/mockups/${orderId}`), {
+      params: Promise.resolve({ id: orderId }),
+    });
+    const json = (await restore.json()) as { filesExpired: boolean; artworks: unknown[] };
+    expect(json.filesExpired).toBe(false);
+    expect(json.artworks).toHaveLength(1);
   });
 
   it("400 for a non-UUID id", async () => {

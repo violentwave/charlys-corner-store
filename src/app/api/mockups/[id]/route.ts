@@ -6,6 +6,7 @@ import { z } from "zod";
 import { getDb, schema } from "@/lib/db";
 import { GARMENT_IDS, type GarmentId } from "@/lib/garments";
 import { mockupViewSchema } from "@/lib/mockup-schema";
+import { mockupFilesExpired } from "@/lib/retention";
 import { clientIp, LIMITS, rateLimit } from "@/lib/rate-limit";
 import { getStorage } from "@/lib/storage";
 
@@ -37,6 +38,8 @@ export async function GET(_request: Request, ctx: { params: Promise<{ id: string
       sizes: schema.mockups.sizes,
       artworkKey: schema.mockups.artworkKey,
       artworks: schema.mockups.artworks,
+      kind: schema.mockups.kind,
+      createdAt: schema.mockups.createdAt,
     })
     .from(schema.mockups)
     .where(eq(schema.mockups.id, id));
@@ -51,8 +54,16 @@ export async function GET(_request: Request, ctx: { params: Promise<{ id: string
   if (!garment.success || views.length === 0) return fail("We couldn't load that design.", 404);
 
   // Rows from before per-view files have only artwork_key (= artwork 0).
-  // Text-only designs have no files at all.
-  const keys = row.artworks.length > 0 ? row.artworks.map((a) => a.key) : row.artworkKey ? [row.artworkKey] : [];
+  // Text-only designs have no files at all. Emailed mockups' files are deleted after a few days
+  // (src/lib/retention.ts): then the design comes back without its images.
+  const filesExpired = mockupFilesExpired(row.kind, row.createdAt);
+  const keys = filesExpired
+    ? []
+    : row.artworks.length > 0
+      ? row.artworks.map((a) => a.key)
+      : row.artworkKey
+        ? [row.artworkKey]
+        : [];
   const storage = getStorage();
   const urls = await Promise.all(keys.map((key) => storage.signedUrl(key, 60 * 60).catch(() => null)));
   if (urls.some((u) => !u)) return fail("We couldn't reach that design's artwork. Please try again.", 502);
@@ -69,5 +80,7 @@ export async function GET(_request: Request, ctx: { params: Promise<{ id: string
     // Image layers' `artwork` indexes `artworks` (empty for text-only); `artwork` (= artworks[0]) stays for older clients.
     artworks,
     artwork: artworks[0],
+    /** True when the uploaded images were deleted (retention): image layers can't come back. */
+    filesExpired,
   });
 }
