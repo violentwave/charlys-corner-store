@@ -209,7 +209,15 @@ const elbowCreases = (y) => [
  * Set-in sleeve (tee / hoodie / performance long sleeve): rounded shoulder cap, the
  * armhole seam hugging the cap edge, underarm seam down the inner (left) edge.
  */
-function setInSleeveView({ zone, cuffTop, cuffBottom, gather = false, extraCuff = [], extraShade = [], highlight = [] }) {
+function setInSleeveView({
+  zone,
+  cuffTop,
+  cuffBottom,
+  gather = false,
+  extraCuff = [],
+  extraShade = [],
+  highlight = [],
+}) {
   const cuffInSilhouette = cuffBottom > 966;
   const hem = gather ? 1150 : 1140;
   const silhouette = [
@@ -229,7 +237,11 @@ function setInSleeveView({ zone, cuffTop, cuffBottom, gather = false, extraCuff 
     // armhole seam just inside the cap edge, plus the seam's soft shadow on the cap
     { kind: "seam", d: "M 296 244 C 322 174 416 116 500 114", o: 0.34 },
     { kind: "seam", d: "M 704 244 C 678 174 584 116 500 114", o: 0.34 },
-    { kind: "tone", d: "M 296 246 C 340 190 430 150 500 148 C 570 150 660 190 704 246 C 640 214 360 214 296 246 Z", o: 0.16 },
+    {
+      kind: "tone",
+      d: "M 296 246 C 340 190 430 150 500 148 C 570 150 660 190 704 246 C 640 214 360 214 296 246 Z",
+      o: 0.16,
+    },
     { kind: "fold", d: "M 420 190 C 446 206 472 218 500 224", o: 0.08, w: 14 },
   ];
   const underarmShade = [
