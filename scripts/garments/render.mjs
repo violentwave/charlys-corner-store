@@ -18,6 +18,8 @@ ${Object.entries(BLURS)
 <pattern id="rib-v" width="7" height="7" patternUnits="userSpaceOnUse"><rect width="2.2" height="7" fill="#000"/></pattern>
 <pattern id="rib-h" width="7" height="7" patternUnits="userSpaceOnUse"><rect width="7" height="2.2" fill="#000"/></pattern>
 <pattern id="mesh" width="14" height="12" patternUnits="userSpaceOnUse"><path d="M0 6 L3.5 0 H10.5 L14 6 L10.5 12 H3.5 Z" fill="none" stroke="#000" stroke-width="2.2"/></pattern>
+<filter id="knit" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.9 0.45" numOctaves="2" seed="7" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.4 1.05"/></filter>
+<filter id="heather" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="3" seed="3" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.2 0.75"/></filter>
 <pattern id="twill" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><rect width="1.4" height="9" fill="#000"/></pattern>
 </defs>
 ${body}
@@ -63,6 +65,12 @@ export function shadingSvg(view) {
   const body = `<g clip-path="url(#sil)">
 <rect width="${W}" height="${H}" fill="#fff"/>
 <path d="${silhouette}" fill="none" stroke="#000" stroke-opacity="${view.edgeOpacity ?? 0.17}" stroke-width="${view.edgeWidth ?? 70}" filter="url(#b-edge)"/>
+${
+  view.texture === false
+    ? ""
+    : `<rect width="${W}" height="${H}" filter="url(#knit)" opacity="${view.texture?.knit ?? 0.08}"/>
+<rect width="${W}" height="${H}" filter="url(#heather)" opacity="${view.texture?.drape ?? 0.03}"/>`
+}
 ${shade.map(shadeElement).join("\n")}
 </g>
 <path d="${silhouette}" fill="none" stroke="#000" stroke-opacity="0.5" stroke-width="2.6" stroke-linejoin="round"/>`;
