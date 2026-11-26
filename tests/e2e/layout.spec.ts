@@ -1,17 +1,15 @@
 import { expect, test } from "@playwright/test";
 
-test("desktop nav is visible", async ({ page }) => {
+test("desktop nav is visible and has no Home link (the logo covers it)", async ({ page }) => {
   test.skip((page.viewportSize()?.width ?? 0) < 1024, "desktop only");
   await page.goto("/");
   const nav = page.getByRole("navigation", { name: /primary/i });
   await expect(nav).toBeVisible();
-  await expect(nav.getByRole("link", { name: "Home" })).toBeVisible();
+  await expect(nav.getByRole("link", { name: "Home" })).toHaveCount(0);
   await expect(nav.getByRole("link", { name: "Contact" })).toBeVisible();
 });
 
-test("mobile drawer opens and closes via button and Esc", async ({ page }) => {
-  test.skip((page.viewportSize()?.width ?? 0) >= 1024, "mobile only");
-  await page.setViewportSize({ width: 360, height: 780 });
+test("the site menu opens and closes via button and Esc at every size", async ({ page }) => {
   await page.goto("/");
   const button = page.getByRole("button", { name: /open menu/i });
   await expect(button).toBeVisible();
@@ -29,18 +27,22 @@ test("footer mailto is correct", async ({ page }) => {
   await expect(mailto).toHaveAttribute("href", "mailto:CHARLYSCORNERSTORE@GMAIL.COM");
 });
 
-test("closed mobile drawer is not keyboard-reachable", async ({ page }) => {
-  test.skip((page.viewportSize()?.width ?? 0) >= 1024, "mobile/tablet only");
-  await page.setViewportSize({ width: 360, height: 780 });
+test("footer tagline appears exactly once", async ({ page }) => {
+  await page.goto("/");
+  const footer = page.getByRole("contentinfo");
+  await expect(footer.getByText(/Have a Ruffin awesome day/i)).toHaveCount(1);
+});
+
+test("closed site menu is not keyboard-reachable", async ({ page }) => {
   await page.goto("/");
   for (let i = 0; i < 12; i++) {
     await page.keyboard.press("Tab");
-    const inDrawer = await page.evaluate(() => !!document.activeElement?.closest("#mobile-nav-drawer"));
-    expect(inDrawer, `tab stop ${i + 1} landed inside the closed drawer`).toBe(false);
+    const inMenu = await page.evaluate(() => !!document.activeElement?.closest("#site-menu"));
+    expect(inMenu, `tab stop ${i + 1} landed inside the closed menu`).toBe(false);
   }
 });
 
-test("tablet width uses the hamburger and has no horizontal scroll", async ({ page }) => {
+test("narrow viewport uses the hamburger and has no horizontal scroll", async ({ page }) => {
   await page.setViewportSize({ width: 900, height: 800 });
   await page.goto("/");
   await expect(page.getByRole("button", { name: /open menu/i })).toBeVisible();

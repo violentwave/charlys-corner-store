@@ -39,17 +39,19 @@ test("a nav tab on Home scrolls to its section without leaving /", async ({ page
   await expect(primaryNav(page).getByRole("link", { name: "Contact" })).toHaveAttribute("aria-current", "location");
 });
 
-test('"Home" scrolls back to the top and clears the hash', async ({ page }) => {
-  test.skip((page.viewportSize()?.width ?? 0) < 1024, "desktop nav only — the drawer has its own test");
+test('"Home" (in the menu) clears the hash and lands back at the top', async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("garment-picker")).toBeVisible({ timeout: 30_000 });
-  await primaryNav(page).getByRole("link", { name: "Contact" }).click();
+  const menu = page.getByRole("dialog", { name: /site navigation/i });
+  await page.getByRole("button", { name: /open menu/i }).click();
+  await menu.getByRole("link", { name: "Contact" }).click();
   await expect(page.locator("#contact")).toBeInViewport();
 
-  await primaryNav(page).getByRole("link", { name: "Home" }).click();
-  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeLessThan(200);
+  await page.getByRole("button", { name: /open menu/i }).click();
+  await menu.getByRole("link", { name: "Home" }).click();
+  await expect(menu).toBeHidden();
   expect(new URL(page.url()).hash).toBe("");
-  await expect(primaryNav(page).getByRole("link", { name: "Home" })).toHaveAttribute("aria-current", "location");
+  await expect(page.locator("#design [data-section-heading]")).toBeFocused();
 });
 
 test("from another page, the tabs navigate normally (no fake scrolling)", async ({ page }) => {

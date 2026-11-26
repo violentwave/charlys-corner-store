@@ -18,6 +18,9 @@ test("business gallery images have alt text", async ({ page }) => {
 });
 
 test("quote submit shows errors then notice", async ({ page }) => {
+  // A fresh per-test IP keeps the shared quote rate limit (5/hour) from tripping when the
+  // suite runs repeatedly or in parallel (same pattern as accounts.spec).
+  await page.setExtraHTTPHeaders({ "x-forwarded-for": `203.0.113.${1 + Math.floor(Math.random() * 254)}` });
   await page.goto("/business");
   await page.getByRole("button", { name: /request quote/i }).click();
   await expect(page.getByText("Please enter your name")).toBeVisible();
