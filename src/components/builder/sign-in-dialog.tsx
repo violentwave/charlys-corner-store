@@ -10,18 +10,20 @@ import { useState } from "react";
 
 import { LoginForm } from "@/components/forms/login-form";
 import { SignupForm } from "@/components/forms/signup-form";
+import { TwoFactorForm } from "@/components/forms/two-factor-form";
 import { VerifyForm } from "@/components/forms/verify-form";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import type { AccountUser } from "@/lib/auth-schema";
+import type { AccountUser, TwoFactorPending } from "@/lib/auth-schema";
 
 export type SignInDialogMode = "signedOut" | "unverified" | null;
 
-type Step = "signup" | "login" | "verify" | "done";
+type Step = "signup" | "login" | "twofactor" | "verify" | "done";
 
 const TITLES: Record<Step, string> = {
   signup: "Create a free account",
   login: "Welcome back",
+  twofactor: "One more step",
   verify: "Check your email",
   done: "You're in!",
 };
@@ -29,6 +31,7 @@ const TITLES: Record<Step, string> = {
 const BLURBS: Record<Step, string> = {
   signup: "One quick account saves your designs and unlocks your mockup + 15% off your 2nd order.",
   login: "Log in to add your design. Your garment and colors are still right here.",
+  twofactor: "Your account has two-step sign-in on — enter the code that proves it's you.",
   verify: "Enter the 6-digit code we just emailed you. This only happens once.",
   done: "Your account is ready. Let's put your design on it.",
 };
@@ -59,6 +62,7 @@ export function SignInDialog(props: SignInDialogProps) {
 function SignInDialogBody({ mode, email: initialEmail, onAccount, onContinue }: SignInDialogProps) {
   const [step, setStep] = useState<Step>(mode === "unverified" ? "verify" : "signup");
   const [email, setEmail] = useState<string>(initialEmail ?? "");
+  const [challenge, setChallenge] = useState<TwoFactorPending | null>(null);
 
   const signedIn = (user: AccountUser) => {
     setEmail(user.email);
@@ -106,8 +110,26 @@ function SignInDialogBody({ mode, email: initialEmail, onAccount, onContinue }: 
         {BLURBS[step]}
       </DialogDescription>
 
-      {step === "signup" ? <SignupForm next="/" onDone={signedIn} onSwitchToLogin={() => setStep("login")} /> : null}
-      {step === "login" ? <LoginForm next="/" onDone={signedIn} onSwitchToSignup={() => setStep("signup")} /> : null}
+      {step === "signup" ? (
+        <SignupForm next="/" googleNext="/#design" onDone={signedIn} onSwitchToLogin={() => setStep("login")} />
+      ) : null}
+      {step === "login" ? (
+        <LoginForm
+          next="/"
+          googleNext="/#design"
+          onDone={signedIn}
+          onSwitchToSignup={() => setStep("signup")}
+          onTwoFactor={(pending) => {
+            setChallenge(pending);
+            setStep("twofactor");
+          }}
+        />
+      ) : null}
+      {step === "twofactor" && challenge ? (
+        <div data-testid="dialog-twofactor">
+          <TwoFactorForm challenge={challenge} next="/#design" onDone={signedIn} onBack={() => setStep("login")} />
+        </div>
+      ) : null}
       {step === "verify" ? <VerifyForm next="/" email={email} onDone={verified} /> : null}
       {step === "done" ? (
         <Button onClick={onContinue} data-testid="dialog-add-design" className="self-start">

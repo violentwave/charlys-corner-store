@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import { ForgotPasswordForm } from "@/components/forms/forgot-password-form";
 import { PageHeader } from "@/components/sections/page-header";
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function ForgotPasswordPage() {
+export default async function ForgotPasswordPage(props: PageProps<"/forgot-password">) {
   return (
     <Section>
       <div className="mx-auto w-full max-w-md">
@@ -19,9 +20,23 @@ export default function ForgotPasswordPage() {
           description="Happens to the best of us. We'll email you a link to set a new one."
         />
         <div className="mt-8">
-          <ForgotPasswordForm />
+          <Suspense
+            fallback={
+              <p role="status" className="text-text-2 animate-pulse text-sm">
+                Loading…
+              </p>
+            }
+          >
+            <ForgotGate searchParams={props.searchParams} />
+          </Suspense>
         </div>
       </div>
     </Section>
   );
+}
+
+/** ?email= prefills the field (the Security tab's "Set a password" links here). */
+async function ForgotGate({ searchParams }: { searchParams: PageProps<"/forgot-password">["searchParams"] }) {
+  const { email } = await searchParams;
+  return <ForgotPasswordForm defaultEmail={typeof email === "string" ? email : undefined} />;
 }

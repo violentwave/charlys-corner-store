@@ -1,5 +1,11 @@
 "use client";
-
+/**
+ * "My designs" (docs/02 Members v2): saved mockups and order requests. Emailed mockups'
+ * files are deleted after MOCKUP_FILES_RETENTION_DAYS (an R2 lifecycle rule) — each card
+ * shows the deletion date, a low-time warning, and Save links while the files exist.
+ * Deleting a mockup removes it for good; an order request is only hidden here (the shop
+ * keeps it).
+ */
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -8,6 +14,7 @@ import { MOCKUP_FILES_RETENTION_DAYS } from "@/lib/retention";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 /** Friendly labels for the request_status enum (db/schema.ts). */
@@ -23,10 +30,38 @@ const STATUS_LABELS: Record<string, { label: string; variant: "neutral" | "cyan"
 const dateLabel = (iso: string) =>
   new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(iso));
 
-function DesignCard({ item }: { item: AccountMockup }) {
+const daysLeft = (iso: string) => Math.ceil((new Date(iso).getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+
+function DesignCard({ item, onRemoved }: { item: AccountMockup; onRemoved: (item: AccountMockup) => void }) {
   const status = STATUS_LABELS[item.status];
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const isMockup = item.kind === "mockup";
+  const daysRemaining = item.filesExpireAt ? daysLeft(item.filesExpireAt) : null;
+
+  const remove = async () => {
+    setDeleting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/account/mockups/${item.id}`, { method: "DELETE" });
+      const data = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+      if (res.ok && data?.ok) {
+        setConfirmOpen(false);
+        onRemoved(item);
+        return;
+      }
+      setError(data?.error ?? "Something went wrong. Please try again.");
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
-    <Card className="flex flex-col gap-4">
+    <Card className="flex flex-col gap-4" data-testid="design-card">
       {item.views.length > 0 ? (
         <div className="bg-bg-3 border-border grid grid-cols-2 gap-2 overflow-hidden rounded-lg border p-2">
           {item.views.map((view) => (
@@ -50,6 +85,17 @@ function DesignCard({ item }: { item: AccountMockup }) {
                     : "Preview unavailable"}
                 </div>
               )}
+              {/* Save while the file exists (a plain anchor download — no JS). */}
+              {view.downloadUrl ? (
+                <a
+                  href={view.downloadUrl}
+                  download
+                  data-testid={`save-${view.view.toLowerCase().replace(/\s+/g, "-")}`}
+                  className="border-neon-cyan text-neon-cyan focus-visible:ring-neon-cyan focus-visible:ring-offset-bg-0 hover:bg-bg-3 flex h-9 items-center justify-center rounded-md border text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                >
+                  Save {view.view.toLowerCase()} image
+                </a>
+              ) : null}
             </div>
           ))}
         </div>
@@ -78,14 +124,90 @@ function DesignCard({ item }: { item: AccountMockup }) {
             <span className="text-text-3">Saved:</span>{" "}
             <time dateTime={item.createdAt}>{dateLabel(item.createdAt)}</time>
           </li>
+          {isMockup ? (
+            <li data-testid="retention-status">
+              {item.filesExpired || !item.filesExpireAt ? (
+                <span className="text-text-3">Images deleted</span>
+              ) : (
+                <>
+                  <span className="text-text-3">
+                    Images deleted on <time dateTime={item.filesExpireAt}>{dateLabel(item.filesExpireAt)}</time>
+                  </span>
+                  {daysRemaining !== null && daysRemaining <= 7 ? (
+                    <Badge variant="yellow" className="ml-2" data-testid="expiry-warning">
+                      <span aria-hidden="true">⚠</span>{" "}
+                      {daysRemaining <= 0 ? "Deleting soon" : `${daysRemaining} days left`}
+                    </Badge>
+                  ) : null}
+                </>
+              )}
+            </li>
+          ) : (
+            <li className="text-text-3" data-testid="kept-by-shop">
+              Kept by the shop
+            </li>
+          )}
         </ul>
       </div>
 
-      <div className="mt-auto">
+      <div className="mt-auto flex flex-wrap items-center gap-2">
         <Button asChild variant="secondary" size="sm">
           <Link href={item.restorePath}>Open in builder</Link>
         </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className={isMockup ? "text-danger" : undefined}
+          onClick={() => {
+            setError(null);
+            setConfirmOpen(true);
+          }}
+          data-testid={isMockup ? "delete-design" : "hide-design"}
+        >
+          {isMockup ? "Delete" : "Remove"}
+        </Button>
       </div>
+
+      <Dialog open={confirmOpen} onOpenChange={(next) => !next && setConfirmOpen(false)}>
+        {confirmOpen ? (
+          <DialogContent aria-describedby="remove-design-body">
+            <DialogTitle className="font-heading text-text-1 pr-6 text-lg tracking-wide uppercase">
+              {isMockup ? "Delete this mockup?" : "Remove this order from your list?"}
+            </DialogTitle>
+            <DialogDescription id="remove-design-body" className="text-text-2 text-sm">
+              {isMockup
+                ? "The images and design are deleted for good. Save them first if you want them."
+                : "The shop still has your order; this only hides it here."}
+            </DialogDescription>
+            {error ? (
+              <p role="alert" className="text-danger text-sm">
+                {error}
+              </p>
+            ) : null}
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                onClick={() => void remove()}
+                loading={deleting}
+                data-testid="confirm-remove"
+                className="bg-danger text-text-1 shadow-none hover:shadow-none"
+              >
+                {isMockup ? "Delete" : "Remove"}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setConfirmOpen(false)}
+                data-testid="cancel-remove"
+              >
+                Cancel
+              </Button>
+            </div>
+          </DialogContent>
+        ) : null}
+      </Dialog>
     </Card>
   );
 }
@@ -120,6 +242,7 @@ function EmptyState({ kind }: { kind: "mockup" | "order" }) {
 export function MyDesigns() {
   const [items, setItems] = useState<AccountMockup[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [announcement, setAnnouncement] = useState<string | null>(null);
   // Bumped by "Try again"; the effect re-reads whenever it changes.
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -154,6 +277,14 @@ export function MyDesigns() {
     setReloadKey((k) => k + 1);
   };
 
+  /** Remove one card after a successful delete/hide, and say so politely. */
+  const onRemoved = (item: AccountMockup) => {
+    setItems((prev) => (prev ? prev.filter((it) => it.id !== item.id) : prev));
+    setAnnouncement(
+      item.kind === "mockup" ? "Mockup deleted." : "Order request removed from your list. The shop still has it.",
+    );
+  };
+
   if (error) {
     return (
       <div role="alert" className="flex flex-col items-start gap-4">
@@ -177,35 +308,49 @@ export function MyDesigns() {
   const orders = items.filter((item) => item.kind === "order");
 
   return (
-    <Tabs defaultValue="mockups">
-      <TabsList aria-label="Your designs">
-        <TabsTrigger value="mockups">Saved mockups ({mockups.length})</TabsTrigger>
-        <TabsTrigger value="orders">Order requests ({orders.length})</TabsTrigger>
-      </TabsList>
+    <div className="flex flex-col gap-4">
+      <p
+        role="note"
+        className="border-border bg-bg-2/60 text-text-2 rounded-xl border p-3 text-sm"
+        data-testid="retention-banner"
+      >
+        Emailed mockups are kept for {MOCKUP_FILES_RETENTION_DAYS} days, then the images are deleted. Save the ones you
+        want to keep.
+      </p>
+      <p role="status" aria-live="polite" className="sr-only">
+        {announcement}
+      </p>
 
-      <TabsContent value="mockups">
-        {mockups.length === 0 ? (
-          <EmptyState kind="mockup" />
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {mockups.map((item) => (
-              <DesignCard key={item.id} item={item} />
-            ))}
-          </div>
-        )}
-      </TabsContent>
+      <Tabs defaultValue="mockups">
+        <TabsList aria-label="Your designs">
+          <TabsTrigger value="mockups">Saved mockups ({mockups.length})</TabsTrigger>
+          <TabsTrigger value="orders">Order requests ({orders.length})</TabsTrigger>
+        </TabsList>
 
-      <TabsContent value="orders">
-        {orders.length === 0 ? (
-          <EmptyState kind="order" />
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {orders.map((item) => (
-              <DesignCard key={item.id} item={item} />
-            ))}
-          </div>
-        )}
-      </TabsContent>
-    </Tabs>
+        <TabsContent value="mockups">
+          {mockups.length === 0 ? (
+            <EmptyState kind="mockup" />
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {mockups.map((item) => (
+                <DesignCard key={item.id} item={item} onRemoved={onRemoved} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="orders">
+          {orders.length === 0 ? (
+            <EmptyState kind="order" />
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {orders.map((item) => (
+                <DesignCard key={item.id} item={item} onRemoved={onRemoved} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }

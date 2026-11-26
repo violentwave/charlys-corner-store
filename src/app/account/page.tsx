@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
+import { AccountTabs } from "@/components/account/account-tabs";
 import { LogoutButton } from "@/components/forms/logout-button";
-import { MyDesigns } from "@/components/account/my-designs";
 import { currentUser } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { PageHeader } from "@/components/sections/page-header";
@@ -42,14 +42,14 @@ async function AccountGate() {
     <>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <PageHeader
-          eyebrow="My designs"
+          eyebrow="My account"
           title={user.name ? `Hey, ${user.name}` : "Your designs"}
-          description="Everything you've saved in the builder and every order request, in one spot."
+          description="Everything you've saved in the builder, every order request, and your sign-in settings."
         />
         <LogoutButton />
       </div>
       <div className="mt-8">
-        <MyDesigns />
+        <AccountTabs email={user.email} />
       </div>
     </>
   );

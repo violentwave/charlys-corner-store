@@ -7,10 +7,11 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
-import { PASSWORD_MIN, resetPasswordSchema } from "@/lib/auth-schema";
+import { PASSWORD_MIN, resetPasswordSchema, type TwoFactorPending } from "@/lib/auth-schema";
 import { Button } from "@/components/ui/button";
 import { Field, fieldControlProps } from "@/components/ui/field";
 import { FormStatus } from "./form-status";
+import { TwoFactorForm } from "./two-factor-form";
 import { Input } from "@/components/ui/input";
 import { mapFieldErrors, NETWORK_ERROR, postJson } from "./auth-post";
 
@@ -29,6 +30,8 @@ export function ResetPasswordForm({ token }: { token: string }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  // 2FA on: the reset link proved the first factor, the code is the second.
+  const [challenge, setChallenge] = useState<TwoFactorPending | null>(null);
 
   const {
     register,
@@ -44,6 +47,10 @@ export function ResetPasswordForm({ token }: { token: string }) {
     setError(null);
     const { data: res } = await postJson("/api/auth/reset", { token, password: data.password });
     if (res?.ok) {
+      if (res.twoFactor) {
+        setChallenge(res.twoFactor as TwoFactorPending);
+        return;
+      }
       router.refresh();
       router.replace("/account");
       return;
@@ -52,6 +59,10 @@ export function ResetPasswordForm({ token }: { token: string }) {
     // A rejected token ("not valid" / "expired") has no rendered field — surface it in the alert.
     setError(res && !res.ok ? (fieldErrors.token ?? res.error) : NETWORK_ERROR);
   };
+
+  if (challenge) {
+    return <TwoFactorForm challenge={challenge} next="/account" />;
+  }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
