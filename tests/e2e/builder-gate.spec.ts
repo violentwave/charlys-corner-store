@@ -64,11 +64,10 @@ test("signed-out upload opens the sign-in dialog, from the step and the canvas",
   await page.getByTestId("upload-artwork").click();
   const dialog = page.getByTestId("sign-in-dialog");
   await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText(/Create a free account to add your design/i);
+  await expect(dialog).toContainText(/Create a free account/i);
   await expect(dialog).toContainText(/15% off your 2nd order/i);
-  const next = encodeURIComponent("/design");
-  await expect(dialog.getByTestId("dialog-signup")).toHaveAttribute("href", `/signup?next=${next}`);
-  await expect(dialog.getByTestId("dialog-login")).toHaveAttribute("href", `/login?next=${next}`);
+  await expect(dialog.getByRole("tab", { name: "New here" })).toHaveAttribute("aria-selected", "true");
+  await expect(dialog.getByRole("tab", { name: "I have an account" })).toBeVisible();
   await page.getByLabel("Close dialog").click();
   await expect(dialog).toHaveCount(0);
 
@@ -85,6 +84,35 @@ test("signed-out upload opens the sign-in dialog, from the step and the canvas",
     document.querySelector("[data-testid='artwork-controls']")!.dispatchEvent(drop);
   });
   await expect(page.getByTestId("sign-in-dialog")).toBeVisible();
+});
+
+test("sign up, verify and upload without ever leaving the builder", async ({ page }) => {
+  const email = `builder-inline-${Date.now()}-${test.info().workerIndex}@example.com`;
+  await freshIp(page);
+  await openBuilder(page);
+  await page.getByRole("button", { name: "Step 3: Design" }).click();
+  await page.getByTestId("upload-artwork").click();
+
+  const dialog = page.getByTestId("sign-in-dialog");
+  await dialog.getByLabel("Email").fill(email);
+  await dialog.getByRole("textbox", { name: "Password" }).fill(FIXTURE_PW);
+  await expect(dialog.getByTestId("turnstile-token")).not.toHaveValue("", { timeout: 20_000 });
+  await dialog.getByRole("button", { name: /create my account/i }).click();
+
+  await expect(dialog).toContainText(/Check your email/i);
+  const code = (await lastEmail(page, email)).subject.match(/\b(\d{6})\b/)?.[1];
+  await dialog.getByTestId("verify-code").fill(code!);
+  await dialog.getByRole("button", { name: /verify my email/i }).click();
+
+  // "Add my design" opens the file picker right away.
+  const chooser = page.waitForEvent("filechooser");
+  await dialog.getByTestId("dialog-add-design").click();
+  await (await chooser).setFiles("tests/e2e/fixtures/art.png");
+  await expect(page.getByTestId("artwork-name")).toContainText("art.png", { timeout: 15_000 });
+  await expect(page).toHaveURL(/\/design$/);
+  await expect(page.getByTestId("sign-in-dialog")).toHaveCount(0);
+  // The header noticed the new session without a reload.
+  await expect(page.getByRole("banner").getByRole("link", { name: "My designs" }).first()).toBeAttached();
 });
 
 test("full flow: sign up → verify → color strip → upload → email path → coupon + download", async ({ page }) => {

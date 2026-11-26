@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
-import { signupSchema, type SignupInput } from "@/lib/auth-schema";
+import { signupSchema, type AccountUser, type SignupInput } from "@/lib/auth-schema";
 import { Button } from "@/components/ui/button";
 import { Field, fieldControlProps } from "@/components/ui/field";
 import { FormStatus } from "./form-status";
@@ -14,7 +14,16 @@ import { Input } from "@/components/ui/input";
 import { Turnstile } from "./turnstile";
 import { mapFieldErrors, NETWORK_ERROR, postJson } from "./auth-post";
 
-export function SignupForm({ next }: { next: string }) {
+export interface SignupFormProps {
+  /** Where to go after verifying (page mode). */
+  next: string;
+  /** Inline mode (builder sign-in dialog): called instead of navigating to /verify. */
+  onDone?: (user: AccountUser) => void;
+  /** Inline mode: shows "Log in" as a button that switches the dialog's tab. */
+  onSwitchToLogin?: () => void;
+}
+
+export function SignupForm({ next, onDone, onSwitchToLogin }: SignupFormProps) {
   const router = useRouter();
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [turnstileKey, setTurnstileKey] = useState(0);
@@ -37,7 +46,8 @@ export function SignupForm({ next }: { next: string }) {
     setConflict(false);
     const { status, data: res } = await postJson("/api/auth/signup", { ...data, turnstileToken });
     if (res?.ok) {
-      router.replace(`/verify?next=${encodeURIComponent(next)}`);
+      if (onDone) onDone(res.user as AccountUser);
+      else router.replace(`/verify?next=${encodeURIComponent(next)}`);
       return;
     }
     if (res && !res.ok && status === 409) {
@@ -103,9 +113,19 @@ export function SignupForm({ next }: { next: string }) {
           {conflict ? (
             <p className="text-text-2 mt-2 text-sm">
               Already have an account?{" "}
-              <Link href="/login" className="text-neon-cyan underline-offset-4 hover:underline">
-                Log in instead
-              </Link>
+              {onSwitchToLogin ? (
+                <button
+                  type="button"
+                  onClick={onSwitchToLogin}
+                  className="text-neon-cyan focus-visible:ring-neon-cyan rounded-sm underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                >
+                  Log in instead
+                </button>
+              ) : (
+                <Link href="/login" className="text-neon-cyan underline-offset-4 hover:underline">
+                  Log in instead
+                </Link>
+              )}
             </p>
           ) : null}
         </div>
@@ -119,9 +139,19 @@ export function SignupForm({ next }: { next: string }) {
 
       <p className="text-text-2 text-sm">
         Already have an account?{" "}
-        <Link href="/login" className="text-neon-cyan underline-offset-4 hover:underline">
-          Log in
-        </Link>
+        {onSwitchToLogin ? (
+          <button
+            type="button"
+            onClick={onSwitchToLogin}
+            className="text-neon-cyan focus-visible:ring-neon-cyan rounded-sm underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+          >
+            Log in
+          </button>
+        ) : (
+          <Link href="/login" className="text-neon-cyan underline-offset-4 hover:underline">
+            Log in
+          </Link>
+        )}
       </p>
     </form>
   );
