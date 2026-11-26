@@ -13,6 +13,7 @@ import { clip, BodyTooLargeError, readFormDataLimited } from "@/lib/http";
 import { issueCoupon } from "@/lib/coupon-store";
 import { upsertLead } from "@/lib/leads";
 import { describeLayers, mockupSummary } from "@/lib/mockup-summary";
+import { MOCKUP_FILES_RETENTION_DAYS, mockupStoragePrefix } from "@/lib/retention";
 import { VIEW_LABELS } from "@/lib/garments";
 import {
   artworkCount,
@@ -166,14 +167,17 @@ export async function POST(request: Request) {
   const keysByView = new Map<string, string>();
   try {
     for (const art of artworks) {
-      const key = buildObjectKey("mockups", art.file.name);
+      const key = buildObjectKey(mockupStoragePrefix(data.intent === "order" ? "order" : "mockup"), art.file.name);
       await storage.put(key, art.bytes, art.contentType);
       const record = { key, name: clip(art.file.name, 120), contentType: art.contentType, size: art.bytes.byteLength };
       stored.push(record);
       artworkRecords.push(record);
     }
     for (const render of renders) {
-      const key = buildObjectKey("mockups", `mockup-${render.view}.png`);
+      const key = buildObjectKey(
+        mockupStoragePrefix(data.intent === "order" ? "order" : "mockup"),
+        `mockup-${render.view}.png`,
+      );
       await storage.put(key, render.bytes, "image/png");
       stored.push({ key, name: `mockup-${render.view}.png`, contentType: "image/png", size: render.bytes.byteLength });
       keysByView.set(render.view, key);
@@ -262,6 +266,7 @@ export async function POST(request: Request) {
       kind: data.intent === "order" ? "order" : "mockup",
       artworks: artworkLinks,
       mockups: mockupUrls,
+      filesKeptDays: data.intent === "order" ? undefined : MOCKUP_FILES_RETENTION_DAYS,
     }),
     user.email,
     { mockupId, leadId },

@@ -1,6 +1,8 @@
 import { Body, Button, Container, Head, Heading, Html, Img, Preview, Text } from "@react-email/components";
 import * as React from "react";
 
+import { MOCKUP_FILES_RETENTION_DAYS } from "@/lib/retention";
+
 import { COUPON_RULES } from "@/lib/coupons";
 import { site } from "@/lib/site";
 
@@ -57,6 +59,10 @@ export function MockupCustomerEmail(p: MockupCustomerEmailProps) {
           {p.mockups.map((m) => (
             <Img key={m.signedUrl} src={m.signedUrl} alt={`Your ${p.garmentName.toLowerCase()} mockup — ${m.view}`} />
           ))}
+          <Text>
+            Your mockups are attached to this email. We keep your design files for {MOCKUP_FILES_RETENTION_DAYS} days,
+            so save anything you want to keep.
+          </Text>
           <Text>
             Coupon code: <strong>{p.coupon.code}</strong>
           </Text>

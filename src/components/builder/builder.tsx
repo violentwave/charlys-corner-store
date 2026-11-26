@@ -14,6 +14,7 @@ import type { AccountUser } from "@/lib/auth-schema";
 import { getGarment, GARMENTS, isHexColor, luma, VIEW_LABELS, type GarmentId, type ViewId } from "@/lib/garments";
 import { MAX_LAYERS_PER_VIEW, MOCKUP_ARTWORK_KINDS, mockupViewSchema } from "@/lib/mockup-schema";
 import { track } from "@/lib/analytics";
+import { MOCKUP_FILES_RETENTION_DAYS } from "@/lib/retention";
 import { Button } from "@/components/ui/button";
 
 import { ColorPicker } from "./color-picker";
@@ -147,7 +148,7 @@ export function Builder() {
 
   // Restore-design deep link (email CTA: /design?mockup=<id>). Runs once per mount.
   const restoredRef = useRef(false);
-  const [restoreStatus, setRestoreStatus] = useState<"loading" | "loaded" | "failed" | null>(null);
+  const [restoreStatus, setRestoreStatus] = useState<"loading" | "loaded" | "expired" | "failed" | null>(null);
 
   const restoreMockup = async (mockupId: string) => {
     // One deferred tick: no setState may run synchronously inside the mount effect.
@@ -157,7 +158,8 @@ export function Builder() {
       const res = await fetch(`/api/mockups/${mockupId}`);
       if (!res.ok) throw new Error("restore request failed");
       const json = (await res.json()) as
-        { ok: true; design: RestoredDesign; artworks: { url: string }[] } | { ok: false; error: string };
+        | { ok: true; design: RestoredDesign; artworks: { url: string }[]; filesExpired?: boolean }
+        | { ok: false; error: string };
       if (!json.ok) throw new Error(json.error);
       // Re-validate on the client: the same schemas the server used for the row.
       const garmentEnum = z.enum(GARMENTS.map((g) => g.id) as [GarmentId, ...GarmentId[]]);
@@ -213,7 +215,7 @@ export function Builder() {
         design: designFromRestore({ garment: garmentId, colors, views, sizes: json.design.sizes }, restoredFiles),
       });
       setFiles(restoredFiles);
-      setRestoreStatus("loaded");
+      setRestoreStatus(json.filesExpired ? "expired" : "loaded");
     } catch {
       // Unknown id, expired link, or a hiccup: friendly message, fresh builder.
       dispatch({ type: "hydrate", step: 1, design: initialDesign(GARMENTS[0]!.id) });
@@ -670,7 +672,9 @@ export function Builder() {
                   ? "Loading your saved design…"
                   : restoreStatus === "loaded"
                     ? "Loaded your saved design."
-                    : "We couldn't load that saved design — starting fresh."}
+                    : restoreStatus === "expired"
+                      ? `Loaded your colors and text. Uploaded images are deleted after ${MOCKUP_FILES_RETENTION_DAYS} days, so add yours again.`
+                      : "We couldn't load that saved design — starting fresh."}
               </p>
             ) : null}
             {sidesNeedingFiles.length > 0 && step === 3 ? (

@@ -21,6 +21,8 @@ export interface MockupOwnerEmailProps {
   /** Every original file, with the sides it's printed on (signed links). */
   artworks: { name: string; contentType: string; size: number; signedUrl: string; usedOn: string[] }[];
   mockups: { view: string; signedUrl: string }[];
+  /** Emailed mockups: files are auto-deleted after this many days (src/lib/retention.ts). Orders: kept. */
+  filesKeptDays?: number;
 }
 
 /** Owner notification for a mockup lead or order request. Free text (name, notes) is clipped by the route before render. */
@@ -83,6 +85,12 @@ export function MockupOwnerEmail(p: MockupOwnerEmailProps) {
               <Link href={a.signedUrl}>{a.signedUrl}</Link>
             </Text>
           ))}
+          {p.filesKeptDays ? (
+            <Text>
+              Heads up: these files are deleted automatically after {p.filesKeptDays} days. Download anything you want
+              to keep.
+            </Text>
+          ) : null}
           <Text>Mockups:</Text>
           {p.mockups.map((m) => (
             <Text key={m.signedUrl}>
