@@ -1,5 +1,28 @@
 import { colorName, findCombo, getGarment, type GarmentId } from "./garments";
-import type { MockupColors, MockupSizes, MockupView } from "./mockup-schema";
+import type { MockupColors, MockupLayer, MockupSizes, MockupView } from "./mockup-schema";
+import { getTextFont } from "./text-fonts";
+
+const deg = (skew: number) => Math.round((Math.atan(skew) * 180) / Math.PI);
+
+/**
+ * One line per layer (bottom → top) for the OWNER email only: text layers include the
+ * visitor's typed text, which never goes into customer emails.
+ */
+export function describeLayers(layers: MockupLayer[]): string[] {
+  return layers.map((layer, i) => {
+    const t = layer.transform;
+    const extras = [
+      t.rotation ? `rotated ${Math.round(t.rotation)}°` : "",
+      t.skewX || t.skewY ? `skewed ${deg(t.skewX)}°/${deg(t.skewY)}°` : "",
+      t.flipX ? "mirrored" : "",
+    ].filter(Boolean);
+    const tail = extras.length ? `, ${extras.join(", ")}` : "";
+    if (layer.type === "image") return `${i + 1}. Artwork file #${layer.artwork + 1}${tail}`;
+    const font = getTextFont(layer.font)?.label ?? layer.font;
+    const outline = layer.outline.width > 0 ? `, outline ${layer.outline.color} ${layer.outline.width}px` : "";
+    return `${i + 1}. Text "${layer.text}" — ${font}, ${layer.color}${outline}${tail}`;
+  });
+}
 
 /** Human-readable rows for mockup emails (customer + owner). Input must already be validated. */
 export function mockupSummary(

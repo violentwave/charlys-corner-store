@@ -36,6 +36,7 @@ import {
 import { SendStep } from "./send-step";
 import { SuccessScreen, type MockupResult } from "./success-screen";
 import { uploadGateFor } from "./upload-gate";
+import "./text-fonts.css";
 
 const STEPS: { id: BuilderStep; label: string; headline: string; helper: string }[] = [
   {
@@ -195,12 +196,13 @@ export function Builder() {
         naturalWidth,
         naturalHeight,
       }));
-      const viewEntries = views.map((v) => ({
-        view: v.view as ViewId,
-        printArea: v.printArea,
-        transform: v.transform,
-        artwork: v.artwork,
-      }));
+      // Interim (single image per side): take each side's first image layer.
+      const viewEntries = views.flatMap((v) => {
+        const image = v.layers.find((l) => l.type === "image");
+        return image
+          ? [{ view: v.view as ViewId, printArea: v.printArea, transform: image.transform, artwork: image.artwork }]
+          : [];
+      });
 
       dispatch({
         type: "hydrate",
@@ -443,7 +445,7 @@ export function Builder() {
       return;
     }
     const missing = plan.payload.views
-      .filter((v) => !files[plan.filesInUse[v.artwork]])
+      .filter((v) => v.layers.some((l) => l.type === "image" && !files[plan.filesInUse[l.artwork]!]))
       .map((v) => VIEW_LABELS[v.view]);
     if (missing.length > 0) {
       setSendError(`Pick your artwork file again for: ${missing.join(", ")}.`);

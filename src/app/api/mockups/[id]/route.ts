@@ -51,7 +51,8 @@ export async function GET(_request: Request, ctx: { params: Promise<{ id: string
   if (!garment.success || views.length === 0) return fail("We couldn't load that design.", 404);
 
   // Rows from before per-view files have only artwork_key (= artwork 0).
-  const keys = row.artworks.length > 0 ? row.artworks.map((a) => a.key) : [row.artworkKey];
+  // Text-only designs have no files at all.
+  const keys = row.artworks.length > 0 ? row.artworks.map((a) => a.key) : row.artworkKey ? [row.artworkKey] : [];
   const storage = getStorage();
   const urls = await Promise.all(keys.map((key) => storage.signedUrl(key, 60 * 60).catch(() => null)));
   if (urls.some((u) => !u)) return fail("We couldn't reach that design's artwork. Please try again.", 502);
@@ -65,7 +66,7 @@ export async function GET(_request: Request, ctx: { params: Promise<{ id: string
       views,
       sizes: row.sizes,
     },
-    // views[].artwork indexes `artworks`; `artwork` (= artworks[0]) stays for older clients.
+    // Image layers' `artwork` indexes `artworks` (empty for text-only); `artwork` (= artworks[0]) stays for older clients.
     artworks,
     artwork: artworks[0],
   });

@@ -12,7 +12,7 @@ import { getDb, schema } from "@/lib/db";
 import { clip, BodyTooLargeError, readFormDataLimited } from "@/lib/http";
 import { issueCoupon } from "@/lib/coupon-store";
 import { upsertLead } from "@/lib/leads";
-import { mockupSummary } from "@/lib/mockup-summary";
+import { describeLayers, mockupSummary } from "@/lib/mockup-summary";
 import { VIEW_LABELS } from "@/lib/garments";
 import {
   artworkCount,
@@ -212,10 +212,10 @@ export async function POST(request: Request) {
         notes: data.notes || null,
         kind: data.intent === "order" ? "order" : "mockup",
         artworks: artworkRecords,
-        artworkKey: artworkRecords[0]!.key,
-        artworkName: artworkRecords[0]!.name,
-        artworkContentType: artworkRecords[0]!.contentType,
-        artworkSizeBytes: artworkRecords[0]!.size,
+        artworkKey: artworkRecords[0]?.key ?? null,
+        artworkName: artworkRecords[0]?.name ?? null,
+        artworkContentType: artworkRecords[0]?.contentType ?? null,
+        artworkSizeBytes: artworkRecords[0]?.size ?? null,
       })
       .returning({ id: schema.mockups.id });
     mockupId = row!.id;
@@ -230,7 +230,9 @@ export async function POST(request: Request) {
     artworkRecords.map(async (a) => ({
       ...a,
       signedUrl: await storage.signedUrl(a.key).catch(() => `(link unavailable; storage key ${a.key})`),
-      usedOn: data.views.filter((v) => artworkRecords[v.artwork] === a).map((v) => VIEW_LABELS[v.view]),
+      usedOn: data.views
+        .filter((v) => v.layers.some((l) => l.type === "image" && artworkRecords[l.artwork] === a))
+        .map((v) => VIEW_LABELS[v.view]),
     })),
   );
   const mockupUrls = await Promise.all(
@@ -253,6 +255,7 @@ export async function POST(request: Request) {
       garmentName: garment.name,
       colors: colorRows,
       views: viewRows,
+      layers: data.views.map((v) => ({ view: VIEW_LABELS[v.view], items: describeLayers(v.layers) })),
       sizes: sizeRows,
       notes: data.notes ? clip(data.notes, 2000) : undefined,
       couponCode: coupon.code,

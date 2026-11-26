@@ -1,0 +1,10 @@
+/* Text-tool fonts (src/lib/text-fonts.ts). Imported only by the builder, so other pages
+   don't download them; the browser fetches each file the first time it's used. */
+@import "@fontsource/anton/400.css";
+@import "@fontsource/bebas-neue/400.css";
+@import "@fontsource/oswald/600.css";
+@import "@fontsource/montserrat/800.css";
+@import "@fontsource/graduate/400.css";
+@import "@fontsource/permanent-marker/400.css";
+@import "@fontsource/pacifico/400.css";
+@import "@fontsource/playfair-display/700.css";

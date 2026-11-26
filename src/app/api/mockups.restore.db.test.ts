@@ -112,7 +112,7 @@ describe.skipIf(!hasTestDb)("GET /api/mockups/[id] (real Postgres)", () => {
     expect(Object.keys(json.design as object).sort()).toEqual(["colors", "garment", "sizes", "views"]);
     expect(Object.keys(json.artwork as object)).toEqual(["url"]);
     const views = json.design.views as Record<string, unknown>[];
-    expect(views.map((v) => Object.keys(v).sort())).toEqual([["artwork", "printArea", "transform", "view"]]);
+    expect(views.map((v) => Object.keys(v).sort())).toEqual([["layers", "printArea", "view"]]);
     // The design itself round-trips.
     expect(json.design).toMatchObject({
       garment: "tshirt",
@@ -122,7 +122,13 @@ describe.skipIf(!hasTestDb)("GET /api/mockups/[id] (real Postgres)", () => {
         {
           view: "front",
           printArea: "full-front",
-          transform: { x: 344, y: 292, width: 312, height: 364, rotation: 15, flipX: false },
+          layers: [
+            {
+              type: "image",
+              artwork: 0,
+              transform: { x: 344, y: 292, width: 312, height: 364, rotation: 15, flipX: false, skewX: 0, skewY: 0 },
+            },
+          ],
         },
       ],
     });

@@ -248,7 +248,14 @@ async function sentMockupRow(page: Page, email: string, trigger: () => Promise<v
       [email],
     );
     expect(rows).toHaveLength(1);
-    return { artworks: rows[0]!.artworks as unknown[], views: rows[0]!.views as { view: string; artwork: number }[] };
+    return {
+      artworks: rows[0]!.artworks as unknown[],
+      views: (rows[0]!.views as { view: string; printArea: string; layers: { artwork?: number }[] }[]).map((v) => ({
+        view: v.view,
+        printArea: v.printArea,
+        artwork: v.layers[0]?.artwork,
+      })),
+    };
   } finally {
     await pool.end();
   }
@@ -351,7 +358,7 @@ test("long sleeve tee: a design on the left sleeve shows its own mockup", async 
     await page.getByRole("button", { name: "Step 4: Send" }).click();
     await page.getByTestId("send-email").click();
   });
-  expect(views).toEqual([expect.objectContaining({ view: "left", printArea: "full-sleeve", artwork: 0 })]);
+  expect(views).toEqual([{ view: "left", printArea: "full-sleeve", artwork: 0 }]);
 
   const success = page.getByTestId("builder-success");
   await expect(success).toBeVisible({ timeout: 30_000 });
