@@ -46,6 +46,6 @@ test("/#design lands on the builder and /#upload on the upload form", async ({ p
   await page.goto("/#design");
   await expect(page.getByTestId("garment-picker")).toBeVisible({ timeout: 30_000 });
   await page.goto("/#upload");
-  await expect(page.locator("#upload").getByRole("heading", { name: /upload artwork for your order/i })).toBeVisible();
-  await expect(page.locator("#upload").getByLabel(/Order number/i)).toBeVisible();
+  await expect(page.locator("#upload").getByRole("heading", { name: /send us your order/i })).toBeVisible();
+  await expect(page.locator("#upload").getByLabel(/First name/i)).toBeVisible();
 });
