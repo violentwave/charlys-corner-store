@@ -137,6 +137,19 @@
   pointer-events: none;
 }
 
+/*
+ * No default animations. With any <ViewTransition> mounted, every transition (a form submit
+ * in startTransition, a server action) starts a view transition, and the browser's default
+ * cross-fade then plays on the root and on React's auto-named groups (_t_…). Only the classes
+ * below (page-*, slide-*) animate; everything else swaps instantly, so in-page updates never
+ * freeze the page. (Class selectors beat `*`, so the opt-in rules still win.)
+ */
+::view-transition-group(*),
+::view-transition-old(*),
+::view-transition-new(*) {
+  animation: none;
+}
+
 /* Anchored chrome: header, footer and menu drawer never animate between pages. */
 ::view-transition-group(site-header),
 ::view-transition-group(site-footer),

@@ -9,12 +9,17 @@ import { ViewTransition } from "react";
  * It lives in each `page.tsx`, not the layout: layouts persist across navigations, so their
  * enter/exit animations never fire. The header, footer and menu drawer sit outside it and
  * carry their own `view-transition-name`, so only the page content moves.
+ *
+ * `default="none"`: only navigation (enter/exit) animates. Without it, every transition update
+ * INSIDE a page (a form submit in startTransition, a select change) cross-faded the whole page,
+ * which made the mobile form e2e specs flaky on slow CI runners.
  */
 export function PageTransition({ children }: { children: ReactNode }) {
   return (
     <ViewTransition
       enter={{ "nav-forward": "page-in", "nav-back": "page-in-back", default: "page-in" }}
       exit={{ "nav-forward": "page-out", "nav-back": "page-out-back", default: "page-out" }}
+      default="none"
     >
       {children}
     </ViewTransition>
