@@ -85,7 +85,7 @@ describe.skipIf(!hasTestDb)("upload/quote route handlers (real Postgres)", () =>
     const res = await postUpload(
       new Request("http://localhost/api/uploads", {
         method: "POST",
-        headers: { "content-length": String(22 * 1024 * 1024) },
+        headers: { "content-length": String(32 * 1024 * 1024) },
         body: "x",
       }),
     );

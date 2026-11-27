@@ -15,7 +15,7 @@ import { orderFormSchema } from "@/lib/schemas";
 import { buildObjectKey, getStorage } from "@/lib/storage";
 import { verifyTurnstile } from "@/lib/turnstile";
 
-const MAX_REQUEST_BYTES = 5 * ARTWORK_MAX_BYTES + 1024 * 1024;
+const MAX_REQUEST_BYTES = 31 * 1024 * 1024;
 
 const fail = (error: string, status: number, fieldErrors?: Record<string, string>) =>
   NextResponse.json({ ok: false, error, ...(fieldErrors ? { fieldErrors } : {}) }, { status });

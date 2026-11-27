@@ -79,7 +79,7 @@ export type ReferralInput = z.infer<typeof referralSchema>;
 /** Order form (home #upload): new or existing order, with optional artwork. */
 export const orderFormSchema = z
   .object({
-    orderType: z.enum(["new", "existing"]),
+    orderType: z.enum(["new", "existing"]).default("new"),
     firstName: z.string().trim().min(1, "Please enter your first name").max(100),
     lastName: z.string().trim().max(100).optional().or(z.literal("")),
     email: emailField,
@@ -97,12 +97,12 @@ export const orderFormSchema = z
       .regex(/^(\d{5}|\d{5}-\d{4})$/, "ZIP must be 5 or 9 digits")
       .optional()
       .or(z.literal("")),
-    items: z.array(z.string()),
+    items: z.array(z.string()).default([]),
     otherItem: z.preprocess((v) => v === "true" || v === true, z.boolean().optional()),
     colors: z.string().trim().max(200).optional().or(z.literal("")),
     printMethod: z.string().trim().max(60).optional().or(z.literal("")),
-    printLocations: z.array(z.string()),
-    sizes: z.record(z.string(), z.number().int().min(0).max(10000)),
+    printLocations: z.array(z.string()).default([]),
+    sizes: z.record(z.string(), z.number().int().min(0).max(10000)).default({}),
     neededBy: z.iso.date("Please pick a valid date").optional().or(z.literal("")),
     files: z.array(z.any()).optional(),
     notes: z.string().trim().max(2000).optional().or(z.literal("")),
