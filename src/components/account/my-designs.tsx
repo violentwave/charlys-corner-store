@@ -75,7 +75,7 @@ function DesignCard({
 }: {
   item: AccountMockup;
   email: string;
-  onRemoved: (item: AccountMockup) => void;
+  onRemoved: (items: AccountMockup[]) => void;
   onListChanged: () => void;
 }) {
   const status = STATUS_LABELS[item.status];
@@ -95,7 +95,7 @@ function DesignCard({
       const data = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
       if (res.ok && data?.ok) {
         setConfirmOpen(false);
-        onRemoved(item);
+        onRemoved([item]);
         return;
       }
       setError(data?.error ?? "Something went wrong. Please try again.");
@@ -287,6 +287,196 @@ function DesignCard({
   );
 }
 
+/**
+ * Several designs sent as ONE cart order (docs/04 §5b): one card for the order, with the
+ * shop's stage tracker, price, Pay now and paid date once each exists, and the designs
+ * inside. Remove hides the whole order — the API already does that from any of its designs.
+ */
+function OrderCard({
+  items,
+  onRemoved,
+  onListChanged,
+}: {
+  items: AccountMockup[];
+  onRemoved: (items: AccountMockup[]) => void;
+  onListChanged: () => void;
+}) {
+  const order = items[0]!.order!;
+  const status = STATUS_LABELS[items[0]!.status];
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [orderAgainItem, setOrderAgainItem] = useState<AccountMockup | null>(null);
+
+  const remove = async () => {
+    setDeleting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/account/mockups/${items[0]!.id}`, { method: "DELETE" });
+      const data = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+      if (res.ok && data?.ok) {
+        setConfirmOpen(false);
+        onRemoved(items);
+        return;
+      }
+      setError(data?.error ?? "Something went wrong. Please try again.");
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <Card className="flex flex-col gap-4 sm:col-span-2" data-testid="order-card">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="font-heading text-text-1 text-sm tracking-wide uppercase">
+          Order #{order.id.slice(0, 8)} · {order.itemCount} {order.itemCount === 1 ? "design" : "designs"}
+        </h3>
+        {status ? (
+          <Badge variant={status.variant} data-testid="order-status">
+            {status.label}
+          </Badge>
+        ) : null}
+      </div>
+
+      {items[0]!.orderStage ? (
+        <div className="border-border border-t pt-3">
+          <OrderStageTracker stage={items[0]!.orderStage} />
+        </div>
+      ) : null}
+
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        {order.quoteCents != null ? (
+          <p className="text-text-1 font-mono" data-testid="order-price">
+            ${(order.quoteCents / 100).toFixed(2)}
+          </p>
+        ) : (
+          <p className="text-text-3">Price after we check it</p>
+        )}
+        {order.paidAt ? (
+          <p className="text-neon-green" data-testid="order-paid">
+            Paid <time dateTime={order.paidAt}>{dateLabel(order.paidAt)}</time>
+          </p>
+        ) : null}
+        {order.payPath ? (
+          <Button asChild size="sm" data-testid="order-pay">
+            <Link href={order.payPath}>Pay now</Link>
+          </Button>
+        ) : null}
+      </div>
+
+      <ul className="flex flex-col gap-3">
+        {items.map((item) => (
+          <li
+            key={item.id}
+            className="border-border flex flex-wrap items-center gap-3 border-t pt-3"
+            data-testid="order-design"
+          >
+            {item.views[0]?.imageUrl ? (
+              // Signed storage URLs (R2/MinIO) — host varies by environment, so a plain <img>.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={item.views[0].imageUrl}
+                alt={`${item.garmentName} mockup`}
+                loading="lazy"
+                className="bg-bg-3 h-16 w-16 shrink-0 rounded-md object-contain"
+              />
+            ) : (
+              <div
+                aria-hidden="true"
+                className="bg-bg-3 text-text-3 flex h-16 w-16 shrink-0 items-center justify-center rounded-md text-center text-[10px]"
+              >
+                No image
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="font-heading text-text-1 text-sm tracking-wide uppercase">{item.garmentName}</p>
+              <p className="text-text-3 text-xs">{item.colors.map((color) => color.name).join(", ")}</p>
+              <p className="text-text-2 text-xs">
+                {item.sizes.length > 0 ? item.sizes.join(", ") : "Sizes on request"}
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setOrderAgainItem(item)}
+              data-testid="order-again"
+            >
+              Order again
+            </Button>
+          </li>
+        ))}
+      </ul>
+
+      <div className="mt-auto flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setError(null);
+            setConfirmOpen(true);
+          }}
+          data-testid="hide-order"
+        >
+          Remove
+        </Button>
+      </div>
+
+      {orderAgainItem ? (
+        <OrderAgainDialog
+          item={orderAgainItem}
+          onClose={() => setOrderAgainItem(null)}
+          onOrdered={() => {
+            setOrderAgainItem(null);
+            onListChanged();
+          }}
+        />
+      ) : null}
+
+      <Dialog open={confirmOpen} onOpenChange={(next) => !next && setConfirmOpen(false)}>
+        {confirmOpen ? (
+          <DialogContent aria-describedby="remove-order-body">
+            <DialogTitle className="font-heading text-text-1 pr-6 text-lg tracking-wide uppercase">
+              Remove this order from your list?
+            </DialogTitle>
+            <DialogDescription id="remove-order-body" className="text-text-2 text-sm">
+              This removes the whole order from My designs. We keep it so we can finish it.
+            </DialogDescription>
+            {error ? (
+              <p role="alert" className="text-danger text-sm">
+                {error}
+              </p>
+            ) : null}
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                onClick={() => void remove()}
+                loading={deleting}
+                data-testid="confirm-remove"
+                className="bg-danger text-text-1 shadow-none hover:shadow-none"
+              >
+                Remove
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setConfirmOpen(false)}
+                data-testid="cancel-remove"
+              >
+                Cancel
+              </Button>
+            </div>
+          </DialogContent>
+        ) : null}
+      </Dialog>
+    </Card>
+  );
+}
+
 function EmptyState({ kind }: { kind: "mockup" | "order" }) {
   const copy =
     kind === "mockup"
@@ -352,11 +542,14 @@ export function MyDesigns({ email }: { email: string }) {
     setReloadKey((k) => k + 1);
   };
 
-  /** Remove one card after a successful delete/hide, and say so politely. */
-  const onRemoved = (item: AccountMockup) => {
-    setItems((prev) => (prev ? prev.filter((it) => it.id !== item.id) : prev));
+  /** Remove cards after a successful delete/hide (a whole order for an order card). */
+  const onRemoved = (removed: AccountMockup[]) => {
+    const ids = new Set(removed.map((item) => item.id));
+    setItems((prev) => (prev ? prev.filter((it) => !ids.has(it.id)) : prev));
     setAnnouncement(
-      item.kind === "mockup" ? "Mockup deleted." : "Order request removed from your list. The shop still has it.",
+      removed[0]?.kind === "mockup"
+        ? "Mockup deleted."
+        : "Order request removed from your list. The shop still has it.",
     );
   };
 
@@ -384,6 +577,18 @@ export function MyDesigns({ email }: { email: string }) {
 
   const mockups = items.filter((item) => item.kind === "mockup");
   const orders = items.filter((item) => item.kind === "order");
+  // Designs from one cart order share order.id: one order card, not one card per design.
+  const orderGroups = new Map<string, AccountMockup[]>();
+  const looseOrders: AccountMockup[] = [];
+  for (const item of orders) {
+    if (!item.order) {
+      looseOrders.push(item);
+      continue;
+    }
+    const group = orderGroups.get(item.order.id);
+    if (group) group.push(item);
+    else orderGroups.set(item.order.id, [item]);
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -429,7 +634,25 @@ export function MyDesigns({ email }: { email: string }) {
             <EmptyState kind="order" />
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {orders.map((item) => (
+              {[...orderGroups.values()].map((group) =>
+                group.length > 1 || (group[0]!.order?.itemCount ?? 1) > 1 ? (
+                  <OrderCard
+                    key={group[0]!.order!.id}
+                    items={group}
+                    onRemoved={onRemoved}
+                    onListChanged={onListChanged}
+                  />
+                ) : (
+                  <DesignCard
+                    key={group[0]!.id}
+                    item={group[0]!}
+                    email={email}
+                    onRemoved={onRemoved}
+                    onListChanged={onListChanged}
+                  />
+                ),
+              )}
+              {looseOrders.map((item) => (
                 <DesignCard
                   key={item.id}
                   item={item}

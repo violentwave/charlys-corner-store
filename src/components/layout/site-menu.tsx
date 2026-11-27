@@ -31,7 +31,16 @@ function isPlainLeftClick(event: MouseEvent<HTMLElement>) {
  * shapes: the visitor gets the "Join the pack" card plus Create/Explore lists; the member
  * gets a header block with the account sections and a Log out row.
  */
-export function SiteMenu({ close, isActive }: { close: () => void; isActive: (item: NavItem) => boolean }) {
+export function SiteMenu({
+  close,
+  isActive,
+  cartCount,
+}: {
+  close: () => void;
+  isActive: (item: NavItem) => boolean;
+  /** The member's cart badge count (same as the header icon). */
+  cartCount: number;
+}) {
   const pathname = usePathname();
   const { loading, user, googleEnabled } = useSession();
 
@@ -123,6 +132,24 @@ export function SiteMenu({ close, isActive }: { close: () => void; isActive: (it
       ) : (
         <JoinCard pathname={pathname} googleEnabled={googleEnabled} close={close} />
       )}
+
+      {user ? (
+        <div className="px-3">
+          <Link
+            href="/cart"
+            transitionTypes={["nav-forward"]}
+            data-testid="menu-cart"
+            data-menu-row=""
+            onClick={close}
+            className={ROW}
+          >
+            Cart
+            <span className="text-text-3 ml-auto font-mono text-xs">
+              {cartCount} {cartCount === 1 ? "design" : "designs"}
+            </span>
+          </Link>
+        </div>
+      ) : null}
 
       {user ? (
         <div className="flex flex-col gap-0.5 px-3">
