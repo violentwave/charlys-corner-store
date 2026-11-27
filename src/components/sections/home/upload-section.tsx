@@ -1,18 +1,16 @@
 import { Section } from "@/components/sections/section";
-import { UploadForm } from "@/components/forms/upload-form";
+import { OrderForm } from "@/components/forms/order-form";
 
-/** Home #upload: the existing-orders artwork uploader, same copy as the old /upload page. */
+/** Home #upload: new and existing orders, with or without an account. */
 export function UploadSection() {
   return (
     <Section
       id="upload"
-      eyebrow="Existing orders"
-      title="Upload artwork for your order"
-      description="Already placed an order? Send us your artwork and your order number and we'll attach it to your job."
+      eyebrow="Order without the designer"
+      title="Send us your order"
+      description="New order or adding art to one you've placed? Fill in what you know: we'll follow up with a price and any questions. Only your first name and email are required."
     >
-      <div className="max-w-xl">
-        <UploadForm />
-      </div>
+      <OrderForm />
     </Section>
   );
 }

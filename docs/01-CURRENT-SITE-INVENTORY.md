@@ -42,6 +42,7 @@ Used by customers who **already placed an order** to attach artwork.
 - [x] File upload (required), PNG or JPEG, max 20 MB
 - [x] Fix: the current heading says "attach order number and file in the comment section", but there's no comment field. Add an optional Notes field.
 - [x] New site: allow PDF, SVG, and AI/EPS too (better for print), show a preview, and email the owner a link to the file.
+- [x] **P52-1 (2026-11-26):** the uploader is now the full order form (`OrderForm`): new + existing orders, guests welcome, only first name + email required, multi-file (≤5, 30 MB total), shipping/pickup, sizes, print locations, referral, marketing opt-in. Route `/api/uploads` stores the extended row.
 
 ### About: `/about.html`
 - [ ] Origin story (Charly the dog, bold-message shirts), "Have a Ruffin awesome day"

@@ -76,4 +76,45 @@ export const uploadSchema = z.object({
 export type ContactInput = z.infer<typeof contactSchema>;
 export type QuoteInput = z.infer<typeof quoteSchema>;
 export type ReferralInput = z.infer<typeof referralSchema>;
-export type UploadInput = z.infer<typeof uploadSchema>;
+/** Order form (home #upload): new or existing order, with optional artwork. */
+export const orderFormSchema = z
+  .object({
+    orderType: z.enum(["new", "existing"]),
+    firstName: z.string().trim().min(1, "Please enter your first name").max(100),
+    lastName: z.string().trim().max(100).optional().or(z.literal("")),
+    email: emailField,
+    phone: phoneField,
+    company: z.string().trim().max(120).optional().or(z.literal("")),
+    orderNumber: z.string().trim().max(40).optional().or(z.literal("")),
+    fulfillment: z.preprocess((v) => (v === "" || v == null ? undefined : v), z.enum(["pickup", "ship"]).optional()),
+    street: z.string().trim().max(200).optional().or(z.literal("")),
+    unit: z.string().trim().max(60).optional().or(z.literal("")),
+    city: z.string().trim().max(100).optional().or(z.literal("")),
+    state: z.string().trim().max(2).optional().or(z.literal("")),
+    zip: z
+      .string()
+      .trim()
+      .regex(/^(\d{5}|\d{5}-\d{4})$/, "ZIP must be 5 or 9 digits")
+      .optional()
+      .or(z.literal("")),
+    items: z.array(z.string()),
+    otherItem: z.preprocess((v) => v === "true" || v === true, z.boolean().optional()),
+    colors: z.string().trim().max(200).optional().or(z.literal("")),
+    printMethod: z.string().trim().max(60).optional().or(z.literal("")),
+    printLocations: z.array(z.string()),
+    sizes: z.record(z.string(), z.number().int().min(0).max(10000)),
+    neededBy: z.iso.date("Please pick a valid date").optional().or(z.literal("")),
+    files: z.array(z.any()).optional(),
+    notes: z.string().trim().max(2000).optional().or(z.literal("")),
+    referralSource: z.preprocess((v) => (v === "" ? undefined : v), z.enum(REFERRAL_SOURCES).optional()),
+    referralOther: z.string().trim().max(200).optional(),
+    marketingOptIn: z.preprocess((v) => v === "true" || v === true, z.boolean().optional()),
+    turnstileToken: z.string().optional(),
+    website: z.string().optional(),
+  })
+  .refine((v) => v.referralSource !== "other" || !!v.referralOther, {
+    message: "Please tell us how you heard about us",
+    path: ["referralOther"],
+  });
+
+export type OrderFormInput = z.infer<typeof orderFormSchema>;

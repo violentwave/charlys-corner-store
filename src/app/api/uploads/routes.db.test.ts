@@ -27,16 +27,13 @@ function uploadForm(bytes: Uint8Array = png, overrides: Record<string, string> =
   const form = new FormData();
   const values = {
     firstName: "Charly",
-    lastName: "Dog",
     email: "charly@example.com",
-    orderNumber: "ORD-123",
-    notes: "Front print",
     turnstileToken: "token",
     website: "",
     ...overrides,
   };
   for (const [k, v] of Object.entries(values)) form.append(k, v);
-  form.append("file", file, "artwork.png");
+  form.append("files", file, "artwork.png");
   return form;
 }
 
@@ -64,10 +61,10 @@ describe.skipIf(!hasTestDb)("upload/quote route handlers (real Postgres)", () =>
     expect(res.status).toBe(200);
     const rows = await db.select().from(schema.uploads);
     expect(rows).toHaveLength(1);
-    expect(rows[0].orderNumber).toBe("ORD-123");
-    expect(_memoryObject(rows[0].fileKey)).toBeDefined();
+    expect(rows[0].firstName).toBe("Charly");
+    expect(rows[0].files).toHaveLength(1);
+    expect(_memoryObject(rows[0].files[0].key)).toBeDefined();
     expect(_outbox()).toHaveLength(2);
-    expect(_outbox()[0].html).toContain("data:image/png;base64,");
   });
 
   it("rejects a text file renamed .png", async () => {
