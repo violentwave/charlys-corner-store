@@ -9,6 +9,7 @@ import { getGarment, type GarmentId } from "@/lib/garments";
 import { checkPayToken } from "@/lib/order-stage";
 import { loadQuotedOrder, PAY_ERRORS, priceOrder, type PayErrorCode, type Pricing } from "@/lib/payments";
 import { existingSquareCustomerId, listCards, squareConfigured, type SavedCard } from "@/lib/square";
+import { PageTransition } from "@/components/layout/page-transition";
 import { PayWithSavedCard } from "./pay-with-card";
 
 export const metadata: Metadata = { title: "Pay", robots: { index: false, follow: false } };
@@ -153,8 +154,10 @@ export default function PayPage({
   searchParams: Promise<{ t?: string; error?: string }>;
 }) {
   return (
-    <Suspense fallback={<p className="text-text-2 p-10">Loading…</p>}>
-      <PayGateLoader params={params} searchParams={searchParams} />
-    </Suspense>
+    <PageTransition>
+      <Suspense fallback={<p className="text-text-2 p-10">Loading…</p>}>
+        <PayGateLoader params={params} searchParams={searchParams} />
+      </Suspense>
+    </PageTransition>
   );
 }

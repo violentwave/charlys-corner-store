@@ -3,6 +3,7 @@ import { Suspense } from "react";
 
 import { SignupForm } from "@/components/forms/signup-form";
 import { PageHeader } from "@/components/sections/page-header";
+import { PageTransition } from "@/components/layout/page-transition";
 import { Section } from "@/components/sections/section";
 import { sanitizeNext } from "@/lib/safe-next";
 
@@ -13,26 +14,28 @@ export const metadata: Metadata = {
 
 export default async function SignupPage(props: PageProps<"/signup">) {
   return (
-    <Section>
-      <div className="mx-auto w-full max-w-md">
-        <PageHeader
-          eyebrow="Join the pack"
-          title="Create your account"
-          description="Save mockups, send order requests, and keep every design in one kennel."
-        />
-        <div className="mt-8">
-          <Suspense
-            fallback={
-              <p role="status" className="text-text-2 animate-pulse text-sm">
-                Loading…
-              </p>
-            }
-          >
-            <SignupGate searchParams={props.searchParams} />
-          </Suspense>
+    <PageTransition>
+      <Section>
+        <div className="mx-auto w-full max-w-md">
+          <PageHeader
+            eyebrow="Join the pack"
+            title="Create your account"
+            description="Save mockups, send order requests, and keep every design in one kennel."
+          />
+          <div className="mt-8">
+            <Suspense
+              fallback={
+                <p role="status" className="text-text-2 animate-pulse text-sm">
+                  Loading…
+                </p>
+              }
+            >
+              <SignupGate searchParams={props.searchParams} />
+            </Suspense>
+          </div>
         </div>
-      </div>
-    </Section>
+      </Section>
+    </PageTransition>
   );
 }
 

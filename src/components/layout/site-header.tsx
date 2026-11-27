@@ -3,8 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState, type MouseEvent } from "react";
-import { addTransitionType, startTransition } from "react";
+import { addTransitionType, startTransition, useEffect, useRef, useState, type MouseEvent } from "react";
 
 import { jumpToSection } from "@/components/layout/section-scroll";
 import { useSession } from "@/components/layout/session";
@@ -272,6 +271,7 @@ export function SiteHeader() {
           aria-modal="true"
           aria-label="Site navigation"
           tabIndex={-1}
+          data-open={open || undefined}
           style={{ viewTransitionName: "site-menu" }}
           className={`bg-bg-1 shadow-glow-cyan absolute inset-y-0 right-0 flex w-[88vw] max-w-sm flex-col overflow-y-auto transition-transform duration-200 motion-reduce:transition-none ${
             open ? "translate-x-0" : "translate-x-full"

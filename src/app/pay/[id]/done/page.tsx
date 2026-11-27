@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { PayDoneClient } from "./pay-done-client";
+import { PageTransition } from "@/components/layout/page-transition";
 
 export const metadata: Metadata = { title: "Pay", robots: { index: false, follow: false } };
 
@@ -25,8 +26,10 @@ export default function PayDonePage({
   searchParams: Promise<{ t?: string }>;
 }) {
   return (
-    <Suspense fallback={<p className="text-text-2 p-10">Loading…</p>}>
-      <PayDoneLoader params={params} searchParams={searchParams} />
-    </Suspense>
+    <PageTransition>
+      <Suspense fallback={<p className="text-text-2 p-10">Loading…</p>}>
+        <PayDoneLoader params={params} searchParams={searchParams} />
+      </Suspense>
+    </PageTransition>
   );
 }

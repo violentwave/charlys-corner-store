@@ -6,6 +6,7 @@ import { ProductGrid } from "@/components/sections/product-grid";
 import { PortfolioGallery } from "@/components/sections/portfolio-gallery";
 import { businessProducts } from "@/components/sections/business-products";
 import { QuoteForm } from "@/components/forms/quote-form";
+import { PageTransition } from "@/components/layout/page-transition";
 import { legacyPromoItems } from "@/content/catalog";
 import { site } from "@/lib/site";
 
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
 
 export default function BusinessPage() {
   return (
-    <>
+    <PageTransition>
       <Section>
         <PageHeader
           eyebrow="Business & promo"
@@ -52,6 +53,6 @@ export default function BusinessPage() {
           <QuoteForm />
         </div>
       </Section>
-    </>
+    </PageTransition>
   );
 }

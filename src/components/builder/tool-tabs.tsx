@@ -19,6 +19,9 @@ import { LayersPanel } from "./layers-panel";
 
 type ToolTab = "item" | "add" | "side" | "layers";
 
+/** Tab order on screen: the panel slides in the direction of travel (P52-3). */
+const TAB_ORDER: ToolTab[] = ["item", "add", "side", "layers"];
+
 export interface ToolTabsProps extends InspectorSectionsProps {
   fileError: string | null;
   onDropFile: (file: File) => void;
@@ -42,6 +45,7 @@ export function ToolTabs(props: ToolTabsProps) {
   // selection themselves (duplicate selects the copy) — yanking the visitor to Item would
   // make the list unusable. At 0 layers the Layers tab ceases to exist → Add.
   const [tab, setTab] = useState<ToolTab>(viewState.selectedLayerId ? "item" : "add");
+  const [dir, setDir] = useState<1 | -1>(1);
   const [lastSelection, setLastSelection] = useState<string | null>(viewState.selectedLayerId);
   const [lastView, setLastView] = useState(props.view.id);
   if (layerCount === 0 && tab === "layers") {
@@ -87,7 +91,11 @@ export function ToolTabs(props: ToolTabsProps) {
 
       <Tabs
         value={tab}
-        onValueChange={(value) => startTransition(() => setTab(value as ToolTab))}
+        onValueChange={(value) => {
+          const next = value as ToolTab;
+          setDir(TAB_ORDER.indexOf(next) >= TAB_ORDER.indexOf(tab) ? 1 : -1);
+          startTransition(() => setTab(next));
+        }}
         className="flex min-h-0 flex-1 flex-col"
       >
         {/* Sits right under the fixed canvas (top = header + canvas + the wrapper's
@@ -131,7 +139,12 @@ export function ToolTabs(props: ToolTabsProps) {
         </div>
 
         {/* The active panel scrolls inside itself; the page (and the sticky canvas) stay put. */}
-        <ViewTransition key={tab} enter="slide-in-right" exit="slide-out-left" default="none">
+        <ViewTransition
+          key={tab}
+          enter={dir > 0 ? "slide-in-right" : "slide-in-left"}
+          exit={dir > 0 ? "slide-out-left" : "slide-out-right"}
+          default="none"
+        >
           <TabsContent
             value="item"
             className="border-border mt-2 min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-md pr-1"

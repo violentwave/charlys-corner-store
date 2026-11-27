@@ -127,94 +127,17 @@
 }
 
 /* ------------------------------------------------------------------ */
-/* View transitions (P52-3)                                           */
+/* Motion (P52-3): page, tab and step transitions                     */
+/* Every animation lives inside prefers-reduced-motion: no-preference, */
+/* so with reduce nothing is defined and content swaps instantly.      */
 /* ------------------------------------------------------------------ */
+
+/* The overlay must never swallow clicks while a transition runs. */
 ::view-transition {
   pointer-events: none;
 }
 
-::view-transition-old(root) {
-  animation:
-    var(--motion-fast) var(--ease-out-neon) both fade-out,
-    var(--motion-fast) var(--ease-out-neon) both slide-up-out;
-}
-::view-transition-new(root) {
-  animation:
-    var(--motion-base) var(--ease-out-neon) var(--motion-fast) both fade-in,
-    var(--motion-base) var(--ease-out-neon) both slide-up-in;
-}
-
-@keyframes slide-up-out {
-  to {
-    transform: translateY(-8px);
-  }
-}
-@keyframes slide-up-in {
-  from {
-    transform: translateY(8px);
-  }
-}
-
-@keyframes slide-in-right {
-  from {
-    transform: translateX(4px);
-    opacity: 0;
-  }
-}
-@keyframes slide-in-left {
-  from {
-    transform: translateX(-4px);
-    opacity: 0;
-  }
-}
-@keyframes slide-out-left {
-  to {
-    transform: translateX(-4px);
-    opacity: 0;
-  }
-}
-@keyframes slide-out-right {
-  to {
-    transform: translateX(4px);
-    opacity: 0;
-  }
-}
-
-/* Directional slides for tagged navigations. */
-::view-transition-old(.nav-forward) {
-  --slide-offset: -60px;
-  animation:
-    var(--motion-fast) ease-in both fade-out,
-    400ms ease-in-out both slide-h;
-}
-::view-transition-new(.nav-forward) {
-  --slide-offset: 60px;
-  animation:
-    var(--motion-base) ease-out var(--motion-fast) both fade-in,
-    400ms ease-in-out both slide-h;
-}
-::view-transition-old(.nav-back) {
-  --slide-offset: 60px;
-  animation:
-    var(--motion-fast) ease-in both fade-out,
-    400ms ease-in-out both slide-h;
-}
-::view-transition-new(.nav-back) {
-  --slide-offset: -60px;
-  animation:
-    var(--motion-base) ease-out var(--motion-fast) both fade-in,
-    400ms ease-in-out both slide-h;
-}
-@keyframes slide-h {
-  from {
-    transform: translateX(var(--slide-offset));
-  }
-  to {
-    transform: translateX(0);
-  }
-}
-
-/* Anchor the header, footer and menu so they don't animate on navigation. */
+/* Anchored chrome: header, footer and menu drawer never animate between pages. */
 ::view-transition-group(site-header),
 ::view-transition-group(site-footer),
 ::view-transition-group(site-menu) {
@@ -232,62 +155,145 @@
   animation: none;
 }
 
-/* Home section jumps: a one-shot cyan underline sweep on the reached heading. */
+/* Page content: 6-8px vertical slide, forward and back in opposite directions. */
+@keyframes page-out-up {
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+@keyframes page-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes page-out-down {
+  to {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@keyframes page-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+/* Tab / step panels: 4px slide + crossfade, in the direction of travel. */
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(4px);
+  }
+}
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+}
+@keyframes slide-out-left {
+  to {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+}
+@keyframes slide-out-right {
+  to {
+    opacity: 0;
+    transform: translateX(4px);
+  }
+}
+
+@keyframes menu-row-in {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+}
+
+@keyframes heading-sweep {
+  0%,
+  100% {
+    text-decoration-color: transparent;
+  }
+  40% {
+    text-decoration-color: var(--neon-cyan);
+  }
+}
+
+/* The heading keeps its underline (transparent), so the sweep never shifts layout. */
 [data-section-heading] {
   text-decoration: underline;
   text-decoration-color: transparent;
   text-decoration-thickness: 2px;
   text-underline-offset: 0.35em;
 }
-section:target [data-section-heading] {
-  animation: heading-sweep 400ms var(--ease-out-neon) both;
-}
-@keyframes heading-sweep {
-  0% {
-    text-decoration-color: transparent;
-  }
-  40% {
-    text-decoration-color: var(--neon-cyan);
-  }
-  100% {
-    text-decoration-color: transparent;
-  }
-}
 
-/* Menu drawer: stagger-in of the link rows (CSS only, max 8 rows). */
-#site-menu [data-menu-row] {
-  opacity: 0;
-  transform: translateX(8px);
-  animation: menu-row-in 150ms var(--ease-out-neon) both;
-}
-#site-menu [data-menu-row]:nth-child(1) {
-  animation-delay: 0ms;
-}
-#site-menu [data-menu-row]:nth-child(2) {
-  animation-delay: 30ms;
-}
-#site-menu [data-menu-row]:nth-child(3) {
-  animation-delay: 60ms;
-}
-#site-menu [data-menu-row]:nth-child(4) {
-  animation-delay: 90ms;
-}
-#site-menu [data-menu-row]:nth-child(5) {
-  animation-delay: 120ms;
-}
-#site-menu [data-menu-row]:nth-child(6) {
-  animation-delay: 150ms;
-}
-#site-menu [data-menu-row]:nth-child(7) {
-  animation-delay: 180ms;
-}
-#site-menu [data-menu-row]:nth-child(8) {
-  animation-delay: 210ms;
-}
-@keyframes menu-row-in {
-  to {
-    opacity: 1;
-    transform: translateX(0);
+@media (prefers-reduced-motion: no-preference) {
+  /* Forward (and untagged) navigation: old leaves fast, new arrives gently. */
+  ::view-transition-old(.page-out) {
+    animation: var(--motion-fast) var(--ease-out-neon) both page-out-up;
+  }
+  ::view-transition-new(.page-in) {
+    animation: var(--motion-base) var(--ease-out-neon) var(--motion-fast) both page-in-up;
+  }
+  /* Back navigation slides the other way. */
+  ::view-transition-old(.page-out-back) {
+    animation: var(--motion-fast) var(--ease-out-neon) both page-out-down;
+  }
+  ::view-transition-new(.page-in-back) {
+    animation: var(--motion-base) var(--ease-out-neon) var(--motion-fast) both page-in-down;
+  }
+
+  /* Account tabs, builder steps, mobile tool tabs. */
+  ::view-transition-old(.slide-out-left) {
+    animation: var(--motion-fast) var(--ease-out-neon) both slide-out-left;
+  }
+  ::view-transition-new(.slide-in-right) {
+    animation: var(--motion-base) var(--ease-out-neon) var(--motion-fast) both slide-in-right;
+  }
+  ::view-transition-old(.slide-out-right) {
+    animation: var(--motion-fast) var(--ease-out-neon) both slide-out-right;
+  }
+  ::view-transition-new(.slide-in-left) {
+    animation: var(--motion-base) var(--ease-out-neon) var(--motion-fast) both slide-in-left;
+  }
+
+  /* Menu drawer: 150 ms stagger-in of the link rows (first 8 only, CSS only). */
+  #site-menu[data-open] [data-menu-row]:nth-child(-n + 8) {
+    animation: menu-row-in var(--dur-fast) var(--ease-out-neon) both;
+  }
+  #site-menu[data-open] [data-menu-row]:nth-child(1) {
+    animation-delay: 0ms;
+  }
+  #site-menu[data-open] [data-menu-row]:nth-child(2) {
+    animation-delay: 20ms;
+  }
+  #site-menu[data-open] [data-menu-row]:nth-child(3) {
+    animation-delay: 40ms;
+  }
+  #site-menu[data-open] [data-menu-row]:nth-child(4) {
+    animation-delay: 60ms;
+  }
+  #site-menu[data-open] [data-menu-row]:nth-child(5) {
+    animation-delay: 80ms;
+  }
+  #site-menu[data-open] [data-menu-row]:nth-child(6) {
+    animation-delay: 100ms;
+  }
+  #site-menu[data-open] [data-menu-row]:nth-child(7) {
+    animation-delay: 120ms;
+  }
+  #site-menu[data-open] [data-menu-row]:nth-child(8) {
+    animation-delay: 140ms;
+  }
+
+  /* Home section jumps: one cyan underline sweep on the reached heading. */
+  section:target [data-section-heading] {
+    animation: heading-sweep 400ms var(--ease-out-neon) both;
   }
 }
 
@@ -299,14 +305,6 @@ section:target [data-section-heading] {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
-  }
-  #site-menu [data-menu-row] {
-    opacity: 1;
-    transform: none;
-  }
-  section:target [data-section-heading] {
-    animation: none;
-    text-decoration-color: transparent;
   }
   ::view-transition-old(*),
   ::view-transition-new(*),

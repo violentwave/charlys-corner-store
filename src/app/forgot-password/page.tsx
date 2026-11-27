@@ -3,6 +3,7 @@ import { Suspense } from "react";
 
 import { ForgotPasswordForm } from "@/components/forms/forgot-password-form";
 import { PageHeader } from "@/components/sections/page-header";
+import { PageTransition } from "@/components/layout/page-transition";
 import { Section } from "@/components/sections/section";
 
 export const metadata: Metadata = {
@@ -12,26 +13,28 @@ export const metadata: Metadata = {
 
 export default async function ForgotPasswordPage(props: PageProps<"/forgot-password">) {
   return (
-    <Section>
-      <div className="mx-auto w-full max-w-md">
-        <PageHeader
-          eyebrow="Password reset"
-          title="Forgot password"
-          description="Happens to the best of us. We'll email you a link to set a new one."
-        />
-        <div className="mt-8">
-          <Suspense
-            fallback={
-              <p role="status" className="text-text-2 animate-pulse text-sm">
-                Loading…
-              </p>
-            }
-          >
-            <ForgotGate searchParams={props.searchParams} />
-          </Suspense>
+    <PageTransition>
+      <Section>
+        <div className="mx-auto w-full max-w-md">
+          <PageHeader
+            eyebrow="Password reset"
+            title="Forgot password"
+            description="Happens to the best of us. We'll email you a link to set a new one."
+          />
+          <div className="mt-8">
+            <Suspense
+              fallback={
+                <p role="status" className="text-text-2 animate-pulse text-sm">
+                  Loading…
+                </p>
+              }
+            >
+              <ForgotGate searchParams={props.searchParams} />
+            </Suspense>
+          </div>
         </div>
-      </div>
-    </Section>
+      </Section>
+    </PageTransition>
   );
 }
 

@@ -6,6 +6,7 @@ import { VerifyForm } from "@/components/forms/verify-form";
 import { currentUser } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { PageHeader } from "@/components/sections/page-header";
+import { PageTransition } from "@/components/layout/page-transition";
 import { Section } from "@/components/sections/section";
 import { sanitizeNext } from "@/lib/safe-next";
 
@@ -16,22 +17,24 @@ export const metadata: Metadata = {
 
 export default async function VerifyPage(props: PageProps<"/verify">) {
   return (
-    <Section>
-      <div className="mx-auto w-full max-w-md">
-        <PageHeader eyebrow="Almost there" title="Check your inbox" />
-        <div className="mt-8">
-          <Suspense
-            fallback={
-              <p role="status" className="text-text-2 animate-pulse text-sm">
-                Loading…
-              </p>
-            }
-          >
-            <VerifyGate searchParams={props.searchParams} />
-          </Suspense>
+    <PageTransition>
+      <Section>
+        <div className="mx-auto w-full max-w-md">
+          <PageHeader eyebrow="Almost there" title="Check your inbox" />
+          <div className="mt-8">
+            <Suspense
+              fallback={
+                <p role="status" className="text-text-2 animate-pulse text-sm">
+                  Loading…
+                </p>
+              }
+            >
+              <VerifyGate searchParams={props.searchParams} />
+            </Suspense>
+          </div>
         </div>
-      </div>
-    </Section>
+      </Section>
+    </PageTransition>
   );
 }
 

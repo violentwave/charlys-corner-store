@@ -766,7 +766,11 @@ export function Builder() {
     }
   };
 
+  /** Which way the step panel slides (P52-3): forward enters from the right, back from the left. */
+  const [stepDir, setStepDir] = useState<1 | -1>(1);
+
   const goStep = (next: BuilderStep) => {
+    setStepDir(next >= step ? 1 : -1);
     startTransition(() => {
       dispatch({ type: "setStep", step: next });
     });
@@ -969,7 +973,12 @@ export function Builder() {
           step === 1 && !success && "lg:h-0 lg:min-h-full lg:self-stretch",
         )}
       >
-        <ViewTransition key={step} enter="slide-in-right" exit="slide-out-left" default="none">
+        <ViewTransition
+          key={step}
+          enter={stepDir > 0 ? "slide-in-right" : "slide-in-left"}
+          exit={stepDir > 0 ? "slide-out-left" : "slide-out-right"}
+          default="none"
+        >
           {success ? (
             <div className="bg-bg-2/60 rounded-2xl p-4 sm:p-6">
               <SuccessScreen

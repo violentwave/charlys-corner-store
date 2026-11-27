@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/sections/page-header";
+import { PageTransition } from "@/components/layout/page-transition";
 import { Section } from "@/components/sections/section";
 import { services } from "@/content/services";
 import { site } from "@/lib/site";
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
 
 export default function ServicesPage() {
   return (
-    <>
+    <PageTransition>
       <Section>
         <PageHeader
           eyebrow="What we do"
@@ -66,6 +67,6 @@ export default function ServicesPage() {
           </Button>
         </div>
       </Section>
-    </>
+    </PageTransition>
   );
 }
