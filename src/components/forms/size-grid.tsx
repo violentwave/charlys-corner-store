@@ -23,7 +23,7 @@ export function SizeGrid({
   return (
     <fieldset className="flex flex-col gap-2">
       <legend className="text-text-1 text-sm font-medium">{label}</legend>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
         {sizes.map((size) => (
           <Field key={size} label={size} controlId={`${idPrefix}-size-${size}`} className="gap-1">
             <Input

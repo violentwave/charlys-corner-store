@@ -81,7 +81,11 @@ auth_tokens  id, user_id, purpose (verify_email|reset_password), token_hash, att
 coupons      id, lead_id (unique: one per email), code (unique), percent_off, min_order_cents,
              status (issued|eligible|redeemed|expired), issued_at, expires_at, redeemed_order_ref
 orders       id, lead_id, provider (square|stripe), provider_order_id, total_cents, coupon_id, created_at
-uploads      id, name, email, order_number, file_url, notes, created_at
+uploads      the Home order form (P52-1, 2026-11-26; new + existing orders, guests or members): id, lead_id, user_id?,
+             order_type (new|existing), first_name, last_name?, email, phone?, company?, order_number?, fulfillment (pickup|ship)?,
+             address jsonb?, items text[], colors?, print_method (recommend|method id), print_locations text[], sizes jsonb,
+             needed_by?, files jsonb [{key,name,contentType,size}] (≤ 5, under uploads/, kept), notes?, referral_*, marketing_opt_in,
+             legacy single-file columns (file_key…) kept for old rows
 quotes       id, company, name, email, phone, items jsonb, quantity, deadline, artwork_url, notes, status, created_at
 contact_msgs id, name, email, message, created_at
 ```
