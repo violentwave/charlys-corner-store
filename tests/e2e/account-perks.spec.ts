@@ -126,8 +126,8 @@ test("order tracking: the owner's 'Mark as Ready' link moves the order", async (
   await expect(async () => {
     const db = await pool();
     try {
-      const { rows } = await db.query("select order_stage from mockups where id = $1", [orderId]);
-      expect(rows[0]?.order_stage).toBe("ready");
+      const { rows } = await db.query("select stage from orders where id = $1", [orderId]);
+      expect(rows[0]?.stage).toBe("ready");
     } finally {
       await db.end();
     }
