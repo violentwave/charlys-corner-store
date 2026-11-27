@@ -5,9 +5,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { addTransitionType, startTransition, useEffect, useRef, useState, type MouseEvent } from "react";
 
+import { CartLink } from "@/components/layout/cart-link";
 import { jumpToSection } from "@/components/layout/section-scroll";
 import { useSession } from "@/components/layout/session";
 import { SiteMenu } from "@/components/layout/site-menu";
+import { CART_CHANGED_EVENT } from "@/lib/cart-events";
 import { primaryNav, type NavItem } from "@/lib/nav";
 import { site } from "@/lib/site";
 
@@ -22,6 +24,8 @@ export function SiteHeader() {
   const [open, setOpen] = useState(false);
   // Scroll-spy (Home only): the id of the section currently in view, null for the top.
   const [activeSection, setActiveSection] = useState<string | null>(null);
+  // Cart badge (members only): re-read once per page load and on every cart change.
+  const [cartCount, setCartCount] = useState(0);
   const drawerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -43,6 +47,31 @@ export function SiteHeader() {
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
+
+  const signedIn = user !== null;
+  // Keyed by the member: signing out and in as someone else re-reads their cart.
+  const memberEmail = user?.email ?? null;
+  useEffect(() => {
+    if (!memberEmail) return;
+    let alive = true;
+    const read = () =>
+      fetch("/api/cart", { cache: "no-store" })
+        .then(async (res) => {
+          if (!res.ok) return null;
+          const data = (await res.json().catch(() => null)) as { items?: unknown[] } | null;
+          return Array.isArray(data?.items) ? data.items.length : null;
+        })
+        .then((count) => {
+          if (alive && count !== null) setCartCount(count);
+        })
+        .catch(() => undefined);
+    void read();
+    window.addEventListener(CART_CHANGED_EVENT, read);
+    return () => {
+      alive = false;
+      window.removeEventListener(CART_CHANGED_EVENT, read);
+    };
+  }, [memberEmail]);
 
   const isActive = (item: NavItem) => {
     if (isHome && item.homeSection) return effectiveSection === item.homeSection;
@@ -188,6 +217,7 @@ export function SiteHeader() {
           </nav>
 
           <div className="ml-auto flex items-center gap-2 lg:ml-0">
+            {signedIn && !loading ? <CartLink count={cartCount} /> : null}
             {/* One "Design Your Own" CTA: full pill from lg, compact pill below (the other is display:none). */}
             <Link
               href="/#design"
@@ -290,7 +320,7 @@ export function SiteHeader() {
               </span>
             </button>
           </div>
-          <SiteMenu close={() => setOpen(false)} isActive={isActive} />
+          <SiteMenu close={() => setOpen(false)} isActive={isActive} cartCount={cartCount} />
         </div>
       </div>
     </>

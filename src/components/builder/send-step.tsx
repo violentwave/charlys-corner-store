@@ -1,13 +1,15 @@
 "use client";
 /**
- * Step 4: "Send it or order it" (docs/04 §5 v2). Two clearly separate paths, each its own
- * card with one sentence and one button. Notes for Charly's sit above both cards (P48-2)
- * and ride along with either path. Identity comes from the verified account — the old
- * email/name/phone/Turnstile gate is gone. The email path keeps the marketing opt-in
- * (unchecked by default); the order path carries the sizes/quantities grid and the
+ * Step 4: "Send it or order it" (docs/04 §5 v2 + §5b). Three clearly separate paths, each
+ * its own card with one sentence and one button: email the mockup, order this one design,
+ * or collect it in the cart to send several together. Notes for Charly's sit above the
+ * cards (P48-2) and ride along with any path. Identity comes from the verified account —
+ * the old email/name/phone/Turnstile gate is gone. The email path keeps the marketing
+ * opt-in (unchecked by default); the order path carries the sizes/quantities grid and the
  * referral question (old-site parity).
  */
 import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useForm, type Resolver } from "react-hook-form";
 
@@ -29,6 +31,12 @@ import { combineSizesAndRoster, sizesTotal } from "@/lib/member-schemas";
 import { toast } from "@/components/ui/toast";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
+/** The last Add to cart attempt, shown inline under the cards (no success screen). */
+export type CartAddState =
+  | { kind: "added"; count: number; warning?: string }
+  | { kind: "full"; message: string }
+  | { kind: "error"; message: string };
+
 export interface SendStepProps {
   garment: GarmentConfig;
   design: BuilderDesign;
@@ -43,9 +51,17 @@ export interface SendStepProps {
   onSize: (size: string, qty: number) => void;
   onNotes: (notes: string) => void;
   onReferral: (referral: ReferralInput) => void;
-  /** Honeypot value lives in the parent so both buttons submit it. */
+  /** Honeypot value lives in the parent so every button submits it. */
   onWebsite: (website: string) => void;
   onSend: (intent: "email" | "order", marketingOptIn: boolean) => void;
+  /** Collects this design in the cart (POST /api/cart, same body as the other paths). */
+  onAddToCart: () => void;
+  /** true when the design was opened from the cart (?cart=<id>): the button updates it. */
+  cartEditing: boolean;
+  /** Result of the last Add to cart attempt (success, full cart, or an error). */
+  cartState: CartAddState | null;
+  /** Starts a fresh design (the "Design another" link after adding to the cart). */
+  onDesignAnother: () => void;
 }
 
 /** Sizes/quantities must total at least 1 for an order (matches the server's rule). */
@@ -66,6 +82,10 @@ export function SendStep({
   onReferral,
   onWebsite,
   onSend,
+  onAddToCart,
+  cartEditing,
+  cartState,
+  onDesignAnother,
 }: SendStepProps) {
   const [optIn, setOptIn] = useState(false);
   const [needsQuantity, setNeedsQuantity] = useState(false);
@@ -113,8 +133,14 @@ export function SendStep({
   };
 
   const blocked = !hasArtwork;
-  const send = (intent: "email" | "order") => {
+  const send = (intent: "email" | "order" | "cart") => {
     if (blocked || sending) return;
+    if (intent === "cart") {
+      // Sizes are optional until the cart is sent — no quantity check on this path.
+      setNeedsQuantity(false);
+      onAddToCart();
+      return;
+    }
     if (intent === "order" && orderQuantity(design) < 1) {
       setNeedsQuantity(true);
       return;
@@ -175,7 +201,7 @@ export function SendStep({
         />
       </Field>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {/* Path 1: the free mockup. */}
         <section
           aria-label="Email me this mockup"
@@ -290,7 +316,88 @@ export function SendStep({
             </Button>
           </div>
         </section>
+
+        {/* Path 3: collect designs and send them as one order (docs/04 §5b). */}
+        <section
+          aria-label="Add to cart"
+          className="border-border bg-bg-2/60 flex flex-col gap-3 rounded-2xl border p-4 sm:p-5"
+          data-testid="path-cart"
+        >
+          <span aria-hidden="true" className="text-2xl">
+            🛒
+          </span>
+          <h3 className="font-heading text-text-1 text-base tracking-wide uppercase">Add to cart</h3>
+          <p className="text-text-2 text-sm">
+            Collect a few designs and send them together. One price for the whole order.
+          </p>
+          {cartEditing ? (
+            <p className="text-text-3 text-xs" data-testid="cart-editing">
+              Updating a design in your cart — the new version replaces the old one.
+            </p>
+          ) : null}
+          <div className="mt-auto">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => send("cart")}
+              disabled={blocked || sending}
+              loading={sending}
+              data-testid="send-cart"
+              className="w-full"
+            >
+              {cartEditing ? "Update in cart" : "Add to cart"}
+            </Button>
+          </div>
+        </section>
       </div>
+
+      {cartState ? (
+        <div
+          role={cartState.kind === "added" ? "status" : "alert"}
+          data-testid={cartState.kind === "added" ? "cart-added" : "cart-error"}
+          className={
+            cartState.kind === "added"
+              ? "border-neon-cyan/50 bg-bg-2/60 flex flex-col gap-2 rounded-xl border p-4"
+              : "border-danger/60 bg-bg-2/60 flex flex-col gap-2 rounded-xl border p-4"
+          }
+        >
+          {cartState.kind === "added" ? (
+            <>
+              <p className="text-text-1 text-sm">
+                Added to your cart ({cartState.count} {cartState.count === 1 ? "design" : "designs"}).
+              </p>
+              {cartState.warning ? (
+                <p className="text-danger text-xs" role="alert">
+                  {cartState.warning}
+                </p>
+              ) : null}
+              <div className="flex flex-wrap items-center gap-2">
+                <Button asChild size="sm">
+                  <Link href="/cart">View cart</Link>
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={onDesignAnother}
+                  data-testid="cart-design-another"
+                >
+                  Design another
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-text-1 text-sm">{cartState.message}</p>
+              <div>
+                <Button asChild size="sm" variant="secondary">
+                  <Link href="/cart">View cart</Link>
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      ) : null}
 
       <p className="text-text-3 text-xs" role="note">
         We only use your artwork to make your mockup and quote your order. Ask us anytime to delete it.

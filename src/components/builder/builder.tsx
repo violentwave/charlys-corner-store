@@ -21,6 +21,7 @@ import { MOCKUP_FILES_RETENTION_DAYS } from "@/lib/retention";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/cn";
+import { CART_CHANGED_EVENT } from "@/lib/cart-events";
 import type { BrandKit } from "@/app/api/account/brand-kit/route";
 
 import { ColorPicker } from "./color-picker";
@@ -44,7 +45,8 @@ import {
   type RestoredDesign,
   type TextPatch,
 } from "./use-builder-state";
-import { SendStep } from "./send-step";
+import { SendStep, type CartAddState } from "./send-step";
+import { buildMockupUpload } from "./upload-body";
 import { StartOverButton } from "./start-over-dialog";
 import { SaveDraftDialog } from "./save-draft-dialog";
 import { SuccessScreen, type MockupResult } from "./success-screen";
@@ -143,6 +145,9 @@ export function Builder() {
   const [honeypot, setHoneypot] = useState("");
   const [success, setSuccess] = useState<MockupResult | null>(null);
   const [exportedUrls, setExportedUrls] = useState<Partial<Record<ViewId, string>>>({});
+  // Cart (docs/04 §5b): the id being edited (?cart=<id>) and the last add's inline status.
+  const [cartEditingId, setCartEditingId] = useState<string | null>(null);
+  const [cartState, setCartState] = useState<CartAddState | null>(null);
 
   // Object URLs of the uploaded files: revoked when dropped or on unmount.
   useEffect(
@@ -265,7 +270,29 @@ export function Builder() {
   };
 
   /**
-   * Takes ?mockup= / ?draft= out of the address bar once it's being loaded, keeping the hash.
+   * Opens a cart design for editing (/?cart=<id>#design): the same hydrate path as the
+   * ?mockup= restore, and the step-4 cart card becomes "Update in cart".
+   */
+  const openCartItem = async (id: string) => {
+    await Promise.resolve();
+    setRestoreStatus("loading");
+    try {
+      const res = await fetch(`/api/cart/${id}`, { cache: "no-store" });
+      if (!res.ok) throw new Error("cart restore failed");
+      const json = (await res.json()) as
+        { ok: true; design: RestoredDesign; artworks: { url: string }[] } | { ok: false; error: string };
+      if (!json.ok) throw new Error(json.error);
+      applyRestoredDesign(json.design, await fetchArtworkFiles(json.artworks));
+      setCartEditingId(id);
+      setRestoreStatus("loaded");
+    } catch {
+      dispatch({ type: "hydrate", step: 1, design: initialDesign(GARMENTS[0]!.id) });
+      setRestoreStatus("failed");
+    }
+  };
+
+  /**
+   * Takes ?mockup= / ?draft= / ?cart= out of the address bar once it's being loaded, keeping the hash.
    * Otherwise a refresh would load the saved copy again over the visitor's newer edits (the
    * builder already keeps those in sessionStorage).
    */
@@ -273,6 +300,7 @@ export function Builder() {
     const url = new URL(window.location.href);
     url.searchParams.delete("mockup");
     url.searchParams.delete("draft");
+    url.searchParams.delete("cart");
     history.replaceState(history.state, "", `${url.pathname}${url.search}${url.hash}`);
   };
 
@@ -321,6 +349,16 @@ export function Builder() {
         restoredRef.current = true;
         dropLoadParams();
         void openDraft(draftIdParam);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+    const cartId = new URLSearchParams(window.location.search).get("cart");
+    if (cartId) {
+      const timer = setTimeout(() => {
+        if (restoredRef.current) return;
+        restoredRef.current = true;
+        dropLoadParams();
+        void openCartItem(cartId);
       }, 0);
       return () => clearTimeout(timer);
     }
@@ -626,55 +664,31 @@ export function Builder() {
    * `mockup-<view>` per side with layers, `views[].layers` in stack order. Text-only
    * designs send no files at all.
    */
+  /** Shared upload options: the same render/export loop and side restore for all three paths. */
+  const uploadOptions = {
+    design,
+    files,
+    honeypot,
+    renderView: exportViewPng,
+    // `activeViewId` is the side the visitor was on when they pressed the button.
+    restoreView: () => setRequestedView(activeViewId),
+    onProgress: setProgress,
+  };
+
   const send = async (intent: "email" | "order", marketingOptIn: boolean) => {
     if (sending) return;
-    const plan = payloadPlan(design);
-    if (plan.payload.views.length === 0) {
-      setSendError("Add something to at least one side — go back to step 3.");
-      return;
-    }
-    const missing = plan.payload.views
-      .filter((v) => v.layers.some((l) => l.type === "image" && !files[plan.filesInUse[l.artwork]!]))
-      .map((v) => VIEW_LABELS[v.view]);
-    if (missing.length > 0) {
-      setSendError(`Pick your artwork file again for: ${missing.join(", ")}.`);
-      return;
-    }
     setSending(true);
     setSendError(null);
+    setCartState(null);
     setProgress("Rendering your mockup…");
     try {
-      const body = new FormData();
-      body.append(
-        "payload",
-        JSON.stringify({
-          ...plan.payload,
-          marketingOptIn,
-          referralSource: design.referral.referralSource,
-          referralOther: design.referral.referralOther,
-          intent,
-        }),
-      );
-      body.append("website", honeypot);
-      plan.filesInUse.forEach((fileIndex, i) => {
-        body.append(`artwork-${i}`, files[fileIndex]!.file);
-      });
-
-      setProgress("Uploading your mockup…");
-      const blobs: Partial<Record<ViewId, Blob>> = {};
-      const sideBefore = activeViewId;
-      try {
-        for (const view of plan.payload.views) {
-          const blob = await exportViewPng(view.view);
-          if (!blob) throw new Error(`could not render the ${view.view} view`);
-          blobs[view.view] = blob;
-          body.append(`mockup-${view.view}`, blob, `mockup-${view.view}.png`);
-        }
-      } finally {
-        setRequestedView(sideBefore);
+      const built = await buildMockupUpload({ ...uploadOptions, intent, marketingOptIn });
+      if (!built.ok) {
+        setSendError(built.error);
+        return;
       }
 
-      const res = await fetch("/api/mockups", { method: "POST", body });
+      const res = await fetch("/api/mockups", { method: "POST", body: built.upload.body });
       const json = (await res.json()) as
         { ok: true; mockupId: string; mockups: MockupResult["mockups"] } | { ok: false; error: string };
       if (!json.ok) {
@@ -687,15 +701,71 @@ export function Builder() {
         }
         return;
       }
-      track("gate_submitted", { garment: design.garment, intent, views: plan.payload.views.length });
+      track("gate_submitted", {
+        garment: design.garment,
+        intent,
+        views: payloadPlan(design).payload.views.length,
+      });
       const urls: Partial<Record<ViewId, string>> = {};
-      for (const [view, blob] of Object.entries(blobs)) {
+      for (const [view, blob] of Object.entries(built.upload.blobs)) {
         if (blob) urls[view as ViewId] = URL.createObjectURL(blob);
       }
       setExportedUrls(urls);
       setSuccess({ mockupId: json.mockupId, intent, mockups: json.mockups });
     } catch {
       setSendError("Something went wrong. Please try again or email us.");
+    } finally {
+      setSending(false);
+      setProgress(null);
+    }
+  };
+
+  /**
+   * Add to cart (docs/04 §5b): the same multipart body as the email path, posted to
+   * /api/cart. Sizes may be empty here — the cart page collects them. When the design was
+   * opened from the cart, the new version is stored first and only then is the old id
+   * deleted (a failed delete leaves both, and the member removes one).
+   */
+  const addToCart = async () => {
+    if (sending) return;
+    setSending(true);
+    setSendError(null);
+    setCartState(null);
+    setProgress("Rendering your mockup…");
+    try {
+      const built = await buildMockupUpload({ ...uploadOptions, intent: "email", marketingOptIn: false });
+      if (!built.ok) {
+        setSendError(built.error);
+        return;
+      }
+
+      const res = await fetch("/api/cart", { method: "POST", body: built.upload.body });
+      const json = (await res.json().catch(() => null)) as
+        { ok: true; item: { id: string }; count: number } | { ok: false; error: string } | null;
+      if (!json?.ok) {
+        const message = json?.error ?? "Something went wrong. Please try again or email us.";
+        if (res.status === 409) setCartState({ kind: "full", message });
+        else setCartState({ kind: "error", message });
+        if (res.status === 401 || res.status === 403) {
+          refreshAccount();
+          dialogPurposeRef.current = "send";
+          setSignInDialog(res.status === 401 ? "signedOut" : "unverified");
+        }
+        return;
+      }
+
+      let warning: string | undefined;
+      if (cartEditingId) {
+        const removed = await fetch(`/api/cart/${cartEditingId}`, { method: "DELETE" }).catch(() => null);
+        if (!removed?.ok) {
+          warning = "The new version is in, but we couldn't remove the old copy — remove one on the cart page.";
+        }
+        setCartEditingId(null);
+      }
+      setCartState({ kind: "added", count: json.count, warning });
+      window.dispatchEvent(new Event(CART_CHANGED_EVENT));
+    } catch {
+      setCartState({ kind: "error", message: "Something went wrong. Please try again or email us." });
     } finally {
       setSending(false);
       setProgress(null);
@@ -713,6 +783,8 @@ export function Builder() {
     setSuccess(null);
     setExportedUrls({});
     setSendError(null);
+    setCartEditingId(null);
+    setCartState(null);
     for (const f of files) URL.revokeObjectURL(f.url);
     setFiles([]);
     // The persist effect rewrites sessionStorage with the fresh state.
@@ -1148,6 +1220,10 @@ export function Builder() {
                     onReferral={(referral) => dispatch({ type: "setReferral", referral })}
                     onWebsite={setHoneypot}
                     onSend={(intent, marketingOptIn) => void send(intent, marketingOptIn)}
+                    onAddToCart={() => void addToCart()}
+                    cartEditing={!!cartEditingId}
+                    cartState={cartState}
+                    onDesignAnother={designAnother}
                   />
                 ) : null}
 

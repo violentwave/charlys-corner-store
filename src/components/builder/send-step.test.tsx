@@ -33,6 +33,10 @@ function renderSendStep(overrides?: {
       onReferral={vi.fn()}
       onWebsite={vi.fn()}
       onSend={onSend}
+      onAddToCart={vi.fn()}
+      cartEditing={false}
+      cartState={null}
+      onDesignAnother={vi.fn()}
     />,
   );
   return { onSend };
@@ -113,6 +117,10 @@ describe("SendStep (step 4: two paths)", () => {
         onReferral={vi.fn()}
         onWebsite={onWebsite}
         onSend={vi.fn()}
+        onAddToCart={vi.fn()}
+        cartEditing={false}
+        cartState={null}
+        onDesignAnother={vi.fn()}
       />,
     );
     fireEvent.change(document.querySelector("#builder-website")!, { target: { value: "http://spam.example" } });
