@@ -105,21 +105,208 @@
     opacity: 0;
   }
 }
+
 @keyframes fade-out {
   to {
     opacity: 0;
   }
 }
+
 @keyframes dialog-in {
   from {
     opacity: 0;
     transform: translateY(1rem) scale(0.97);
   }
 }
+
 @keyframes dialog-out {
   to {
     opacity: 0;
     transform: translateY(1rem) scale(0.97);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Motion (P52-3): page, tab and step transitions                     */
+/* Every animation lives inside prefers-reduced-motion: no-preference, */
+/* so with reduce nothing is defined and content swaps instantly.      */
+/* ------------------------------------------------------------------ */
+
+/* The overlay must never swallow clicks while a transition runs. */
+::view-transition {
+  pointer-events: none;
+}
+
+/*
+ * No default animations. With any <ViewTransition> mounted, every transition (a form submit
+ * in startTransition, a server action) starts a view transition, and the browser's default
+ * cross-fade then plays on the root and on React's auto-named groups (_t_…). Only the classes
+ * below (page-*, slide-*) animate; everything else swaps instantly, so in-page updates never
+ * freeze the page. (Class selectors beat `*`, so the opt-in rules still win.)
+ */
+::view-transition-group(*),
+::view-transition-old(*),
+::view-transition-new(*) {
+  animation: none;
+}
+
+/* Anchored chrome: header, footer and menu drawer never animate between pages. */
+::view-transition-group(site-header),
+::view-transition-group(site-footer),
+::view-transition-group(site-menu) {
+  animation: none;
+  z-index: 100;
+}
+::view-transition-old(site-header),
+::view-transition-old(site-footer),
+::view-transition-old(site-menu) {
+  display: none;
+}
+::view-transition-new(site-header),
+::view-transition-new(site-footer),
+::view-transition-new(site-menu) {
+  animation: none;
+}
+
+/* Page content: 6-8px vertical slide, forward and back in opposite directions. */
+@keyframes page-out-up {
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+@keyframes page-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes page-out-down {
+  to {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@keyframes page-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+/* Tab / step panels: 4px slide + crossfade, in the direction of travel. */
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(4px);
+  }
+}
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+}
+@keyframes slide-out-left {
+  to {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+}
+@keyframes slide-out-right {
+  to {
+    opacity: 0;
+    transform: translateX(4px);
+  }
+}
+
+@keyframes menu-row-in {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+}
+
+@keyframes heading-sweep {
+  0%,
+  100% {
+    text-decoration-color: transparent;
+  }
+  40% {
+    text-decoration-color: var(--neon-cyan);
+  }
+}
+
+/* The heading keeps its underline (transparent), so the sweep never shifts layout. */
+[data-section-heading] {
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.35em;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Forward (and untagged) navigation: old leaves fast, new arrives gently. */
+  ::view-transition-old(.page-out) {
+    animation: var(--motion-fast) var(--ease-out-neon) both page-out-up;
+  }
+  ::view-transition-new(.page-in) {
+    animation: var(--motion-base) var(--ease-out-neon) var(--motion-fast) both page-in-up;
+  }
+  /* Back navigation slides the other way. */
+  ::view-transition-old(.page-out-back) {
+    animation: var(--motion-fast) var(--ease-out-neon) both page-out-down;
+  }
+  ::view-transition-new(.page-in-back) {
+    animation: var(--motion-base) var(--ease-out-neon) var(--motion-fast) both page-in-down;
+  }
+
+  /* Account tabs, builder steps, mobile tool tabs. */
+  ::view-transition-old(.slide-out-left) {
+    animation: var(--motion-fast) var(--ease-out-neon) both slide-out-left;
+  }
+  ::view-transition-new(.slide-in-right) {
+    animation: var(--motion-base) var(--ease-out-neon) var(--motion-fast) both slide-in-right;
+  }
+  ::view-transition-old(.slide-out-right) {
+    animation: var(--motion-fast) var(--ease-out-neon) both slide-out-right;
+  }
+  ::view-transition-new(.slide-in-left) {
+    animation: var(--motion-base) var(--ease-out-neon) var(--motion-fast) both slide-in-left;
+  }
+
+  /* Menu drawer: 150 ms stagger-in of the link rows (first 8 only, CSS only). */
+  #site-menu[data-open] [data-menu-row]:nth-child(-n + 8) {
+    animation: menu-row-in var(--dur-fast) var(--ease-out-neon) both;
+  }
+  #site-menu[data-open] [data-menu-row]:nth-child(1) {
+    animation-delay: 0ms;
+  }
+  #site-menu[data-open] [data-menu-row]:nth-child(2) {
+    animation-delay: 20ms;
+  }
+  #site-menu[data-open] [data-menu-row]:nth-child(3) {
+    animation-delay: 40ms;
+  }
+  #site-menu[data-open] [data-menu-row]:nth-child(4) {
+    animation-delay: 60ms;
+  }
+  #site-menu[data-open] [data-menu-row]:nth-child(5) {
+    animation-delay: 80ms;
+  }
+  #site-menu[data-open] [data-menu-row]:nth-child(6) {
+    animation-delay: 100ms;
+  }
+  #site-menu[data-open] [data-menu-row]:nth-child(7) {
+    animation-delay: 120ms;
+  }
+  #site-menu[data-open] [data-menu-row]:nth-child(8) {
+    animation-delay: 140ms;
+  }
+
+  /* Home section jumps: one cyan underline sweep on the reached heading. */
+  section:target [data-section-heading] {
+    animation: heading-sweep 400ms var(--ease-out-neon) both;
   }
 }
 
@@ -131,5 +318,11 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
   }
 }

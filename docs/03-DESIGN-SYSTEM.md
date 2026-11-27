@@ -75,6 +75,20 @@ Scale (rem): 0.75 · 0.875 · 1 · 1.125 · 1.25 · 1.5 · 2 · 2.5 · 3.5 · 5 
 - **Coupon ticket:** dashed yellow border, mono code, "copy" button.
 - **Charly mascot:** simple line-art neon dog (commission or illustrate; ask the owner for photos) for empty states, 404, loading ("Fetching your mockup…"), and success screens.
 
+## Motion (P52-3)
+
+Tokens (in `src/styles/tokens.css`): `--motion-fast: 120ms`, `--motion-base: 200ms`, `--ease-out-neon: cubic-bezier(0.22, 1, 0.36, 1)`. Nothing runs longer than 250 ms; use the tokens, never a hard-coded duration.
+
+Where transitions are used:
+- **Page navigation** — every `page.tsx` wraps its content in `<PageTransition>` (`src/components/layout/page-transition.tsx`), a React `<ViewTransition>`: the old page fades out in 120 ms with a 6px upward slide, the new one fades in over 200 ms from 8px below. It lives in each page, not the layout (layouts persist, so their enter/exit never fire). Links carry `transitionTypes={["nav-forward"]}`; browser back adds `nav-back` on `popstate`, which plays the reverse slide.
+- **Anchored chrome** — header, footer and menu drawer carry their own `view-transition-name` (`site-header`, `site-footer`, `site-menu`) and never animate, so the page moves and the frame stays put.
+- **Account tabs, builder steps, mobile tool tabs** — a keyed `<ViewTransition>` around the panel crossfades with a 4px slide in the direction of travel (tab to the right enters from the right), changed inside `startTransition`. The Konva stage sits outside the wrapper: the canvas never animates or remounts.
+- **Menu drawer** — its slide plus a 150 ms stagger-in of the first 8 link rows (`#site-menu[data-open] [data-menu-row]`, CSS only).
+- **Home section jumps** — a one-shot 400 ms cyan underline sweep on the reached heading (`section:target [data-section-heading]`). The underline is always present but transparent, so the sweep costs no layout.
+- **Hover/press polish** — 120 ms transform/opacity (and colours) only; no box-shadow animation on large elements.
+
+Reduced-motion rule: every animation and keyframe is defined inside `@media (prefers-reduced-motion: no-preference)`, so with `reduce` nothing is defined and content swaps instantly; the global `@media (prefers-reduced-motion: reduce)` block additionally forces `animation-duration: 0.01ms` / `transition-duration: 0.01ms` and zero-duration view transitions. Browsers without the View Transitions API just swap instantly (no polyfill). CLS stays 0: transitions only use `transform`/`opacity`, never layout properties.
+
 ## Accessibility (non-negotiable)
 - WCAG 2.2 AA: body text ≥ 4.5:1, large text ≥ 3:1. `--text-3` is for ≥18px only.
 - Visible focus ring: 2px `--neon-cyan` + offset on every interactive element.
@@ -84,5 +98,4 @@ Scale (rem): 0.75 · 0.875 · 1 · 1.125 · 1.25 · 1.5 · 2 · 2.5 · 3.5 · 5 
 ## Inspiration references (from research)
 - Rapid Silk Screen: Bungee Inline + Nunito pairing (retro display, friendly body)
 - Muzli dark-mode set: glass cards, sticky blur nav, gradient pill CTAs
-- Vev "Neon Highlights" palette, rated HIGH fit for synthwave
 - Awwwards/Colorlib retro galleries (Poolsuite is a good tone reference: playful retro done with restraint)

@@ -11,6 +11,7 @@ import { PastWorkSection } from "@/components/sections/home/past-work-section";
 import { AboutSummary } from "@/components/sections/home/about-summary";
 import { ContactSummary } from "@/components/sections/home/contact-summary";
 import { Hero } from "@/components/neon/hero";
+import { PageTransition } from "@/components/layout/page-transition";
 import { site } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
 
 export default function Home() {
   return (
-    <>
+    <PageTransition>
       {/* One-page Home (Logan, 2026-11-26): builder, upload, then summary sections.
           Business, About and Contact stay full pages — these are the trimmed versions. */}
       <DesignSection />
@@ -48,6 +49,6 @@ export default function Home() {
       <PastWorkSection />
       <AboutSummary />
       <ContactSummary />
-    </>
+    </PageTransition>
   );
 }

@@ -8,6 +8,7 @@
  * (max-height from --canvas-h and --chrome-h, set by the builder) so the page never
  * moves. Arrow keys follow the WAI-ARIA tabs pattern (Radix Tabs).
  */
+import { startTransition, ViewTransition } from "react";
 import { useState } from "react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,6 +18,9 @@ import { AddButtons, SelectedItemSection, SideSection, type InspectorSectionsPro
 import { LayersPanel } from "./layers-panel";
 
 type ToolTab = "item" | "add" | "side" | "layers";
+
+/** Tab order on screen: the panel slides in the direction of travel (P52-3). */
+const TAB_ORDER: ToolTab[] = ["item", "add", "side", "layers"];
 
 export interface ToolTabsProps extends InspectorSectionsProps {
   fileError: string | null;
@@ -41,6 +45,7 @@ export function ToolTabs(props: ToolTabsProps) {
   // selection themselves (duplicate selects the copy) — yanking the visitor to Item would
   // make the list unusable. At 0 layers the Layers tab ceases to exist → Add.
   const [tab, setTab] = useState<ToolTab>(viewState.selectedLayerId ? "item" : "add");
+  const [dir, setDir] = useState<1 | -1>(1);
   const [lastSelection, setLastSelection] = useState<string | null>(viewState.selectedLayerId);
   const [lastView, setLastView] = useState(props.view.id);
   if (layerCount === 0 && tab === "layers") {
@@ -84,7 +89,15 @@ export function ToolTabs(props: ToolTabsProps) {
         </p>
       ) : null}
 
-      <Tabs value={tab} onValueChange={(value) => setTab(value as ToolTab)} className="flex min-h-0 flex-1 flex-col">
+      <Tabs
+        value={tab}
+        onValueChange={(value) => {
+          const next = value as ToolTab;
+          setDir(TAB_ORDER.indexOf(next) >= TAB_ORDER.indexOf(tab) ? 1 : -1);
+          startTransition(() => setTab(next));
+        }}
+        className="flex min-h-0 flex-1 flex-col"
+      >
         {/* Sits right under the fixed canvas (top = header + canvas + the wrapper's
             pb-4); the panel below scrolls inside itself, so the page never moves. */}
         <div className="bg-bg-0 z-20 pt-1 pb-1">
@@ -126,67 +139,74 @@ export function ToolTabs(props: ToolTabsProps) {
         </div>
 
         {/* The active panel scrolls inside itself; the page (and the sticky canvas) stay put. */}
-        <TabsContent
-          value="item"
-          className="border-border mt-2 min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-md pr-1"
+        <ViewTransition
+          key={tab}
+          enter={dir > 0 ? "slide-in-right" : "slide-in-left"}
+          exit={dir > 0 ? "slide-out-left" : "slide-out-right"}
+          default="none"
         >
-          <div className="flex flex-col gap-3">
-            <SelectedItemSection {...props} />
-            {props.accountEmail ? (
-              <p className="text-text-3 text-xs" data-testid="signed-in-as">
-                Signed in as <span className="text-text-2">{props.accountEmail}</span>
-              </p>
-            ) : null}
-          </div>
-        </TabsContent>
-
-        <TabsContent
-          value="add"
-          className="border-border mt-2 min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-md pr-1"
-        >
-          <div className="flex flex-col gap-2">
-            <AddButtons
-              capReached={props.capReached}
-              logo={props.logo}
-              onUploadClick={props.onUploadClick}
-              onAddText={props.onAddText}
-              onAddLogo={props.onAddLogo}
-            />
-            {props.capReached ? (
-              <p className="text-text-3 text-xs" role="note" data-testid="layers-cap">
-                This side holds 8 designs — remove one to add another.
-              </p>
-            ) : null}
-            {props.accountEmail ? (
-              <p className="text-text-3 text-xs" data-testid="signed-in-as">
-                Signed in as <span className="text-text-2">{props.accountEmail}</span>
-              </p>
-            ) : null}
-          </div>
-        </TabsContent>
-
-        <TabsContent
-          value="side"
-          className="border-border mt-2 min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-md pr-1"
-        >
-          <SideSection {...props} />
-        </TabsContent>
-
-        {layerCount > 0 ? (
           <TabsContent
-            value="layers"
+            value="item"
             className="border-border mt-2 min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-md pr-1"
           >
-            <LayersPanel
-              rows={rows}
-              selectedId={viewState.selectedLayerId}
-              onSelect={props.onSelectLayer}
-              onMove={props.onMoveLayer}
-              onDuplicate={props.onDuplicateLayer}
-              onRemove={props.onRemoveLayer}
-            />
+            <div className="flex flex-col gap-3">
+              <SelectedItemSection {...props} />
+              {props.accountEmail ? (
+                <p className="text-text-3 text-xs" data-testid="signed-in-as">
+                  Signed in as <span className="text-text-2">{props.accountEmail}</span>
+                </p>
+              ) : null}
+            </div>
           </TabsContent>
-        ) : null}
+
+          <TabsContent
+            value="add"
+            className="border-border mt-2 min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-md pr-1"
+          >
+            <div className="flex flex-col gap-2">
+              <AddButtons
+                capReached={props.capReached}
+                logo={props.logo}
+                onUploadClick={props.onUploadClick}
+                onAddText={props.onAddText}
+                onAddLogo={props.onAddLogo}
+              />
+              {props.capReached ? (
+                <p className="text-text-3 text-xs" role="note" data-testid="layers-cap">
+                  This side holds 8 designs — remove one to add another.
+                </p>
+              ) : null}
+              {props.accountEmail ? (
+                <p className="text-text-3 text-xs" data-testid="signed-in-as">
+                  Signed in as <span className="text-text-2">{props.accountEmail}</span>
+                </p>
+              ) : null}
+            </div>
+          </TabsContent>
+
+          <TabsContent
+            value="side"
+            className="border-border mt-2 min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-md pr-1"
+          >
+            <SideSection {...props} />
+          </TabsContent>
+
+          {layerCount > 0 ? (
+            <TabsContent
+              value="layers"
+              className="border-border mt-2 min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-md pr-1"
+            >
+              <LayersPanel
+                rows={rows}
+                selectedId={viewState.selectedLayerId}
+                onSelect={props.onSelectLayer}
+                onMove={props.onMoveLayer}
+                onDuplicate={props.onDuplicateLayer}
+                onRemove={props.onRemoveLayer}
+              />
+            </TabsContent>
+          ) : null}
+        </ViewTransition>
       </Tabs>
     </div>
   );

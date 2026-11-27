@@ -75,8 +75,10 @@ export function SiteMenu({ close, isActive }: { close: () => void; isActive: (it
       <Link
         key={`${item.group}-${item.href}`}
         href={item.href}
+        transitionTypes={["nav-forward"]}
         aria-current={active ? (pathname === "/" && item.homeSection ? "location" : "page") : undefined}
         data-active={active || undefined}
+        data-menu-row=""
         onClick={(event) => onMenuNavClick(event, item)}
         className={ROW}
       >
@@ -130,7 +132,9 @@ export function SiteMenu({ close, isActive }: { close: () => void; isActive: (it
               <Link
                 key={hash}
                 href={`/account#${hash}`}
+                transitionTypes={["nav-forward"]}
                 data-testid={hash === "designs" ? "account-link" : undefined}
+                data-menu-row=""
                 aria-current={hash === "designs" && pathname === "/account" ? "page" : undefined}
                 onClick={(event) => onAccountNavClick(event, hash)}
                 className={ROW}
@@ -171,6 +175,7 @@ function JoinCard({ pathname, googleEnabled, close }: { pathname: string; google
           <Link
             href={`/signup?next=${encodeURIComponent(pathname)}`}
             onClick={close}
+            data-menu-row=""
             className="bg-neon-pink text-bg-0 shadow-glow-pink focus-visible:ring-neon-cyan inline-flex min-h-[44px] items-center justify-center rounded-full px-3 text-sm font-semibold transition-transform duration-150 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:outline-none"
           >
             Create account
@@ -179,6 +184,7 @@ function JoinCard({ pathname, googleEnabled, close }: { pathname: string; google
             href={`/login?next=${encodeURIComponent(pathname)}`}
             onClick={close}
             data-testid="account-link"
+            data-menu-row=""
             className="border-neon-cyan text-neon-cyan hover:shadow-glow-cyan focus-visible:ring-neon-cyan inline-flex min-h-[44px] items-center justify-center rounded-full border px-3 text-sm font-semibold transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none"
           >
             Log in

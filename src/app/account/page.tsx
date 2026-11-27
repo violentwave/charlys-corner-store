@@ -7,6 +7,7 @@ import { LogoutButton } from "@/components/forms/logout-button";
 import { currentUser } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { PageHeader } from "@/components/sections/page-header";
+import { PageTransition } from "@/components/layout/page-transition";
 import { Section } from "@/components/sections/section";
 
 export const metadata: Metadata = {
@@ -16,19 +17,21 @@ export const metadata: Metadata = {
 
 export default function AccountPage() {
   return (
-    <Section>
-      <div className="mx-auto w-full max-w-6xl">
-        <Suspense
-          fallback={
-            <p role="status" className="text-text-2 animate-pulse text-sm">
-              Fetching your designs…
-            </p>
-          }
-        >
-          <AccountGate />
-        </Suspense>
-      </div>
-    </Section>
+    <PageTransition>
+      <Section>
+        <div className="mx-auto w-full max-w-6xl">
+          <Suspense
+            fallback={
+              <p role="status" className="text-text-2 animate-pulse text-sm">
+                Fetching your designs…
+              </p>
+            }
+          >
+            <AccountGate />
+          </Suspense>
+        </div>
+      </Section>
+    </PageTransition>
   );
 }
 

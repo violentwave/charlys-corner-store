@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/sections/page-header";
 import { Section } from "@/components/sections/section";
 import { ContactForm } from "@/components/forms/contact-form";
+import { PageTransition } from "@/components/layout/page-transition";
 import { about } from "@/content/about";
 import { site } from "@/lib/site";
 
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
 
 export default function AboutPage() {
   return (
-    <>
+    <PageTransition>
       <Section>
         <PageHeader eyebrow="Our story" title={about.headline} />
         <div className="text-text-2 mt-8 flex max-w-2xl flex-col gap-4">
@@ -49,6 +50,6 @@ export default function AboutPage() {
           <ContactForm sourcePage="about" />
         </div>
       </Section>
-    </>
+    </PageTransition>
   );
 }

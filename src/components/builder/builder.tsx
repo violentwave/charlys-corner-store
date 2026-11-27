@@ -6,6 +6,7 @@
  * the two send paths ("Email me this mockup" / "Order this design"). Loaded client-only
  * through next/dynamic (ssr:false) because Konva must never run on the server.
  */
+import { startTransition, ViewTransition } from "react";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 
@@ -765,8 +766,14 @@ export function Builder() {
     }
   };
 
+  /** Which way the step panel slides (P52-3): forward enters from the right, back from the left. */
+  const [stepDir, setStepDir] = useState<1 | -1>(1);
+
   const goStep = (next: BuilderStep) => {
-    dispatch({ type: "setStep", step: next });
+    setStepDir(next >= step ? 1 : -1);
+    startTransition(() => {
+      dispatch({ type: "setStep", step: next });
+    });
     // Steps live below the canvas on phones; keep the panel in view. The scroll-margin
     // that clears the fixed canvas (mobile step 3) arrives with the new step's render,
     // so scroll one frame later — an immediate scrollIntoView reads margin 0.
@@ -966,224 +973,231 @@ export function Builder() {
           step === 1 && !success && "lg:h-0 lg:min-h-full lg:self-stretch",
         )}
       >
-        {success ? (
-          <div className="bg-bg-2/60 rounded-2xl p-4 sm:p-6">
-            <SuccessScreen
-              garmentId={design.garment}
-              summary={{ garmentName: garment.name, colorNames, sizeEntries }}
-              result={success}
-              urls={exportedUrls}
-              onDesignAnother={designAnother}
-              onGoToOrder={() => {
-                setSuccess(null);
-                goStep(4);
-              }}
-            />
-          </div>
-        ) : (
-          <>
-            {/* Notices + step navigation. On mobile step 3 these render inside the fixed
+        <ViewTransition
+          key={step}
+          enter={stepDir > 0 ? "slide-in-right" : "slide-in-left"}
+          exit={stepDir > 0 ? "slide-out-left" : "slide-out-right"}
+          default="none"
+        >
+          {success ? (
+            <div className="bg-bg-2/60 rounded-2xl p-4 sm:p-6">
+              <SuccessScreen
+                garmentId={design.garment}
+                summary={{ garmentName: garment.name, colorNames, sizeEntries }}
+                result={success}
+                urls={exportedUrls}
+                onDesignAnother={designAnother}
+                onGoToOrder={() => {
+                  setSuccess(null);
+                  goStep(4);
+                }}
+              />
+            </div>
+          ) : (
+            <>
+              {/* Notices + step navigation. On mobile step 3 these render inside the fixed
                 tool shell instead (conditionally — never two copies in the DOM). */}
-            {!mobileStep3 ? (
-              <>
-                {notices}
-                {stepProgress}
-              </>
-            ) : null}
-
-            <div
-              className={cn(
-                "bg-bg-2/60 rounded-2xl p-4 sm:p-6",
-                step === 1 && "lg:flex lg:min-h-0 lg:flex-1 lg:flex-col",
-              )}
-            >
-              {/* Below lg on step 3 the fixed tool shell replaces this card header. */}
-              <header className={cn("mb-5 flex flex-col gap-1", mobileStep3 && "hidden")}>
-                <h2 className="font-heading text-text-1 text-xl tracking-wide uppercase">{stepInfo.headline}</h2>
-                <p className="text-text-2 text-sm">{stepInfo.helper}</p>
-              </header>
-
-              {step === 1 ? (
-                <GarmentStep
-                  selectedId={design.garment}
-                  onSelect={(id) => {
-                    dispatch({ type: "selectGarment", garmentId: id });
-                    track("garment_selected", { garment: id });
-                  }}
-                  onContinue={() => goStep(2)}
-                />
+              {!mobileStep3 ? (
+                <>
+                  {notices}
+                  {stepProgress}
+                </>
               ) : null}
-              {step === 2 ? (
-                <ColorPicker
-                  garment={garment}
-                  colors={design.colors}
-                  onZoneColor={(zone, hex) => dispatch({ type: "setZoneColor", zone, hex })}
-                />
-              ) : null}
-              {step === 3 ? (
-                isDesktop ? (
-                  <DesignInspector
-                    view={activeView}
-                    views={garment.views}
-                    viewState={activeViewState}
-                    artByView={artByView}
-                    files={chooserFiles}
-                    selectedFileReady={selectedLayer?.type !== "image" || !!files[selectedLayer.fileIndex]}
-                    fileError={fileError}
-                    capReached={activeViewState.layers.length >= MAX_LAYERS_PER_VIEW}
-                    accountEmail={account?.verified ? account.email : null}
-                    brandInks={brandKit?.inkColors}
-                    brandFonts={brandKit?.fonts as TextFontId[] | undefined}
-                    logo={brandKit?.logo}
-                    onAddLogo={() => void addBrandLogo()}
-                    lockRatio={lockRatio}
-                    onLockRatioChange={setLockRatio}
-                    onUploadClick={() => void attemptUpload()}
-                    onDropFile={(file) => void attemptUpload(file)}
-                    onAddText={addText}
-                    onViewChange={setRequestedView}
-                    onSetPrintArea={(viewId, areaId) =>
-                      dispatch({ type: "setPrintArea", view: viewId, printAreaId: areaId })
-                    }
-                    method={printMethod.method}
-                    methodOptions={methodOptions}
-                    onSetPrintMethod={(viewId, method) => dispatch({ type: "setPrintMethod", view: viewId, method })}
-                    onSelectLayer={(layerId) => dispatch({ type: "selectLayer", view: activeViewId, layerId })}
-                    onTransform={(layerId, transform, mergeKey) =>
-                      dispatch({ type: "updateLayer", view: activeViewId, layerId, patch: { transform }, mergeKey })
-                    }
-                    onTextChange={changeText}
-                    onOutlineChange={(layerId, outline, mergeKey) =>
-                      dispatch({
-                        type: "updateLayer",
-                        view: activeViewId,
-                        layerId,
-                        patch: { outline } as Partial<BuilderLayer>,
-                        mergeKey,
-                      })
-                    }
-                    onRemoveLayer={(layerId) => removeLayer(activeViewId, layerId)}
-                    onDuplicateLayer={(layerId) => dispatch({ type: "duplicateLayer", view: activeViewId, layerId })}
-                    onMoveLayer={(layerId, to) => dispatch({ type: "moveLayer", view: activeViewId, layerId, to })}
+
+              <div
+                className={cn(
+                  "bg-bg-2/60 rounded-2xl p-4 sm:p-6",
+                  step === 1 && "lg:flex lg:min-h-0 lg:flex-1 lg:flex-col",
+                )}
+              >
+                {/* Below lg on step 3 the fixed tool shell replaces this card header. */}
+                <header className={cn("mb-5 flex flex-col gap-1", mobileStep3 && "hidden")}>
+                  <h2 className="font-heading text-text-1 text-xl tracking-wide uppercase">{stepInfo.headline}</h2>
+                  <p className="text-text-2 text-sm">{stepInfo.helper}</p>
+                </header>
+
+                {step === 1 ? (
+                  <GarmentStep
+                    selectedId={design.garment}
+                    onSelect={(id) => {
+                      dispatch({ type: "selectGarment", garmentId: id });
+                      track("garment_selected", { garment: id });
+                    }}
+                    onContinue={() => goStep(2)}
                   />
-                ) : (
-                  <ToolTabs
-                    top={
-                      mobileStep3 ? (
-                        <>
-                          {notices}
-                          {stepProgress}
-                        </>
-                      ) : undefined
-                    }
-                    view={activeView}
-                    views={garment.views}
-                    viewState={activeViewState}
-                    artByView={artByView}
-                    files={chooserFiles}
-                    selectedFileReady={selectedLayer?.type !== "image" || !!files[selectedLayer.fileIndex]}
-                    fileError={fileError}
-                    capReached={activeViewState.layers.length >= MAX_LAYERS_PER_VIEW}
-                    accountEmail={account?.verified ? account.email : null}
-                    brandInks={brandKit?.inkColors}
-                    brandFonts={brandKit?.fonts as TextFontId[] | undefined}
-                    logo={brandKit?.logo}
-                    onAddLogo={() => void addBrandLogo()}
-                    lockRatio={lockRatio}
-                    onLockRatioChange={setLockRatio}
-                    onUploadClick={() => void attemptUpload()}
-                    onDropFile={(file) => void attemptUpload(file)}
-                    onAddText={addText}
-                    onViewChange={setRequestedView}
-                    onSetPrintArea={(viewId, areaId) =>
-                      dispatch({ type: "setPrintArea", view: viewId, printAreaId: areaId })
-                    }
-                    method={printMethod.method}
-                    methodOptions={methodOptions}
-                    onSetPrintMethod={(viewId, method) => dispatch({ type: "setPrintMethod", view: viewId, method })}
-                    onSelectLayer={(layerId) => dispatch({ type: "selectLayer", view: activeViewId, layerId })}
-                    onTransform={(layerId, transform, mergeKey) =>
-                      dispatch({ type: "updateLayer", view: activeViewId, layerId, patch: { transform }, mergeKey })
-                    }
-                    onTextChange={changeText}
-                    onOutlineChange={(layerId, outline, mergeKey) =>
-                      dispatch({
-                        type: "updateLayer",
-                        view: activeViewId,
-                        layerId,
-                        patch: { outline } as Partial<BuilderLayer>,
-                        mergeKey,
-                      })
-                    }
-                    onRemoveLayer={(layerId) => removeLayer(activeViewId, layerId)}
-                    onDuplicateLayer={(layerId) => dispatch({ type: "duplicateLayer", view: activeViewId, layerId })}
-                    onMoveLayer={(layerId, to) => dispatch({ type: "moveLayer", view: activeViewId, layerId, to })}
+                ) : null}
+                {step === 2 ? (
+                  <ColorPicker
+                    garment={garment}
+                    colors={design.colors}
+                    onZoneColor={(zone, hex) => dispatch({ type: "setZoneColor", zone, hex })}
                   />
-                )
-              ) : null}
-              {step === 4 ? (
-                <SendStep
-                  garment={garment}
-                  design={design}
-                  accountEmail={account?.verified ? account.email : null}
-                  hasArtwork={hasLayers}
-                  sending={sending}
-                  progress={progress}
-                  error={sendError}
-                  onSize={(size, qty) => dispatch({ type: "setSize", size, qty })}
-                  onNotes={(notes) => dispatch({ type: "setNotes", notes })}
-                  onReferral={(referral) => dispatch({ type: "setReferral", referral })}
-                  onWebsite={setHoneypot}
-                  onSend={(intent, marketingOptIn) => void send(intent, marketingOptIn)}
-                />
-              ) : null}
+                ) : null}
+                {step === 3 ? (
+                  isDesktop ? (
+                    <DesignInspector
+                      view={activeView}
+                      views={garment.views}
+                      viewState={activeViewState}
+                      artByView={artByView}
+                      files={chooserFiles}
+                      selectedFileReady={selectedLayer?.type !== "image" || !!files[selectedLayer.fileIndex]}
+                      fileError={fileError}
+                      capReached={activeViewState.layers.length >= MAX_LAYERS_PER_VIEW}
+                      accountEmail={account?.verified ? account.email : null}
+                      brandInks={brandKit?.inkColors}
+                      brandFonts={brandKit?.fonts as TextFontId[] | undefined}
+                      logo={brandKit?.logo}
+                      onAddLogo={() => void addBrandLogo()}
+                      lockRatio={lockRatio}
+                      onLockRatioChange={setLockRatio}
+                      onUploadClick={() => void attemptUpload()}
+                      onDropFile={(file) => void attemptUpload(file)}
+                      onAddText={addText}
+                      onViewChange={setRequestedView}
+                      onSetPrintArea={(viewId, areaId) =>
+                        dispatch({ type: "setPrintArea", view: viewId, printAreaId: areaId })
+                      }
+                      method={printMethod.method}
+                      methodOptions={methodOptions}
+                      onSetPrintMethod={(viewId, method) => dispatch({ type: "setPrintMethod", view: viewId, method })}
+                      onSelectLayer={(layerId) => dispatch({ type: "selectLayer", view: activeViewId, layerId })}
+                      onTransform={(layerId, transform, mergeKey) =>
+                        dispatch({ type: "updateLayer", view: activeViewId, layerId, patch: { transform }, mergeKey })
+                      }
+                      onTextChange={changeText}
+                      onOutlineChange={(layerId, outline, mergeKey) =>
+                        dispatch({
+                          type: "updateLayer",
+                          view: activeViewId,
+                          layerId,
+                          patch: { outline } as Partial<BuilderLayer>,
+                          mergeKey,
+                        })
+                      }
+                      onRemoveLayer={(layerId) => removeLayer(activeViewId, layerId)}
+                      onDuplicateLayer={(layerId) => dispatch({ type: "duplicateLayer", view: activeViewId, layerId })}
+                      onMoveLayer={(layerId, to) => dispatch({ type: "moveLayer", view: activeViewId, layerId, to })}
+                    />
+                  ) : (
+                    <ToolTabs
+                      top={
+                        mobileStep3 ? (
+                          <>
+                            {notices}
+                            {stepProgress}
+                          </>
+                        ) : undefined
+                      }
+                      view={activeView}
+                      views={garment.views}
+                      viewState={activeViewState}
+                      artByView={artByView}
+                      files={chooserFiles}
+                      selectedFileReady={selectedLayer?.type !== "image" || !!files[selectedLayer.fileIndex]}
+                      fileError={fileError}
+                      capReached={activeViewState.layers.length >= MAX_LAYERS_PER_VIEW}
+                      accountEmail={account?.verified ? account.email : null}
+                      brandInks={brandKit?.inkColors}
+                      brandFonts={brandKit?.fonts as TextFontId[] | undefined}
+                      logo={brandKit?.logo}
+                      onAddLogo={() => void addBrandLogo()}
+                      lockRatio={lockRatio}
+                      onLockRatioChange={setLockRatio}
+                      onUploadClick={() => void attemptUpload()}
+                      onDropFile={(file) => void attemptUpload(file)}
+                      onAddText={addText}
+                      onViewChange={setRequestedView}
+                      onSetPrintArea={(viewId, areaId) =>
+                        dispatch({ type: "setPrintArea", view: viewId, printAreaId: areaId })
+                      }
+                      method={printMethod.method}
+                      methodOptions={methodOptions}
+                      onSetPrintMethod={(viewId, method) => dispatch({ type: "setPrintMethod", view: viewId, method })}
+                      onSelectLayer={(layerId) => dispatch({ type: "selectLayer", view: activeViewId, layerId })}
+                      onTransform={(layerId, transform, mergeKey) =>
+                        dispatch({ type: "updateLayer", view: activeViewId, layerId, patch: { transform }, mergeKey })
+                      }
+                      onTextChange={changeText}
+                      onOutlineChange={(layerId, outline, mergeKey) =>
+                        dispatch({
+                          type: "updateLayer",
+                          view: activeViewId,
+                          layerId,
+                          patch: { outline } as Partial<BuilderLayer>,
+                          mergeKey,
+                        })
+                      }
+                      onRemoveLayer={(layerId) => removeLayer(activeViewId, layerId)}
+                      onDuplicateLayer={(layerId) => dispatch({ type: "duplicateLayer", view: activeViewId, layerId })}
+                      onMoveLayer={(layerId, to) => dispatch({ type: "moveLayer", view: activeViewId, layerId, to })}
+                    />
+                  )
+                ) : null}
+                {step === 4 ? (
+                  <SendStep
+                    garment={garment}
+                    design={design}
+                    accountEmail={account?.verified ? account.email : null}
+                    hasArtwork={hasLayers}
+                    sending={sending}
+                    progress={progress}
+                    error={sendError}
+                    onSize={(size, qty) => dispatch({ type: "setSize", size, qty })}
+                    onNotes={(notes) => dispatch({ type: "setNotes", notes })}
+                    onReferral={(referral) => dispatch({ type: "setReferral", referral })}
+                    onWebsite={setHoneypot}
+                    onSend={(intent, marketingOptIn) => void send(intent, marketingOptIn)}
+                  />
+                ) : null}
 
-              {/* Below lg on step 3 these live in the fixed action bar instead (P51-1);
+                {/* Below lg on step 3 these live in the fixed action bar instead (P51-1);
                   conditionally rendered — never two copies in the DOM. Step 1 has its own
                   Continue under the garment list and nothing to go back to, so no footer. */}
-              {!mobileStep3 && step > 1 ? (
-                <div className="mt-6 flex flex-col gap-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => goStep((step - 1) as BuilderStep)}
-                      disabled={step === 1}
-                    >
-                      ← Back
-                    </Button>
-                    {step < 4 ? (
-                      <Button size="sm" onClick={() => goStep((step + 1) as BuilderStep)}>
-                        Continue →
+                {!mobileStep3 && step > 1 ? (
+                  <div className="mt-6 flex flex-col gap-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => goStep((step - 1) as BuilderStep)}
+                        disabled={step === 1}
+                      >
+                        ← Back
                       </Button>
+                      {step < 4 ? (
+                        <Button size="sm" onClick={() => goStep((step + 1) as BuilderStep)}>
+                          Continue →
+                        </Button>
+                      ) : null}
+                    </div>
+                    {/* Secondary actions on their own row, so the footer never overflows at 360px. */}
+                    {step > 1 ? (
+                      <div className="flex flex-wrap items-center gap-1">
+                        {step === 3 ? (
+                          <>
+                            <Button variant="ghost" size="sm" onClick={undo} disabled={!canUndo} data-testid="undo">
+                              Undo
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={redo} disabled={!canRedo} data-testid="redo">
+                              Redo
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={startSaveDraft} data-testid="save-draft">
+                              Save draft
+                            </Button>
+                          </>
+                        ) : null}
+                        <span className="ml-auto">
+                          <StartOverButton onConfirm={designAnother} />
+                        </span>
+                      </div>
                     ) : null}
                   </div>
-                  {/* Secondary actions on their own row, so the footer never overflows at 360px. */}
-                  {step > 1 ? (
-                    <div className="flex flex-wrap items-center gap-1">
-                      {step === 3 ? (
-                        <>
-                          <Button variant="ghost" size="sm" onClick={undo} disabled={!canUndo} data-testid="undo">
-                            Undo
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={redo} disabled={!canRedo} data-testid="redo">
-                            Redo
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={startSaveDraft} data-testid="save-draft">
-                            Save draft
-                          </Button>
-                        </>
-                      ) : null}
-                      <span className="ml-auto">
-                        <StartOverButton onConfirm={designAnother} />
-                      </span>
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-          </>
-        )}
+                ) : null}
+              </div>
+            </>
+          )}
+        </ViewTransition>
       </div>
 
       {mobileStep3 ? (

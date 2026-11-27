@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/sections/page-header";
 import { Section } from "@/components/sections/section";
 import { ContactDetails } from "@/components/sections/contact-details";
 import { ContactForm } from "@/components/forms/contact-form";
+import { PageTransition } from "@/components/layout/page-transition";
 import { site } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
 
 export default function ContactPage() {
   return (
-    <>
+    <PageTransition>
       <Section>
         <PageHeader eyebrow="Get in touch" title="Contact" />
         <div className="mt-8 max-w-2xl">
@@ -26,6 +27,6 @@ export default function ContactPage() {
           <ContactForm sourcePage="contact" />
         </div>
       </Section>
-    </>
+    </PageTransition>
   );
 }

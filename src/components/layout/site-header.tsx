@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { addTransitionType, startTransition, useEffect, useRef, useState, type MouseEvent } from "react";
 
 import { jumpToSection } from "@/components/layout/section-scroll";
 import { useSession } from "@/components/layout/session";
@@ -28,6 +28,21 @@ export function SiteHeader() {
   const isHome = pathname === "/";
   // On other pages no section is highlighted (the path-based rule applies instead).
   const effectiveSection = isHome ? activeSection : null;
+
+  // Tag browser back/forward navigations so the directional slide plays the right way.
+  useEffect(() => {
+    const onPop = () => {
+      startTransition(() => {
+        try {
+          addTransitionType("nav-back");
+        } catch {
+          /* unsupported browsers: no-op */
+        }
+      });
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
 
   const isActive = (item: NavItem) => {
     if (isHome && item.homeSection) return effectiveSection === item.homeSection;
@@ -131,6 +146,7 @@ export function SiteHeader() {
       <Link
         key={item.href}
         href={item.href}
+        transitionTypes={["nav-forward"]}
         aria-current={active ? (isHome && item.homeSection ? "location" : "page") : undefined}
         onClick={(event) => onNavClick(event, item)}
         className={`relative px-3 py-2 text-sm font-medium transition-colors duration-150 ${
@@ -154,7 +170,7 @@ export function SiteHeader() {
 
   return (
     <>
-      <header className="bg-bg-0/80 sticky top-0 z-50 backdrop-blur-md">
+      <header className="bg-bg-0/80 sticky top-0 z-50 backdrop-blur-md" style={{ viewTransitionName: "site-header" }}>
         <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-4 sm:px-6">
           <Link href="/" className="flex shrink-0 items-center gap-2" aria-label={`${site.name} home`}>
             <Image
@@ -175,12 +191,14 @@ export function SiteHeader() {
             {/* One "Design Your Own" CTA: full pill from lg, compact pill below (the other is display:none). */}
             <Link
               href="/#design"
+              transitionTypes={["nav-forward"]}
               className="bg-neon-pink text-bg-0 shadow-glow-pink focus-visible:ring-neon-cyan hidden rounded-full px-5 py-2 text-sm font-semibold transition-transform duration-150 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:outline-none lg:inline-flex"
             >
               Design Your Own
             </Link>
             <Link
               href="/#design"
+              transitionTypes={["nav-forward"]}
               aria-label="Design Your Own"
               data-testid="design-cta-compact"
               className="bg-neon-pink text-bg-0 shadow-glow-pink focus-visible:ring-neon-cyan inline-flex h-9 items-center rounded-full px-3 text-xs font-semibold transition-transform duration-150 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:outline-none lg:hidden"
@@ -253,6 +271,8 @@ export function SiteHeader() {
           aria-modal="true"
           aria-label="Site navigation"
           tabIndex={-1}
+          data-open={open || undefined}
+          style={{ viewTransitionName: "site-menu" }}
           className={`bg-bg-1 shadow-glow-cyan absolute inset-y-0 right-0 flex w-[88vw] max-w-sm flex-col overflow-y-auto transition-transform duration-200 motion-reduce:transition-none ${
             open ? "translate-x-0" : "translate-x-full"
           }`}
