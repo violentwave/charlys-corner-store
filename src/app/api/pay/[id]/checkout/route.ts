@@ -44,9 +44,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const row = await loadQuotedOrder(db, id);
   if (!row) return NextResponse.json({ error: "not found" }, { status: 404 });
   const user = await currentUser(db);
-  const isOwner = Boolean(user && row.mockup.userId === user.id);
+  const isOwner = Boolean(user && row.order.userId === user.id);
   if (!isOwner && !checkPayToken(id, token)) return NextResponse.json({ error: "not found" }, { status: 404 });
-  if (row.mockup.paidAt) return back("paid", 409);
+  if (row.order.paidAt) return back("paid", 409);
 
   const pricing = await priceOrder(db, row);
 
@@ -56,7 +56,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     .from(schema.orderPayments)
     .where(
       and(
-        eq(schema.orderPayments.mockupId, id),
+        eq(schema.orderPayments.orderId, id),
         eq(schema.orderPayments.method, "payment_link"),
         eq(schema.orderPayments.status, "pending"),
       ),
@@ -82,7 +82,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return back("square", 502);
     }
     await db.insert(schema.orderPayments).values({
-      mockupId: id,
+      orderId: id,
       leadId: row.lead.id,
       amountCents: pricing.totalCents,
       subtotalCents: pricing.subtotalCents,

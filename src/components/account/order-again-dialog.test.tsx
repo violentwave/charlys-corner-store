@@ -26,6 +26,7 @@ const order: AccountMockup = {
   removal: "hide",
   restorePath: "/?mockup=o1",
   orderStage: null,
+  order: null,
   canResend: false,
   canReorder: true,
 };

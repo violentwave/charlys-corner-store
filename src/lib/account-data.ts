@@ -9,7 +9,7 @@ import type { StorageDriver } from "./storage";
  * Member data removal (Logan, 2026-11-26).
  * - Emailed mockups: the row and its files (originals + rendered PNGs) are deleted.
  * - Order requests: hidden from "My designs" only. The owner still needs the order and its
- *   artwork to quote and print it.
+ *   artwork to quote and print it. Hiding one design of an order hides the whole order.
  * Storage deletes are best-effort: a file that's already gone (30-day lifecycle rule) is fine.
  */
 
@@ -44,7 +44,14 @@ export async function removeMemberDesign(
     );
   if (!row) return "not_found";
   if (row.kind === "order") {
-    await db.update(schema.mockups).set({ hiddenByUserAt: new Date() }).where(eq(schema.mockups.id, row.id));
+    if (row.orderId) {
+      await db
+        .update(schema.orders)
+        .set({ hiddenByUserAt: new Date() })
+        .where(and(eq(schema.orders.id, row.orderId), isNull(schema.orders.hiddenByUserAt)));
+    } else {
+      await db.update(schema.mockups).set({ hiddenByUserAt: new Date() }).where(eq(schema.mockups.id, row.id));
+    }
     return "hidden";
   }
   await db.delete(schema.mockups).where(eq(schema.mockups.id, row.id));

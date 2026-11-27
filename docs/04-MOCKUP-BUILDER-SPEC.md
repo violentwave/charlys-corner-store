@@ -79,6 +79,11 @@ Sizes and quantities grid (XS–5XL / OSFA for hats) · "How did you hear about 
 - Server: `verifiedUser` first (401/403) → validate → rate-limit (per IP + per user) → store files → lead from the account → mockup row (`user_id`, `kind`) → coupon → emails.
 - The old "Send to Charly's for a quote" endpoint (`/api/mockups/[id]/quote`) is removed; the order path replaces it.
 
+### 5b. Cart (2026-11-26, Logan: account required)
+- Members can **Add to cart** instead of sending one design: the same multipart upload goes to `POST /api/cart` (sizes optional at this point). Up to **20 designs** per cart; adding sends no email.
+- The cart (`GET /api/cart`) lists each design with its mockup previews, sizes grid (`sizeOptions`) and notes. `PATCH /api/cart/[id]` edits sizes/notes, `DELETE` removes it (files too), `GET /api/cart/[id]` reopens it in the builder (same shape as the `?mockup=` restore).
+- **Send the cart** (`POST /api/cart/submit { notes? }`): every design needs ≥ 1 piece. It becomes **one order**: the owner sets one price for the whole order, the customer pays once (`/pay/<orderId>`), and one tracker covers it. Owner email: one spreadsheet row per design (colors, sides + method + layers, sizes, pieces, notes, every side's mockup, every original) plus `order.csv`.
+
 ### 6. Success screens (two, one per path)
 - **Email path:** mockup images + **Download** buttons + coupon ticket (code, copy button, rules: "15% off your 2nd order · $30 minimum · expires {date, 1 year} · one per email") + CTAs: "Order this design" (returns to the order card, design intact), "Design another." Charly the dog celebrates.
 - **Order path:** "Order request sent! We'll email you the price." + design summary + coupon ticket + "View in My designs" + "Design another".

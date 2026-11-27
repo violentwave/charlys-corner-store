@@ -1,0 +1,304 @@
+'use client'
+
+import { useState } from 'react'
+import { Button, ChromeHeading, Dog, Icon, Sunset } from '../studio-ui'
+import {
+  ColorPicker,
+  GarmentPicker,
+  LayerControls,
+  MethodPicker,
+  Notice,
+  Stepper,
+  Tools,
+} from '../studio-controls'
+import { emptyDesign, type Layer } from '../studio-model'
+
+const frames = [
+  ['Garment', '?frame=garment'],
+  ['Colors', '?frame=colors'],
+  ['Design', '?frame=design'],
+  ['Send', '?frame=send'],
+  ['Email success', '?frame=email'],
+  ['Order success', '?frame=order'],
+  ['Cart', '?frame=cart'],
+  ['Empty canvas', '?frame=design'],
+  ['Sign-in gate', '?frame=design&state=auth'],
+  ['Verify your email', '?frame=design&state=verify'],
+  ['Loading', '?frame=design&state=auth&loading=1'],
+  ['Wrong file type', '?frame=design&state=type'],
+  ['File too big', '?frame=design&state=large'],
+  ['Low DPI', '?frame=design&state=dpi'],
+  ['Won’t print', '?frame=design&state=placement'],
+  ['Disabled methods', '?frame=design&state=methods'],
+  ['Rate limit', '?frame=send&state=rate'],
+  ['Network retry', '?frame=send&state=network'],
+  ['Start over', '?frame=design&state=reset'],
+  ['Restore banner', '?frame=design&state=restore'],
+] as const
+const devices = [
+  [1440, 900],
+  [390, 844],
+  [360, 800],
+] as const
+const tokens = [
+  ['Night', '#0A0A14'],
+  ['Deep', '#12121F'],
+  ['Panel', '#1A1A2E'],
+  ['Plate', '#24243D'],
+  ['Paper', '#F5F3FF'],
+  ['Muted', '#B8B5D6'],
+  ['Dim', '#7C7A9C'],
+  ['Pink', '#FF2E97'],
+  ['Cyan', '#00F0FF'],
+  ['Purple', '#B026FF'],
+  ['Orange', '#FF6B35'],
+  ['Yellow', '#FFE14D'],
+  ['Success', '#39FF88'],
+]
+const text: Layer = {
+  id: 'first',
+  kind: 'text',
+  name: 'Text',
+  text: 'CHARLY’S',
+  src: '',
+  pixels: 0,
+  pixelHeight: 0,
+  font: 0,
+  ink: '#F5F3FF',
+  outline: '#0A0A14',
+  stroke: 0,
+  arch: 0,
+  spacing: 0,
+  x: 50,
+  y: 45,
+  w: 28,
+  h: 14,
+  rotation: 0,
+  flip: false,
+  lock: true,
+}
+const deviceScale = (n: number) => (n === 1440 ? 0.72 : 1)
+
+export default function ComponentSheet() {
+  const [preview, setPreview] = useState(0),
+    [device, setDevice] = useState(0),
+    [step, setStep] = useState(0),
+    [tab, setTab] = useState('Item'),
+    [item, setItem] = useState(0),
+    [color, setColor] = useState(0),
+    [method, setMethod] = useState(0),
+    [layer, setLayer] = useState(text),
+    [selection, setSelection] = useState('first'),
+    [toast, setToast] = useState(false)
+  const [width, height] = devices[device],
+    scale = deviceScale(width)
+  const sampleDesign = {
+    ...emptyDesign(),
+    item,
+    color,
+    layers: {
+      Front: [layer, { ...text, id: 'second', name: 'Text second', text: 'Port St. Lucie' }],
+    },
+  }
+  return (
+    <div className="studio-app">
+      <header className="studio-header">
+        <div className="header-inner">
+          <a href="/" className="brand-link">
+            <span className="brand-mark">
+              <Dog className="size-8" />
+            </span>
+            <span>
+              <strong>CHARLY’S</strong>
+              <small>
+                CORNER STORE <i>·</i> TEES & APPAREL
+              </small>
+            </span>
+          </a>
+          <a className="studio-button secondary" href="/">
+            <Icon name="back" />
+            Back to studio
+          </a>
+        </div>
+      </header>
+      <main className="studio-main sheet">
+        <div className="studio-intro">
+          <Sunset />
+          <div className="intro-copy">
+            <div className="intro-kicker">
+              <span /> MOCKUP STUDIO / DESIGN LIBRARY <span />
+            </div>
+            <ChromeHeading text="Component sheet" />
+            <p>Review every step and state at its intended viewport.</p>
+          </div>
+        </div>
+        <section className="surface sheet-block">
+          <div className="section-label">
+            <span>RESPONSIVE FRAMES</span>
+            <span className="mono">
+              {width} × {height}
+            </span>
+          </div>
+          <div className="chips">
+            {devices.map(([n], i) => (
+              <Button key={n} aria-pressed={i === device} onClick={() => setDevice(i)}>
+                {n === 1440 ? 'Desktop' : 'Mobile'} {n}
+              </Button>
+            ))}
+          </div>
+          <div className="chips">
+            {frames.map(([label], i) => (
+              <Button key={label} aria-pressed={i === preview} onClick={() => setPreview(i)}>
+                {label}
+              </Button>
+            ))}
+          </div>
+          <div className="sheet-viewport">
+            <div style={{ width: width * scale, height: height * scale }}>
+              <iframe
+                title={`${frames[preview][0]} · ${width} pixels`}
+                src={`/${frames[preview][1]}`}
+                width={width}
+                height={height}
+                style={{ transform: `scale(${scale})` }}
+              />
+            </div>
+          </div>
+          <a href={`/${frames[preview][1]}`} className="studio-button secondary w-fit">
+            Open selected frame <Icon name="arrow" />
+          </a>
+        </section>
+        <section className="surface sheet-block">
+          <div className="section-label">THEME TOKENS</div>
+          <div className="palette-grid">
+            {tokens.map(([n, hex]) => (
+              <div key={hex}>
+                <i style={{ backgroundColor: hex }} />
+                <strong>{n}</strong>
+                <span className="mono">{hex}</span>
+              </div>
+            ))}
+          </div>
+          <div className="sheet-gradients">
+            <span>Sunset</span>
+            <span>Vice</span>
+            <span>Chrome</span>
+          </div>
+          <div className="flex flex-wrap gap-5 text-sm">
+            <span className="font-display">Orbitron</span>
+            <span>Poppins</span>
+            <span className="mono">JetBrains Mono</span>
+          </div>
+        </section>
+        <section className="surface sheet-block">
+          <div className="section-label">PRIMARY / SECONDARY / GHOST</div>
+          {(['primary', 'secondary', 'ghost'] as const).map((tone) => (
+            <div className="flex flex-wrap gap-2" key={tone}>
+              {['Default', 'Hover', 'Focus', 'Selected', 'Disabled', 'Error'].map((s, i) => (
+                <Button
+                  key={s}
+                  tone={tone}
+                  disabled={i === 4}
+                  data-state={s.toLowerCase()}
+                  icon={i === 5 ? 'warning' : i === 3 ? 'check' : undefined}
+                >
+                  {s}
+                </Button>
+              ))}
+            </div>
+          ))}
+        </section>
+        <div className="sheet-two">
+          <section className="surface sheet-block">
+            <div className="section-label">STEPPER / CHIPS / TABS</div>
+            <Stepper step={step} go={setStep} />
+            <Tools tab={tab} setTab={setTab} />
+            <div className="chips">
+              <Button aria-pressed>
+                Full Front <span className="mono">12″×14″</span>
+              </Button>
+              <Button>Left Chest</Button>
+              <Button disabled>Full Sleeve</Button>
+            </div>
+          </section>
+          <section className="surface sheet-block">
+            <div className="section-label">SWATCH STRIP / PRINT METHOD</div>
+            <ColorPicker design={{ ...emptyDesign(), color }} change={setColor} />
+            <MethodPicker design={{ ...emptyDesign(), item: 2, method }} change={setMethod} />
+          </section>
+          <section className="surface sheet-block">
+            <div className="section-label">GARMENT CARDS</div>
+            <GarmentPicker
+              value={item}
+              onChange={(n) => {
+                setItem(n)
+                setColor(0)
+              }}
+            />
+          </section>
+          <section className="surface sheet-block">
+            <div className="section-label">LAYERS / SLIDERS</div>
+            <LayerControls
+              side="Front"
+              design={sampleDesign}
+              selected={selection}
+              select={setSelection}
+              update={(p) => setLayer((l) => ({ ...l, ...p }))}
+              duplicate={() => setToast(true)}
+              remove={() => setToast(true)}
+              reorder={(_, d) => setSelection(d > 0 ? 'second' : 'first')}
+              add={() => setToast(true)}
+            />
+          </section>
+          <section className="surface sheet-block">
+            <div className="section-label">LOADING / TOAST / ERRORS</div>
+            <div className="skeleton-row" aria-label="Loading designs" />
+            <Notice icon="check" tone="success">
+              Loaded your saved design.
+            </Notice>
+            <Notice icon="warning" tone="error">
+              Network error. Check your connection and try again.{' '}
+              <Button onClick={() => setToast(true)}>Retry</Button>
+            </Notice>
+            <Notice icon="warning" tone="warning">
+              Artwork outside the guide won’t print.{' '}
+              <Button onClick={() => setToast(true)}>Fit to area</Button>
+            </Notice>
+            <Button tone="secondary" onClick={() => setToast(true)}>
+              Show toast
+            </Button>
+          </section>
+          <section className="surface sheet-block">
+            <div className="section-label">DIALOGS / MOBILE ACTION BAR</div>
+            <div className="flex flex-wrap gap-2">
+              {frames
+                .filter(([_, url]) => url.includes('state='))
+                .map(([label, url]) => (
+                  <a key={label} href={`/${url}`} className="studio-button ghost">
+                    {label}
+                  </a>
+                ))}
+            </div>
+            <div className="sheet-action-bar">
+              <Button icon="back" disabled>
+                Back
+              </Button>
+              <Button icon="save">Save draft</Button>
+              <Button tone="primary">
+                Continue <Icon name="arrow" />
+              </Button>
+              <Button icon="more" aria-label="More options" />
+            </div>
+          </section>
+        </div>
+      </main>
+      {toast && (
+        <div className="studio-toast" role="status">
+          <Icon name="check" />
+          Draft saved.
+          <Button icon="close" aria-label="Dismiss toast" onClick={() => setToast(false)} />
+        </div>
+      )}
+    </div>
+  )
+}

@@ -301,11 +301,11 @@ test("My designs: an order request is only hidden here — the shop keeps it", a
   await dialog.getByTestId("confirm-remove").click();
   await expect(page.getByTestId("design-card")).toHaveCount(0);
 
-  // "Hidden" not "deleted": the row stays, with hidden_by_user_at set.
+  // "Hidden" not "deleted": the order (and its design) stays, with hidden_by_user_at set.
   const db = await pool();
   try {
     const { rows } = await db.query(
-      "select m.hidden_by_user_at from mockups m join leads l on l.id = m.lead_id where lower(l.email) = $1",
+      "select o.hidden_by_user_at from orders o join leads l on l.id = o.lead_id where lower(l.email) = $1",
       [email],
     );
     expect(rows).toHaveLength(1);

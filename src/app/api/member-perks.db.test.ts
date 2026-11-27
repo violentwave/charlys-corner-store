@@ -106,9 +106,13 @@ describe.skipIf(!hasTestDb)("member perks (real Postgres)", () => {
     const render = `${folder}/2026/11/${crypto.randomUUID()}-mockup-front.png`;
     await storage.put(art, png, "image/png");
     await storage.put(render, png, "image/png");
+    const id = crypto.randomUUID();
+    if (kind === "order") await db.insert(schema.orders).values({ id, leadId, userId, createdAt });
     const [row] = await db
       .insert(schema.mockups)
       .values({
+        id,
+        orderId: kind === "order" ? id : null,
         leadId,
         userId,
         couponId: coupon.id,
@@ -123,7 +127,6 @@ describe.skipIf(!hasTestDb)("member perks (real Postgres)", () => {
         artworkName: "art.png",
         artworkContentType: "image/png",
         artworkSizeBytes: png.byteLength,
-        ...(kind === "order" ? { orderStage: "received" as const } : {}),
       })
       .returning();
     return { row: row!, keys: [art, render] };
@@ -145,8 +148,8 @@ describe.skipIf(!hasTestDb)("member perks (real Postgres)", () => {
     const get = await stageGet(new Request(link), params(row.id));
     expect(get.status).toBe(200);
     expect(await get.text()).toContain("Mark this order as “Ready”?");
-    const [unchanged] = await db.select().from(schema.mockups).where(eq(schema.mockups.id, row.id));
-    expect(unchanged!.orderStage).toBe("received"); // GET never changes anything
+    const [unchanged] = await db.select().from(schema.orders).where(eq(schema.orders.id, row.id));
+    expect(unchanged!.stage).toBe("received"); // GET never changes anything
 
     const form = new URLSearchParams(link.search);
     const post = await stagePost(
@@ -158,8 +161,8 @@ describe.skipIf(!hasTestDb)("member perks (real Postgres)", () => {
       params(row.id),
     );
     expect(post.status).toBe(200);
-    const [updated] = await db.select().from(schema.mockups).where(eq(schema.mockups.id, row.id));
-    expect(updated!.orderStage).toBe("ready");
+    const [updated] = await db.select().from(schema.orders).where(eq(schema.orders.id, row.id));
+    expect(updated!.stage).toBe("ready");
     expect(_outbox().at(-1)).toMatchObject({ to: "fan@example.com" });
     expect(_outbox().at(-1)!.subject).toContain("Ready");
 
@@ -229,7 +232,9 @@ describe.skipIf(!hasTestDb)("member perks (real Postgres)", () => {
       .select()
       .from(schema.mockups)
       .where(eq(schema.mockups.id, String(res.mockupId)));
-    expect(copy).toMatchObject({ kind: "order", orderStage: "received", reorderOf: row.id, sizes: { L: 3 } });
+    expect(copy).toMatchObject({ kind: "order", orderId: copy!.id, reorderOf: row.id, sizes: { L: 3 } });
+    const [copyOrder] = await db.select().from(schema.orders).where(eq(schema.orders.id, copy!.id));
+    expect(copyOrder).toMatchObject({ stage: "received", reorderOf: row.id, quoteCents: null });
     expect(copy!.artworks[0]!.key).toBe(keys[0]);
     expect(_outbox().some((m) => m.subject.includes("ORDER REQUEST (again)"))).toBe(true);
   });

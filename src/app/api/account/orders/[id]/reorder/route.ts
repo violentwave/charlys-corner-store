@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { and, eq, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
@@ -17,8 +19,9 @@ import { LIMITS, rateLimit } from "@/lib/rate-limit";
 import { getStorage } from "@/lib/storage";
 
 /**
- * POST /api/account/orders/[id]/reorder { sizes, notes? }: "Order again". A new order request
- * with the same design and the same stored files (order files are kept), new sizes. Emails go
+ * POST /api/account/orders/[id]/reorder { sizes, notes? }: "Order again". `id` is the DESIGN
+ * (an order item's mockup id; for one-design orders that's also the order id). A new one-design
+ * order with the same design and the same stored files (order files are kept), new sizes. Emails go
  * out like a normal order request; the owner's says which order it repeats.
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -31,10 +34,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) return fail("We couldn't find that order.", 404);
 
-  const [original] = await db
-    .select()
+  const [found] = await db
+    .select({ m: schema.mockups, o: schema.orders })
     .from(schema.mockups)
-    .where(and(eq(schema.mockups.id, id), eq(schema.mockups.userId, user.id), isNull(schema.mockups.hiddenByUserAt)));
+    .innerJoin(schema.orders, eq(schema.orders.id, schema.mockups.orderId))
+    .where(
+      and(
+        eq(schema.mockups.id, id),
+        eq(schema.mockups.userId, user.id),
+        isNull(schema.mockups.hiddenByUserAt),
+        isNull(schema.orders.hiddenByUserAt),
+      ),
+    );
+  const original = found?.m;
   if (!original || original.kind !== "order") return fail("We couldn't find that order.", 404);
 
   const garment = getGarment(original.garment as GarmentId);
@@ -47,9 +59,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!rl.ok) return fail("Too many requests today. Please try again tomorrow or email us.", 429);
 
   const sizes = Object.fromEntries(Object.entries(read.data.sizes).filter(([, qty]) => qty > 0));
-  const [row] = await db
-    .insert(schema.mockups)
-    .values({
+  const newId = randomUUID();
+  await db.transaction(async (tx) => {
+    await tx.insert(schema.orders).values({
+      id: newId,
+      leadId: original.leadId,
+      userId: user.id,
+      notes: read.data.notes || null,
+      reorderOf: original.orderId,
+    });
+    await tx.insert(schema.mockups).values({
+      id: newId,
+      orderId: newId,
       userId: user.id,
       leadId: original.leadId,
       garment: original.garment,
@@ -58,17 +79,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       sizes,
       notes: read.data.notes || null,
       kind: "order",
-      orderStage: "received",
-      orderStageAt: new Date(),
       reorderOf: original.id,
       artworks: original.artworks,
       artworkKey: original.artworkKey,
       artworkName: original.artworkName,
       artworkContentType: original.artworkContentType,
       artworkSizeBytes: original.artworkSizeBytes,
-    })
-    .returning({ id: schema.mockups.id });
-  const mockupId = row!.id;
+    });
+  });
+  const mockupId = newId;
 
   const { colorRows, viewRows, sizeRows } = mockupSummary(
     original.garment as GarmentId,

@@ -125,7 +125,7 @@ export function getStorage(): StorageDriver {
 
 /** uploads/2026/11/<uuid>-<safe-name> — unguessable, never trusts the client's file name for paths. */
 export function buildObjectKey(
-  prefix: "uploads" | "quotes" | "mockups" | "orders" | "mockups/drafts" | "brand",
+  prefix: "uploads" | "quotes" | "mockups" | "orders" | "mockups/drafts" | "mockups/cart" | "brand",
   fileName: string,
   now = new Date(),
 ): string {

@@ -151,9 +151,15 @@ describe.skipIf(!hasTestDb)("payments (real Postgres, mocked Square)", () => {
     return { user: user!, leadId };
   }
   async function order(userId: string | null, leadId: string, quoteCents: number | null = 4000) {
+    const [o] = await db
+      .insert(schema.orders)
+      .values({ leadId, userId, quoteCents, quotedAt: quoteCents ? new Date() : null })
+      .returning();
     const [row] = await db
       .insert(schema.mockups)
       .values({
+        id: o!.id,
+        orderId: o!.id,
         leadId,
         userId,
         kind: "order",
@@ -161,16 +167,13 @@ describe.skipIf(!hasTestDb)("payments (real Postgres, mocked Square)", () => {
         colors: { body: "#ffffff" },
         sizes: { M: 2 },
         views: [{ view: "front", printArea: "full-front", layers: [], mockupKey: "orders/x.png" } as never],
-        orderStage: "received",
-        quoteCents,
-        quotedAt: quoteCents ? new Date() : null,
       })
       .returning();
     return row!;
   }
-  const rows = (mockupId: string) =>
-    db.select().from(schema.orderPayments).where(eq(schema.orderPayments.mockupId, mockupId));
-  const mockup = async (id: string) => (await db.select().from(schema.mockups).where(eq(schema.mockups.id, id)))[0]!;
+  const rows = (orderId: string) =>
+    db.select().from(schema.orderPayments).where(eq(schema.orderPayments.orderId, orderId));
+  const mockup = async (id: string) => (await db.select().from(schema.orders).where(eq(schema.orders.id, id)))[0]!;
 
   it("owner link: the email URL opens the price form, saves the price and emails a Pay now link", async () => {
     const { user, leadId } = await member();
@@ -194,7 +197,7 @@ describe.skipIf(!hasTestDb)("payments (real Postgres, mocked Square)", () => {
     expect(post.status).toBe(200);
     const saved = await mockup(row.id);
     expect(saved.quoteCents).toBe(4250);
-    expect(saved.orderStage).toBe("quoted");
+    expect(saved.stage).toBe("quoted");
     const mail = _outbox().at(-1)!;
     expect(mail.to).toBe("payer@example.com");
     expect(mail.html).toContain(`/pay/${row.id}?t=`);
@@ -248,7 +251,7 @@ describe.skipIf(!hasTestDb)("payments (real Postgres, mocked Square)", () => {
     const guest = await checkout(json({ t: payToken(row.id) }), params(row.id));
     expect(guest.status).toBe(200);
 
-    await db.update(schema.mockups).set({ paidAt: new Date() }).where(eq(schema.mockups.id, row.id));
+    await db.update(schema.orders).set({ paidAt: new Date() }).where(eq(schema.orders.id, row.id));
     expect((await checkout(json({ t: payToken(row.id) }), params(row.id))).status).toBe(409);
     const form = await checkout(
       new Request(`${ORIGIN}/api/x`, { method: "POST", body: new URLSearchParams({ t: payToken(row.id) }) }),
@@ -373,7 +376,7 @@ describe.skipIf(!hasTestDb)("payments (real Postgres, mocked Square)", () => {
     cards = { "card-mine": { customer_id: "CUST-1", enabled: true } };
     const row = await order(user.id, leadId, 4000);
     await db.insert(schema.orderPayments).values({
-      mockupId: row.id,
+      orderId: row.id,
       leadId,
       amountCents: 4000,
       subtotalCents: 4000,

@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { fail } from "@/lib/auth/route-helpers";
@@ -28,6 +28,18 @@ export type AccountMockup = {
   removal: "delete" | "hide";
   /** Order requests: where it stands (owner updates it), with a one-line explanation. */
   orderStage: { stage: OrderStage; label: string; description: string; updatedAt: string | null } | null;
+  /**
+   * Order items (2026-11-26): the order this design belongs to. Several designs can share one
+   * order (a cart checkout); stage, price and payment are the order's.
+   */
+  order: {
+    id: string;
+    itemCount: number;
+    quoteCents: number | null;
+    paidAt: string | null;
+    /** /pay/<id> once priced and unpaid; null otherwise. */
+    payPath: string | null;
+  } | null;
   /** Emailed mockups whose files still exist can be re-sent (POST …/[id]/resend). */
   canResend: boolean;
   /** Order requests can be ordered again (POST /api/account/orders/[id]/reorder). */
@@ -42,12 +54,30 @@ export async function GET() {
   const user = await currentUser(db);
   if (!user) return fail("Please log in first.", 401);
 
-  const rows = await db
-    .select()
+  const joined = await db
+    .select({ m: schema.mockups, o: schema.orders })
     .from(schema.mockups)
-    .where(and(eq(schema.mockups.userId, user.id), isNull(schema.mockups.hiddenByUserAt)))
-    .orderBy(desc(schema.mockups.createdAt))
+    .leftJoin(schema.orders, eq(schema.orders.id, schema.mockups.orderId))
+    .where(
+      and(
+        eq(schema.mockups.userId, user.id),
+        isNull(schema.mockups.hiddenByUserAt),
+        or(isNull(schema.mockups.orderId), isNull(schema.orders.hiddenByUserAt)),
+      ),
+    )
+    .orderBy(desc(schema.mockups.createdAt), desc(schema.mockups.id))
     .limit(50);
+  const orderIds = [...new Set(joined.flatMap((r) => (r.o ? [r.o.id] : [])))];
+  const counts = new Map<string, number>();
+  if (orderIds.length) {
+    const rows = await db
+      .select({ orderId: schema.mockups.orderId, n: sql<number>`count(*)::int` })
+      .from(schema.mockups)
+      .where(inArray(schema.mockups.orderId, orderIds))
+      .groupBy(schema.mockups.orderId);
+    for (const r of rows) counts.set(r.orderId!, Number(r.n));
+  }
+  const rows = joined.map((r) => ({ ...r.m, order: r.o }));
 
   const storage = getStorage();
   const items: AccountMockup[] = await Promise.all(
@@ -86,15 +116,23 @@ export async function GET() {
             ? null
             : new Date(m.createdAt.getTime() + MOCKUP_FILES_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString(),
         removal: m.kind === "order" ? "hide" : "delete",
-        orderStage:
-          m.kind === "order"
-            ? {
-                stage: (m.orderStage ?? "received") as OrderStage,
-                label: ORDER_STAGE_LABELS[(m.orderStage ?? "received") as OrderStage],
-                description: ORDER_STAGE_DESCRIPTIONS[(m.orderStage ?? "received") as OrderStage],
-                updatedAt: (m.orderStageAt ?? m.createdAt).toISOString(),
-              }
-            : null,
+        orderStage: m.order
+          ? {
+              stage: m.order.stage,
+              label: ORDER_STAGE_LABELS[m.order.stage],
+              description: ORDER_STAGE_DESCRIPTIONS[m.order.stage],
+              updatedAt: m.order.stageAt.toISOString(),
+            }
+          : null,
+        order: m.order
+          ? {
+              id: m.order.id,
+              itemCount: counts.get(m.order.id) ?? 1,
+              quoteCents: m.order.quoteCents,
+              paidAt: m.order.paidAt?.toISOString() ?? null,
+              payPath: m.order.quoteCents != null && !m.order.paidAt ? `/pay/${m.order.id}` : null,
+            }
+          : null,
         canResend: m.kind === "mockup" && !mockupFilesExpired(m.kind, m.createdAt),
         canReorder: m.kind === "order",
         restorePath: `/design?mockup=${m.id}`,
