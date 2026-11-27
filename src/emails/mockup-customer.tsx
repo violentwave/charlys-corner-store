@@ -13,40 +13,22 @@ export interface MockupCustomerEmailProps {
   /** Zone label ("Sleeves & collar") + palette name ("Navy" or "Custom #rrggbb"). */
   colors: { label: string; hex: string; name: string }[];
   views: { view: string; area: string; method?: string }[];
-  coupon: { code: string; expiresAt: Date; isNew: boolean };
   /** Rendered mockups, inlined via 7-day signed storage URLs (the PNGs are also attached, so they outlive the links). */
   mockups: { view: string; signedUrl: string }[];
   /** Deep link: /?mockup=<id>#design restores this design in the builder (design data only, no PII). */
   mockupId: string;
 }
 
-/** Fixed to the shop's time zone so the printed expiry matches the CouponTicket on screen. */
-function formatExpiry(date: Date): string {
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "America/New_York",
-  });
-}
-
 export function MockupCustomerEmail(p: MockupCustomerEmailProps) {
-  const terms = `${COUPON_RULES.percentOff}% off your 2nd order · $${(COUPON_RULES.minOrderCents / 100).toFixed(
-    0,
-  )} minimum · expires ${formatExpiry(p.coupon.expiresAt)} · one per email`;
   return (
     <Html>
       <Head />
-      <Preview>Your mockup is ready + 15% off your 2nd order</Preview>
+      <Preview>Your mockup is ready</Preview>
       <Body>
         <Container>
           <Heading>Your Charly&apos;s mockup is ready 🐾</Heading>
           <Text>Hi {p.name},</Text>
-          <Text>
-            {p.coupon.isNew
-              ? "Here's your mockup, plus 15% off your 2nd order below."
-              : "Here's your code again, in case it slipped away."}
-          </Text>
+          <Text>Here&apos;s your mockup.</Text>
           <Text>
             {p.garmentName}
             {p.colors.length === 1
@@ -65,9 +47,9 @@ export function MockupCustomerEmail(p: MockupCustomerEmailProps) {
             so save anything you want to keep.
           </Text>
           <Text>
-            Coupon code: <strong>{p.coupon.code}</strong>
+            Order and pay once, and we&apos;ll email you {COUPON_RULES.percentOff}% off your next order ($
+            {(COUPON_RULES.minOrderCents / 100).toFixed(0)} minimum).
           </Text>
-          <Text>{terms}</Text>
           <Button
             href={`${site.url}/?mockup=${p.mockupId}#design`}
             style={{

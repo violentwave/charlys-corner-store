@@ -1,11 +1,11 @@
 import { expect, test } from "@playwright/test";
 
-test("desktop nav is visible and has no Home link (the logo covers it)", async ({ page }) => {
+test("desktop nav is visible and starts with Home (back since 2026-11-26)", async ({ page }) => {
   test.skip((page.viewportSize()?.width ?? 0) < 1024, "desktop only");
   await page.goto("/");
   const nav = page.getByRole("navigation", { name: /primary/i });
   await expect(nav).toBeVisible();
-  await expect(nav.getByRole("link", { name: "Home" })).toHaveCount(0);
+  await expect(nav.getByRole("link", { name: "Home" })).toBeVisible();
   await expect(nav.getByRole("link", { name: "Contact" })).toBeVisible();
 });
 

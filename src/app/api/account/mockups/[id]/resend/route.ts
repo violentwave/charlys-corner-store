@@ -47,10 +47,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   } catch {
     return fail("This mockup's images are no longer stored, so it can't be re-sent.", 410);
   }
-  const [coupon] = row.couponId
-    ? await db.select().from(schema.coupons).where(eq(schema.coupons.id, row.couponId))
-    : [];
-  if (!coupon) return fail("Something went wrong on our end. Please try again.", 500);
 
   const { garment, colorRows, viewRows } = mockupSummary(row.garment as GarmentId, row.colors, row.views, row.sizes);
   const mockups = await Promise.all(
@@ -59,13 +55,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   await confirmCustomer(
     db,
     user.email,
-    "Your Charly's mockup (again) 🐾 + 15% off inside",
+    "Your Charly's mockup (again) 🐾",
     MockupCustomerEmail({
       name: user.name ? clip(user.name, 40) : "there",
       garmentName: garment.name,
       colors: colorRows,
       views: viewRows,
-      coupon: { code: coupon.code, expiresAt: coupon.expiresAt, isNew: false },
       mockups,
       mockupId: row.id,
     }),

@@ -107,6 +107,15 @@ export function SiteHeader() {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     if (!isHome) return;
 
+    // Home while already on Home: back to the top (the builder), no reload.
+    if (item.href === "/" && !item.homeSection) {
+      event.preventDefault();
+      history.replaceState(null, "", "/");
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+      return;
+    }
+
     if (item.homeSection) {
       const el = document.getElementById(item.homeSection);
       if (!el) return; // section missing — navigate normally
@@ -144,81 +153,85 @@ export function SiteHeader() {
       : "Open menu";
 
   return (
-    <header className="bg-bg-0/80 sticky top-0 z-50 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-4 sm:px-6">
-        <Link href="/" className="flex shrink-0 items-center gap-2" aria-label={`${site.name} home`}>
-          <Image
-            src="/brand/logo.png"
-            alt={`${site.name} logo`}
-            width={72}
-            height={48}
-            priority
-            className="h-12 w-auto"
-          />
-        </Link>
-
-        <nav aria-label="Primary" className="hidden flex-1 items-center justify-center gap-1 lg:flex">
-          {primaryNav.map(renderNavLink)}
-        </nav>
-
-        <div className="ml-auto flex items-center gap-2 lg:ml-0">
-          {/* One "Design Your Own" CTA: full pill from lg, compact pill below (the other is display:none). */}
-          <Link
-            href="/#design"
-            className="bg-neon-pink text-bg-0 shadow-glow-pink focus-visible:ring-neon-cyan hidden rounded-full px-5 py-2 text-sm font-semibold transition-transform duration-150 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:outline-none lg:inline-flex"
-          >
-            Design Your Own
-          </Link>
-          <Link
-            href="/#design"
-            aria-label="Design Your Own"
-            data-testid="design-cta-compact"
-            className="bg-neon-pink text-bg-0 shadow-glow-pink focus-visible:ring-neon-cyan inline-flex h-9 items-center rounded-full px-3 text-xs font-semibold transition-transform duration-150 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:outline-none lg:hidden"
-          >
-            Design
+    <>
+      <header className="bg-bg-0/80 sticky top-0 z-50 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-4 sm:px-6">
+          <Link href="/" className="flex shrink-0 items-center gap-2" aria-label={`${site.name} home`}>
+            <Image
+              src="/brand/logo.png"
+              alt={`${site.name} logo`}
+              width={72}
+              height={48}
+              priority
+              className="h-12 w-auto"
+            />
           </Link>
 
-          <button
-            ref={buttonRef}
-            type="button"
-            data-testid="menu-button"
-            className="text-text-1 hover:bg-bg-2 focus-visible:ring-neon-cyan relative inline-flex h-11 w-11 items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-none"
-            aria-expanded={open}
-            aria-controls="site-menu"
-            aria-label={menuButtonLabel}
-            onClick={() => setOpen((value) => !value)}
-          >
-            {user && !loading ? (
-              <span
-                aria-hidden="true"
-                data-testid="menu-member-dot"
-                className="bg-neon-cyan shadow-glow-cyan absolute top-1.5 right-1.5 h-2 w-2 rounded-full"
-              />
-            ) : null}
-            <span aria-hidden="true" className="flex flex-col gap-1.5">
-              <span
-                className={`block h-0.5 w-6 bg-current transition-transform duration-150 ${
-                  open ? "translate-y-2 rotate-45" : ""
-                }`}
-              />
-              <span
-                className={`block h-0.5 w-6 bg-current transition-opacity duration-150 ${
-                  open ? "opacity-0" : "opacity-100"
-                }`}
-              />
-              <span
-                className={`block h-0.5 w-6 bg-current transition-transform duration-150 ${
-                  open ? "-translate-y-2 -rotate-45" : ""
-                }`}
-              />
-            </span>
-          </button>
+          <nav aria-label="Primary" className="hidden flex-1 items-center justify-center gap-1 lg:flex">
+            {primaryNav.map(renderNavLink)}
+          </nav>
+
+          <div className="ml-auto flex items-center gap-2 lg:ml-0">
+            {/* One "Design Your Own" CTA: full pill from lg, compact pill below (the other is display:none). */}
+            <Link
+              href="/#design"
+              className="bg-neon-pink text-bg-0 shadow-glow-pink focus-visible:ring-neon-cyan hidden rounded-full px-5 py-2 text-sm font-semibold transition-transform duration-150 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:outline-none lg:inline-flex"
+            >
+              Design Your Own
+            </Link>
+            <Link
+              href="/#design"
+              aria-label="Design Your Own"
+              data-testid="design-cta-compact"
+              className="bg-neon-pink text-bg-0 shadow-glow-pink focus-visible:ring-neon-cyan inline-flex h-9 items-center rounded-full px-3 text-xs font-semibold transition-transform duration-150 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:outline-none lg:hidden"
+            >
+              Design
+            </Link>
+
+            <button
+              ref={buttonRef}
+              type="button"
+              data-testid="menu-button"
+              className="text-text-1 hover:bg-bg-2 focus-visible:ring-neon-cyan relative inline-flex h-11 w-11 items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-none"
+              aria-expanded={open}
+              aria-controls="site-menu"
+              aria-label={menuButtonLabel}
+              onClick={() => setOpen((value) => !value)}
+            >
+              {user && !loading ? (
+                <span
+                  aria-hidden="true"
+                  data-testid="menu-member-dot"
+                  className="bg-neon-cyan shadow-glow-cyan absolute top-1.5 right-1.5 h-2 w-2 rounded-full"
+                />
+              ) : null}
+              <span aria-hidden="true" className="flex flex-col gap-1.5">
+                <span
+                  className={`block h-0.5 w-6 bg-current transition-transform duration-150 ${
+                    open ? "translate-y-2 rotate-45" : ""
+                  }`}
+                />
+                <span
+                  className={`block h-0.5 w-6 bg-current transition-opacity duration-150 ${
+                    open ? "opacity-0" : "opacity-100"
+                  }`}
+                />
+                <span
+                  className={`block h-0.5 w-6 bg-current transition-transform duration-150 ${
+                    open ? "-translate-y-2 -rotate-45" : ""
+                  }`}
+                />
+              </span>
+            </button>
+          </div>
         </div>
-      </div>
 
-      <div aria-hidden="true" className="bg-vice h-px w-full" />
+        <div aria-hidden="true" className="bg-vice h-px w-full" />
+      </header>
 
-      {/* Site menu: slides in from the right at every screen size. */}
+      {/* Site menu: slides in from the right at every screen size. It lives outside <header> on
+          purpose: the header's backdrop-blur makes it the containing block for fixed children,
+          which squeezed the menu into the 64px header bar. */}
       <div
         className={`fixed inset-0 z-[60] overflow-hidden ${open ? "pointer-events-auto" : "pointer-events-none"}`}
         aria-hidden={!open}
@@ -240,7 +253,7 @@ export function SiteHeader() {
           aria-modal="true"
           aria-label="Site navigation"
           tabIndex={-1}
-          className={`bg-bg-1 shadow-glow-cyan absolute inset-y-0 right-0 flex w-[85vw] max-w-xs flex-col overflow-y-auto transition-transform duration-200 motion-reduce:transition-none ${
+          className={`bg-bg-1 shadow-glow-cyan absolute inset-y-0 right-0 flex w-[88vw] max-w-sm flex-col overflow-y-auto transition-transform duration-200 motion-reduce:transition-none ${
             open ? "translate-x-0" : "translate-x-full"
           }`}
         >
@@ -260,6 +273,6 @@ export function SiteHeader() {
           <SiteMenu close={() => setOpen(false)} isActive={isActive} />
         </div>
       </div>
-    </header>
+    </>
   );
 }

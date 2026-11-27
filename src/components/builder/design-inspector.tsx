@@ -123,7 +123,7 @@ export function SideSection({
       </div>
       <div className="mt-3">
         <label htmlFor="print-method" className="text-text-2 mb-1 block text-xs">
-          Print method
+          Print method <span className="text-text-3">(whole garment)</span>
         </label>
         <Select value={method} onValueChange={(value) => onSetPrintMethod(view.id, value as PrintMethodChoice)}>
           <SelectTrigger

@@ -14,7 +14,12 @@ import { site } from "@/lib/site";
 const HEADING = "font-heading text-text-3 text-xs tracking-widest uppercase";
 /** Every interactive row is ≥ 44px tall (WCAG 2.5.8 / 2.2 touch target). */
 const ROW =
-  "text-text-2 hover:text-text-1 focus-visible:ring-neon-cyan data-[active=true]:bg-bg-2 data-[active=true]:text-neon-cyan flex min-h-[44px] items-center rounded-md px-3 text-base font-medium transition-colors hover:bg-bg-2";
+  "text-text-2 hover:text-text-1 focus-visible:ring-neon-cyan data-[active=true]:bg-bg-2 data-[active=true]:text-neon-cyan flex min-h-[44px] items-center rounded-md px-3 text-sm font-medium leading-tight transition-colors hover:bg-bg-2";
+/**
+ * Link lists sit in two columns so the whole menu fits a 720px-tall screen without scrolling
+ * (Logan, 2026-11-26); rows stay ≥ 44px tall.
+ */
+const GRID = "grid grid-cols-2 gap-x-1 gap-y-0.5";
 
 /** Modifier/middle-button clicks (new tab / new window) must keep the browser's default. */
 function isPlainLeftClick(event: MouseEvent<HTMLElement>) {
@@ -80,11 +85,18 @@ export function SiteMenu({ close, isActive }: { close: () => void; isActive: (it
     );
   };
 
+  // Email and (for members) Log out share one row, so the whole menu fits a 720px screen.
   const contactStrip = (
-    <div className="border-border flex flex-col gap-1.5 border-t px-3 py-4">
-      <a href={`mailto:${site.email}`} className="text-neon-cyan text-sm underline-offset-4 hover:underline">
-        {site.email.toLowerCase()}
-      </a>
+    <div className="border-border mt-auto flex flex-col gap-1.5 border-t px-6 py-2">
+      <div className="flex items-center justify-between gap-3">
+        <a
+          href={`mailto:${site.email}`}
+          className="text-neon-cyan min-w-0 truncate text-sm underline-offset-4 hover:underline"
+        >
+          {site.email.toLowerCase()}
+        </a>
+        {user ? <LogoutButton close={close} /> : null}
+      </div>
       {site.phone ? (
         <a href={`tel:${site.phone}`} className="text-text-2 text-sm">
           {site.phone}
@@ -112,35 +124,35 @@ export function SiteMenu({ close, isActive }: { close: () => void; isActive: (it
 
       {user ? (
         <div className="flex flex-col gap-0.5 px-3">
-          <p className={`${HEADING} px-3 py-2`}>Your account</p>
-          {accountNav.map(({ label, hash }) => (
-            <Link
-              key={hash}
-              href={`/account#${hash}`}
-              data-testid={hash === "designs" ? "account-link" : undefined}
-              aria-current={hash === "designs" && pathname === "/account" ? "page" : undefined}
-              onClick={(event) => onAccountNavClick(event, hash)}
-              className={ROW}
-            >
-              {label}
-            </Link>
-          ))}
+          <p className={`${HEADING} px-3 py-1.5`}>Your account</p>
+          <div className={GRID}>
+            {accountNav.map(({ label, hash }) => (
+              <Link
+                key={hash}
+                href={`/account#${hash}`}
+                data-testid={hash === "designs" ? "account-link" : undefined}
+                aria-current={hash === "designs" && pathname === "/account" ? "page" : undefined}
+                onClick={(event) => onAccountNavClick(event, hash)}
+                className={ROW}
+              >
+                {label}
+              </Link>
+            ))}
+          </div>
         </div>
       ) : null}
 
       <div className="flex flex-col gap-0.5 px-3">
-        <p className={`${HEADING} px-3 py-2`}>Create</p>
-        {menuCreateNav.map(menuLink)}
+        <p className={`${HEADING} px-3 py-1.5`}>Create</p>
+        <div className={GRID}>{menuCreateNav.map(menuLink)}</div>
       </div>
 
       <div className="flex flex-col gap-0.5 px-3">
-        <p className={`${HEADING} px-3 py-2`}>Explore</p>
-        {exploreNav.map(menuLink)}
+        <p className={`${HEADING} px-3 py-1.5`}>Explore</p>
+        <div className={GRID}>{exploreNav.map(menuLink)}</div>
       </div>
 
       {contactStrip}
-
-      {user ? <LogoutRow close={close} /> : null}
     </>
   );
 }
@@ -148,26 +160,30 @@ export function SiteMenu({ close, isActive }: { close: () => void; isActive: (it
 /** Visitor card: the join pitch plus the three sign-in entry points (Google wins errors + 2FA). */
 function JoinCard({ pathname, googleEnabled, close }: { pathname: string; googleEnabled: boolean; close: () => void }) {
   return (
-    <div className="border-border bg-bg-2 mx-3 rounded-2xl border p-4">
+    <div className="border-border bg-bg-2 mx-3 mt-3 rounded-2xl border p-3">
       <p className="font-heading text-text-1 text-sm tracking-wide uppercase">Join the pack</p>
-      <p className="text-text-2 mt-1 text-sm">Save designs, track orders, and get 15% off your 2nd order.</p>
+      <p className="text-text-2 mt-1 text-sm">
+        Save designs, track orders, and get 15% off your next order after your first.
+      </p>
       <div className="mt-3 flex flex-col gap-2">
         <GoogleButton next={pathname} googleEnabled={googleEnabled} />
-        <Link
-          href={`/signup?next=${encodeURIComponent(pathname)}`}
-          onClick={close}
-          className="bg-neon-pink text-bg-0 shadow-glow-pink focus-visible:ring-neon-cyan inline-flex min-h-[44px] items-center justify-center rounded-full px-5 text-sm font-semibold transition-transform duration-150 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:outline-none"
-        >
-          Create account
-        </Link>
-        <Link
-          href={`/login?next=${encodeURIComponent(pathname)}`}
-          onClick={close}
-          data-testid="account-link"
-          className="border-neon-cyan text-neon-cyan hover:shadow-glow-cyan focus-visible:ring-neon-cyan inline-flex min-h-[44px] items-center justify-center rounded-full border px-5 text-sm font-semibold transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none"
-        >
-          Log in
-        </Link>
+        <div className="grid grid-cols-2 gap-2">
+          <Link
+            href={`/signup?next=${encodeURIComponent(pathname)}`}
+            onClick={close}
+            className="bg-neon-pink text-bg-0 shadow-glow-pink focus-visible:ring-neon-cyan inline-flex min-h-[44px] items-center justify-center rounded-full px-3 text-sm font-semibold transition-transform duration-150 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:outline-none"
+          >
+            Create account
+          </Link>
+          <Link
+            href={`/login?next=${encodeURIComponent(pathname)}`}
+            onClick={close}
+            data-testid="account-link"
+            className="border-neon-cyan text-neon-cyan hover:shadow-glow-cyan focus-visible:ring-neon-cyan inline-flex min-h-[44px] items-center justify-center rounded-full border px-3 text-sm font-semibold transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none"
+          >
+            Log in
+          </Link>
+        </div>
       </div>
     </div>
   );
@@ -216,7 +232,7 @@ function MemberHeader({ user }: { user: { email: string; name: string | null; ve
 }
 
 /** Member menu footer: signs out, announces the change, and heads home. */
-function LogoutRow({ close }: { close: () => void }) {
+function LogoutButton({ close }: { close: () => void }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -236,21 +252,21 @@ function LogoutRow({ close }: { close: () => void }) {
   };
 
   return (
-    <div className="border-border mt-auto flex flex-col gap-1.5 border-t px-6 py-4">
+    <span className="flex shrink-0 flex-col items-end">
       <button
         type="button"
         onClick={onLogout}
         disabled={pending}
         data-testid="menu-logout"
-        className="text-text-2 hover:text-danger hover:bg-bg-2 focus-visible:ring-neon-cyan inline-flex min-h-[44px] items-center rounded-md px-3 text-base font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
+        className="text-text-2 hover:text-danger hover:bg-bg-2 focus-visible:ring-neon-cyan inline-flex min-h-[44px] items-center rounded-md px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
       >
         Log out
       </button>
       {error ? (
-        <p role="alert" className="text-danger px-3 text-sm">
+        <span role="alert" className="text-danger text-xs">
           {error}
-        </p>
+        </span>
       ) : null}
-    </div>
+    </span>
   );
 }

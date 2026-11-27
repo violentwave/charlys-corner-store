@@ -222,7 +222,7 @@ test("step 4 shows both send paths; the order card holds sizes, notes and referr
   await page.getByRole("button", { name: "Step 4: Send" }).click();
 
   // Two clearly separate paths (docs/04 §5 v2).
-  await expect(page.getByTestId("path-email")).toContainText(/15% off your 2nd order/i);
+  await expect(page.getByTestId("path-email")).toContainText(/15% off your next one/i);
   await expect(page.getByTestId("path-order")).toContainText(/Nothing is charged now/i);
   await expect(page.getByTestId("send-step").getByLabel("M", { exact: true })).toBeVisible();
   // Notes sit above BOTH path cards (P48-2): one field, either path.

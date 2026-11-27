@@ -15,7 +15,6 @@ export interface MockupOwnerEmailProps {
   /** "2 × M" entries for sizes the customer entered (empty when none). */
   sizes: string[];
   notes?: string;
-  couponCode: string;
   /** "order" = an order request (owner confirms price + invoices); "mockup" = a mockup lead. */
   kind?: "mockup" | "order";
   /** Every original file, with the sides it's printed on (signed links). */
@@ -81,7 +80,6 @@ export function MockupOwnerEmail(p: MockupOwnerEmailProps) {
           ))}
           {p.sizes.length > 0 ? <Text>Sizes: {p.sizes.join(", ")}</Text> : null}
           {p.notes ? <Text>Notes: {p.notes}</Text> : null}
-          <Text>Coupon code: {p.couponCode}</Text>
           {p.artworks.length === 0 ? <Text>Original artwork: none (text only)</Text> : null}
           {p.artworks.length > 0 ? (
             <Text>Original artwork{p.artworks.length > 1 ? ` (${p.artworks.length} files)` : ""}:</Text>

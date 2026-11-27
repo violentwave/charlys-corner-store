@@ -48,12 +48,18 @@ function oneLine(s: string) {
 }
 
 /**
- * Account emails (verification codes, reset links). Rate-limited by the auth routes
- * (LIMITS.resendCode / forgotPassword), not by the confirmation cap. Returns whether it sent.
+ * Emails to a signed-in member's own verified address (codes, reset links, their mockups and
+ * orders). Rate-limited by the calling route, not by the confirmation cap (that cap stops the
+ * public forms from mailing strangers). Returns whether it sent.
  */
-export async function sendAccountEmail(to: string, subject: string, email: ReactElement): Promise<boolean> {
+export async function sendAccountEmail(
+  to: string,
+  subject: string,
+  email: ReactElement,
+  attachments?: EmailMessage["attachments"],
+): Promise<boolean> {
   try {
-    const res = await sendEmail({ to, subject: oneLine(subject), ...(await renderBoth(email)) });
+    const res = await sendEmail({ to, subject: oneLine(subject), ...(await renderBoth(email)), attachments });
     if (!res.ok) console.error("account email failed");
     return res.ok;
   } catch {

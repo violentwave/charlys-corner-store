@@ -1,9 +1,10 @@
 "use client";
 /**
  * Builder success screens (docs/04 §6 v2) — one per path:
- * - email: mockup images + per-view downloads + coupon ticket + "Order this design" CTA
+ * - email: mockup images + per-view downloads + "Order this design" CTA
  *   (returns to the order card with the design intact).
- * - order: confirmation + summary + coupon ticket + "View in My designs".
+ * - order: confirmation + summary + "View in My designs".
+ * No coupon code here: the 15% code is emailed after the first paid order (Logan, 2026-11-26).
  * Charly celebrates (reduced-motion safe).
  *
  * `urls` are object URLs the builder created for the client-rendered PNGs at submit
@@ -12,16 +13,14 @@
  */
 import Link from "next/link";
 
-import { CouponTicket } from "@/components/neon/coupon-ticket";
 import { Button } from "@/components/ui/button";
-import { toast } from "@/components/ui/toast";
 import { track } from "@/lib/analytics";
+import { COUPON_RULES } from "@/lib/coupons";
 import { VIEW_LABELS, type GarmentId, type ViewId } from "@/lib/garments";
 
 export type MockupResult = {
   mockupId: string;
   intent: "email" | "order";
-  coupon: { code: string; expiresAt: string; isNew: boolean };
   mockups: { view: ViewId; url: string }[];
 };
 
@@ -76,12 +75,7 @@ export function SuccessScreen({ garmentId, summary, result, urls, onDesignAnothe
           ) : null}
         </div>
 
-        {result.coupon.isNew ? null : <p className="text-text-2 text-sm">Here&apos;s your code again.</p>}
-        <CouponTicket
-          code={result.coupon.code}
-          expiresAt={new Date(result.coupon.expiresAt)}
-          onCopied={() => toast({ title: "Code copied", description: `${result.coupon.code} is on your clipboard.` })}
-        />
+        <NextOrderPerk />
 
         <Button asChild data-testid="view-my-designs">
           <Link href="/account">View in My designs</Link>
@@ -100,8 +94,7 @@ export function SuccessScreen({ garmentId, summary, result, urls, onDesignAnothe
         <div>
           <h2 className="font-heading text-neon-green text-lg tracking-wide uppercase">Mockup sent!</h2>
           <p className="text-text-2 text-sm">
-            We emailed {result.mockups.length === 1 ? "your mockup" : "your mockups"} to you, along with the coupon
-            below.
+            We emailed {result.mockups.length === 1 ? "your mockup" : "your mockups"} to you.
           </p>
         </div>
       </div>
@@ -131,12 +124,7 @@ export function SuccessScreen({ garmentId, summary, result, urls, onDesignAnothe
         </div>
       ))}
 
-      {result.coupon.isNew ? null : <p className="text-text-2 text-sm">Here&apos;s your code again.</p>}
-      <CouponTicket
-        code={result.coupon.code}
-        expiresAt={new Date(result.coupon.expiresAt)}
-        onCopied={() => toast({ title: "Code copied", description: `${result.coupon.code} is on your clipboard.` })}
-      />
+      <NextOrderPerk />
 
       <Button onClick={onGoToOrder} data-testid="goto-order">
         Order this design
@@ -176,5 +164,19 @@ function Charly() {
       {/* collar */}
       <path d="M22 52h20" stroke="var(--neon-cyan)" />
     </svg>
+  );
+}
+
+/** The 15% perk, as a promise: the code itself arrives by email after the first paid order. */
+function NextOrderPerk() {
+  return (
+    <p
+      className="border-neon-yellow/50 text-text-2 rounded-xl border border-dashed p-3 text-sm"
+      data-testid="next-order-perk"
+    >
+      🐾 Order and pay once, and we&apos;ll email you{" "}
+      <strong className="text-neon-yellow">{COUPON_RULES.percentOff}% off your next order</strong> ($
+      {(COUPON_RULES.minOrderCents / 100).toFixed(0)} minimum).
+    </p>
   );
 }

@@ -44,7 +44,7 @@ describe("SendStep (step 4: two paths)", () => {
     const emailPath = screen.getByTestId("path-email");
     expect(emailPath).toHaveTextContent("Email me this mockup");
     expect(emailPath).toHaveTextContent(/pup@example\.com/);
-    expect(emailPath).toHaveTextContent(/15% off your 2nd order/);
+    expect(emailPath).toHaveTextContent(/15% off your next one/);
 
     const orderPath = screen.getByTestId("path-order");
     expect(orderPath).toHaveTextContent("Order this design");

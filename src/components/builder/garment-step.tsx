@@ -17,9 +17,12 @@ export interface GarmentStepProps {
  */
 export function GarmentStep({ selectedId, onSelect, onContinue }: GarmentStepProps) {
   return (
-    <div className="flex flex-col gap-4">
-      <GarmentPicker selectedId={selectedId} onSelect={onSelect} />
-      <Button size="lg" onClick={onContinue} data-testid="garment-continue" className="self-start">
+    <div className="flex flex-col gap-4 lg:min-h-0 lg:flex-1">
+      {/* lg+: the list scrolls inside the panel so the panel matches the preview's height. */}
+      <div className="lg:-mx-1 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:px-1 lg:py-1" data-testid="garment-scroll">
+        <GarmentPicker selectedId={selectedId} onSelect={onSelect} />
+      </div>
+      <Button size="lg" onClick={onContinue} data-testid="garment-continue" className="shrink-0 self-start">
         Continue →
       </Button>
     </div>

@@ -110,7 +110,7 @@ test("signed-out upload opens the sign-in dialog, from the step and the canvas",
   const dialog = page.getByTestId("sign-in-dialog");
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText(/Create a free account/i);
-  await expect(dialog).toContainText(/15% off your 2nd order/i);
+  await expect(dialog).toContainText(/15% off the next/i);
   await expect(dialog.getByRole("tab", { name: "New here" })).toHaveAttribute("aria-selected", "true");
   await expect(dialog.getByRole("tab", { name: "I have an account" })).toBeVisible();
   await page.getByLabel("Close dialog").click();
@@ -206,7 +206,9 @@ test("full flow: sign up → verify → color strip → upload → email path �
   const success = page.getByTestId("builder-success");
   await expect(success).toBeVisible({ timeout: 30_000 });
   await expect(success.getByText(/Mockup sent!/i)).toBeVisible();
-  await expect(success.getByText(/CHARLY-[A-Z2-9]{4}-[A-Z2-9]{4}/)).toBeVisible();
+  // No code before the first paid order (2026-11-26): only the promise.
+  await expect(success.getByText(/CHARLY-[A-Z2-9]{4}-[A-Z2-9]{4}/)).toHaveCount(0);
+  await expect(success.getByTestId("next-order-perk")).toBeVisible();
   await expect(success.getByTestId("mockup-download-front")).toBeVisible();
   await expect(success.getByTestId("mockup-image-front")).toBeVisible();
 
@@ -287,7 +289,9 @@ test("order path: sizes are required, the request lands under My designs", async
   await expect(success).toBeVisible({ timeout: 30_000 });
   await expect(success).toContainText(/Order request sent!/i);
   await expect(success.getByTestId("order-summary")).toContainText("2 × M");
-  await expect(success.getByText(/CHARLY-[A-Z2-9]{4}-[A-Z2-9]{4}/)).toBeVisible();
+  // No code before the first paid order (2026-11-26): only the promise.
+  await expect(success.getByText(/CHARLY-[A-Z2-9]{4}-[A-Z2-9]{4}/)).toHaveCount(0);
+  await expect(success.getByTestId("next-order-perk")).toBeVisible();
 
   // It shows up under My designs → Order requests.
   await success.getByTestId("view-my-designs").click();

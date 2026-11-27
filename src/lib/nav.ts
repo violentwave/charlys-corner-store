@@ -13,12 +13,13 @@ export type NavItem = {
 };
 
 /**
- * Every navigation list lives here. `primaryNav` is the lg+ header row (the logo covers
- * "Home"); `createNav` and `helpNav` feed the footer columns and the site menu; `exploreNav`
+ * Every navigation list lives here. `primaryNav` is the lg+ header row; `createNav` and `helpNav` feed the footer columns and the site menu; `exploreNav`
  * is the menu's "Explore" list. An item may carry several groups (see the spreads below).
  */
 export const navItems: readonly NavItem[] = [
-  // Primary header nav (lg+).
+  // Primary header nav (lg+). Home is back (Logan, 2026-11-26): the builder and the order form
+  // sit at the top of it.
+  { label: "Home", href: "/", group: "primary" },
   { label: "Shop", href: "/shop", group: "primary" },
   { label: "Business & Promo", href: "/business", group: "primary", homeSection: "business" },
   { label: "About", href: "/about", group: "primary", homeSection: "about" },
