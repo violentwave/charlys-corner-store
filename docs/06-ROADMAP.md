@@ -95,9 +95,10 @@ Each page prompt is shipped by the agent (Ship section); Claude reviews every me
 
 - [x] Print methods: all six listed, filtered by fabric/color/area, server-checked, shown in emails (Claude)
 - [x] Performance Tee (Gildan 42000) + Performance Long Sleeve (Gildan 42400) in the builder, templates generated (Claude)
-- [ ] Header with one CTA + one menu at every size (visitor / member versions), footer with groups and back-to-top, no duplicate buttons (opencode, prompt P50-A)
-- [ ] Builder mobile layout: canvas stays in view, tools in a bottom sheet, fewer taps (Claude)
-- [ ] More realistic garments: fix sleeve views, better shading/texture on every template (Claude)
+- [x] Header with one CTA + one menu at every size (visitor / member versions), footer with groups and back-to-top, no duplicate buttons (opencode, prompt P50-A)
+- [x] Builder mobile layout: canvas stays in view, tools in a bottom sheet, fewer taps (Claude)
+- [x] More realistic garments: fix sleeve views, better shading/texture on every template (Claude)
+- [x] Order form (P52-1): new + existing orders, guests welcome, full width, with artwork upload (replaces the old uploader)
 
 ## Phase 5: Shop and checkout (Square, decided 2026-11-26)
 

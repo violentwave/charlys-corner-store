@@ -120,7 +120,7 @@ export const quotes = pgTable(
   (t) => [index("quotes_created_idx").on(t.createdAt)],
 );
 
-/** Artwork for an existing order (old "Custom Image Uploader" page). */
+/** Order form submissions (old "Custom Image Uploader" page, now a full order form). */
 export const uploads = pgTable(
   "uploads",
   {
@@ -128,18 +128,44 @@ export const uploads = pgTable(
     leadId: uuid("lead_id")
       .notNull()
       .references(() => leads.id),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    orderType: text("order_type").notNull().default("new"),
     firstName: text("first_name").notNull(),
-    lastName: text("last_name").notNull(),
+    lastName: text("last_name"),
     email: text("email").notNull(),
-    orderNumber: text("order_number").notNull(),
-    fileKey: text("file_key").notNull(),
-    fileName: text("file_name").notNull(),
-    contentType: text("content_type").notNull(),
-    sizeBytes: integer("size_bytes").notNull(),
+    phone: text("phone"),
+    company: text("company"),
+    orderNumber: text("order_number"),
+    fulfillment: text("fulfillment"),
+    address: jsonb("address").$type<{ street?: string; unit?: string; city?: string; state?: string; zip?: string }>(),
+    items: text("items")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    colors: text("colors"),
+    printMethod: text("print_method"),
+    printLocations: text("print_locations")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    sizes: jsonb("sizes").$type<MockupSizes>().notNull().default({}),
+    neededBy: date("needed_by"),
+    files: jsonb("files")
+      .$type<{ key: string; name: string; contentType: string; size: number }[]>()
+      .notNull()
+      .default([]),
+    // legacy single-file columns (kept for old rows)
+    fileKey: text("file_key"),
+    fileName: text("file_name"),
+    contentType: text("content_type"),
+    sizeBytes: integer("size_bytes"),
     notes: text("notes"),
+    referralSource: referralSource("referral_source"),
+    referralOther: text("referral_other"),
+    marketingOptIn: boolean("marketing_opt_in").notNull().default(false),
     createdAt: createdAt(),
   },
-  (t) => [index("uploads_created_idx").on(t.createdAt)],
+  (t) => [index("uploads_created_idx").on(t.createdAt), index("uploads_user_idx").on(t.userId)],
 );
 
 /** Standalone "How did you hear about us?" answers (Home page survey, old-site parity). */

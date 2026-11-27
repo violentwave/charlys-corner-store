@@ -74,8 +74,8 @@ describe.skipIf(!hasTestDb)("Phase 3 review fixes (real Postgres)", () => {
     let sent = 0;
     const body = new ReadableStream<Uint8Array>({
       pull(controller) {
-        if (sent++ >= 25)
-          controller.close(); // ~25 MB, over the 21 MB cap
+        if (sent++ >= 33)
+          controller.close(); // ~33 MB, over the 31 MB cap
         else controller.enqueue(chunk);
       },
     });
@@ -88,7 +88,7 @@ describe.skipIf(!hasTestDb)("Phase 3 review fixes (real Postgres)", () => {
     expect(req.headers.get("content-length")).toBeNull();
     const res = await postUpload(req);
     expect(res.status).toBe(413);
-    expect(sent).toBeLessThan(25); // stopped reading early
+    expect(sent).toBeLessThan(33); // stopped reading early
   });
 
   it("quote with one good and one bad file stores nothing", async () => {

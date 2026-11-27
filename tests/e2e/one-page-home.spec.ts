@@ -108,7 +108,7 @@ test("below-the-fold forms render their Turnstile widget only when near the view
   await expect(contactTurnstile).toHaveAttribute("data-turnstile-state", "deferred");
 
   // ...and renders once the form scrolls near (or the builder's own upload section does).
-  await page.locator("#upload").scrollIntoViewIfNeeded();
+  await page.locator("#upload [data-testid='turnstile']").scrollIntoViewIfNeeded();
   await expect(page.locator("#upload [data-testid='turnstile']")).toHaveAttribute(
     "data-turnstile-state",
     /ready|solved/,
