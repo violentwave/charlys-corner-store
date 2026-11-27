@@ -35,6 +35,7 @@ const mockup = (over: Partial<AccountMockup> = {}): AccountMockup => ({
   removal: "delete",
   restorePath: "/?mockup=m1",
   orderStage: null,
+  order: null,
   canResend: false,
   canReorder: false,
   ...over,
@@ -54,6 +55,7 @@ const order: AccountMockup = {
   removal: "hide",
   restorePath: "/?mockup=o1",
   orderStage: null,
+  order: null,
   canResend: false,
   canReorder: false,
 };

@@ -5,12 +5,13 @@ import { z } from "zod";
 import { QuoteReadyCustomerEmail } from "@/emails/quote-ready-customer";
 import { getDb, schema } from "@/lib/db";
 import { getGarment, type GarmentId } from "@/lib/garments";
+import type { MockupSizes } from "@/lib/mockup-schema";
 import { clip } from "@/lib/http";
 import { sendAccountEmail } from "@/lib/notify";
 import { checkOwnerQuoteLink, OWNER_QUOTE_DAYS, payToken } from "@/lib/order-stage";
 import { clientIp, LIMITS, rateLimit } from "@/lib/rate-limit";
 import { site } from "@/lib/site";
-import { cancelPendingPayments } from "@/lib/payments";
+import { cancelPendingPayments, loadOrder, orderTitle } from "@/lib/payments";
 import { squareConfigured } from "@/lib/square";
 
 const quoteSchema = z
@@ -53,15 +54,9 @@ const invalid = () =>
     400,
   );
 
-async function load(id: string) {
-  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
-  const [row] = await getDb()
-    .select({ mockup: schema.mockups, lead: schema.leads })
-    .from(schema.mockups)
-    .innerJoin(schema.leads, eq(schema.leads.id, schema.mockups.leadId))
-    .where(eq(schema.mockups.id, id));
-  return row && row.mockup.kind === "order" ? row : null;
-}
+const load = (id: string) => loadOrder(getDb(), id);
+
+const pieces = (sizes: MockupSizes) => Object.values(sizes).reduce((n, q) => n + (q ?? 0), 0);
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -69,18 +64,21 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const ok = checkOwnerQuoteLink(id, url.searchParams.get("exp"), url.searchParams.get("sig"));
   const row = ok ? await load(id) : null;
   if (!ok || !row) return invalid();
-  const garment = getGarment(row.mockup.garment as GarmentId).name;
+  const order = row.order;
+  const list = row.items
+    .map((m) => `<li>${escape(getGarment(m.garment as GarmentId).name)} · ${pieces(m.sizes)} pcs</li>`)
+    .join("");
   const fields = ["exp", "sig"]
     .map((k) => `<input type="hidden" name="${k}" value="${escape(url.searchParams.get(k)!)}">`)
     .join("");
-  const current = row.mockup.quoteCents ? `$${(row.mockup.quoteCents / 100).toFixed(2)}` : "not set yet";
-  const paid = row.mockup.paidAt ? "<p><strong>Already paid.</strong> Re-quoting is locked.</p>" : "";
-  const form = row.mockup.paidAt
+  const current = order.quoteCents ? `$${(order.quoteCents / 100).toFixed(2)}` : "not set yet";
+  const paid = order.paidAt ? "<p><strong>Already paid.</strong> Re-quoting is locked.</p>" : "";
+  const form = order.paidAt
     ? ""
-    : `<form method="post">${fields}<label>Price (USD)</label><input name="price" inputmode="decimal" required value="${escape(row.mockup.quoteCents ? (row.mockup.quoteCents / 100).toFixed(2) : "")}"><label>Note to the customer (optional)</label><textarea name="note" maxlength="300" rows="3">${escape(row.mockup.quoteNote ?? "")}</textarea><button type="submit">Save price & email the customer</button></form>`;
+    : `<form method="post">${fields}<label>Price (USD)</label><input name="price" inputmode="decimal" required value="${escape(order.quoteCents ? (order.quoteCents / 100).toFixed(2) : "")}"><label>Note to the customer (optional)</label><textarea name="note" maxlength="300" rows="3">${escape(order.quoteNote ?? "")}</textarea><button type="submit">Save price & email the customer</button></form>`;
   return page(
     "Set the price",
-    `<h1>Set the price</h1><p>${escape(garment)} for ${escape(row.lead.email)}<br>Current: ${escape(current)}</p>${paid}${form}<p><small>Valid ${OWNER_QUOTE_DAYS} days.</small></p>`,
+    `<h1>Set the price</h1><p>${row.items.length} design${row.items.length === 1 ? "" : "s"} for ${escape(row.lead.email)}</p><ul>${list}</ul><p>Current: ${escape(current)} for the whole order</p>${paid}${form}<p><small>Valid ${OWNER_QUOTE_DAYS} days.</small></p>`,
   );
 }
 
@@ -103,7 +101,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   );
   const row = ok ? await load(id) : null;
   if (!ok || !row) return invalid();
-  if (row.mockup.paidAt)
+  if (row.order.paidAt)
     return page("Already paid", "<h1>Already paid</h1><p>This order is paid; re-quoting is locked.</p>", 409);
 
   const parsed = quoteSchema.safeParse({
@@ -125,11 +123,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // A new price retires any unpaid link for the old one.
   await cancelPendingPayments(db, id);
   await db
-    .update(schema.mockups)
-    .set({ quoteCents, quoteNote: note, quotedAt: now, orderStage: "quoted", orderStageAt: now })
-    .where(eq(schema.mockups.id, id));
+    .update(schema.orders)
+    .set({ quoteCents, quoteNote: note, quotedAt: now, stage: "quoted", stageAt: now })
+    .where(eq(schema.orders.id, id));
 
-  const garment = getGarment(row.mockup.garment as GarmentId).name;
+  const garment = orderTitle(row.items);
   // The signed token lets guests (and members on another device) open the pay page.
   const customerUrl = squareConfigured() ? `${site.url.replace(/\/$/, "")}/pay/${id}?t=${payToken(id)}` : null;
   await sendAccountEmail(

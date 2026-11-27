@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 
@@ -203,25 +205,35 @@ export async function POST(request: Request) {
     });
     // No coupon here (Logan, 2026-11-26): the 15% code is created and emailed when the
     // customer's first order is paid (src/lib/payments.ts markOrderPaid).
-    const [row] = await db
-      .insert(schema.mockups)
-      .values({
-        userId: user.id,
-        leadId,
-        garment: data.garment,
-        colors: data.colors,
-        views: data.views.map((entry) => ({ ...entry, mockupKey: keysByView.get(entry.view)! })),
-        sizes: data.sizes,
-        notes: data.notes || null,
-        kind: data.intent === "order" ? "order" : "mockup",
-        ...(data.intent === "order" ? { orderStage: "received" as const, orderStageAt: new Date() } : {}),
-        artworks: artworkRecords,
-        artworkKey: artworkRecords[0]?.key ?? null,
-        artworkName: artworkRecords[0]?.name ?? null,
-        artworkContentType: artworkRecords[0]?.contentType ?? null,
-        artworkSizeBytes: artworkRecords[0]?.size ?? null,
-      })
-      .returning({ id: schema.mockups.id });
+    // An order request from the builder is a one-design order; both rows share one id so the
+    // "order #" in every email and link is the same.
+    const id = randomUUID();
+    const row = await db.transaction(async (tx) => {
+      if (data.intent === "order") {
+        await tx.insert(schema.orders).values({ id, leadId, userId: user.id, notes: data.notes || null });
+      }
+      const [inserted] = await tx
+        .insert(schema.mockups)
+        .values({
+          id,
+          orderId: data.intent === "order" ? id : null,
+          userId: user.id,
+          leadId,
+          garment: data.garment,
+          colors: data.colors,
+          views: data.views.map((entry) => ({ ...entry, mockupKey: keysByView.get(entry.view)! })),
+          sizes: data.sizes,
+          notes: data.notes || null,
+          kind: data.intent === "order" ? "order" : "mockup",
+          artworks: artworkRecords,
+          artworkKey: artworkRecords[0]?.key ?? null,
+          artworkName: artworkRecords[0]?.name ?? null,
+          artworkContentType: artworkRecords[0]?.contentType ?? null,
+          artworkSizeBytes: artworkRecords[0]?.size ?? null,
+        })
+        .returning({ id: schema.mockups.id });
+      return inserted;
+    });
     mockupId = row!.id;
   } catch {
     await cleanup();

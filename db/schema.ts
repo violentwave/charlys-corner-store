@@ -207,6 +207,61 @@ export const coupons = pgTable(
   (t) => [uniqueIndex("coupons_code_unique").on(t.code), uniqueIndex("coupons_lead_unique").on(t.leadId)],
 );
 
+/**
+ * An order request (2026-11-26): one or more designs (`mockups` rows with kind "order" and this
+ * `order_id`), priced, paid and tracked once. Rows made before carts reuse their single item's id,
+ * so owner and customer links sent before the change keep working.
+ */
+export const orders = pgTable(
+  "orders",
+  {
+    id: id(),
+    leadId: uuid("lead_id")
+      .notNull()
+      .references(() => leads.id),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    /** Order-level notes (the cart's "Notes for Charly's"); each item keeps its own notes too. */
+    notes: text("notes"),
+    stage: orderStage("stage").notNull().default("received"),
+    stageAt: timestamp("stage_at", { withTimezone: true }).notNull().defaultNow(),
+    /** Owner-set price for the whole order (P51-3): cents, optional note. */
+    quoteCents: integer("quote_cents"),
+    quoteNote: text("quote_note"),
+    quotedAt: timestamp("quoted_at", { withTimezone: true }),
+    /** Set when the customer pays (Square webhook or saved card). */
+    paidAt: timestamp("paid_at", { withTimezone: true }),
+    /** The member removed it from "My designs"; kept for the shop. */
+    hiddenByUserAt: timestamp("hidden_by_user_at", { withTimezone: true }),
+    /** "Order again": the order this one repeats. */
+    reorderOf: uuid("reorder_of"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("orders_user_idx").on(t.userId), index("orders_created_idx").on(t.createdAt)],
+);
+
+/**
+ * A member's cart (2026-11-26): designs waiting to be sent as one order. Files live under
+ * mockups/cart/ (the 30-day R2 rule cleans up abandoned carts) and move to orders/ at checkout.
+ */
+export const cartItems = pgTable(
+  "cart_items",
+  {
+    id: id(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    garment: text("garment").notNull(),
+    colors: jsonb("colors").$type<MockupColors>().notNull(),
+    views: jsonb("views").$type<MockupViewRecord[]>().notNull(),
+    artworks: jsonb("artworks").$type<MockupArtworkRecord[]>().notNull().default([]),
+    sizes: jsonb("sizes").$type<MockupSizes>().notNull().default({}),
+    notes: text("notes"),
+    createdAt: createdAt(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("cart_items_user_idx").on(t.userId)],
+);
+
 /** Build-Your-Own Mockup submissions (email gate on /design). */
 export const mockups = pgTable(
   "mockups",
@@ -233,17 +288,11 @@ export const mockups = pgTable(
      * deleted (the owner still needs them); emailed mockups are deleted outright instead.
      */
     hiddenByUserAt: timestamp("hidden_by_user_at", { withTimezone: true }),
-    /** Order requests only: progress shown to the customer (null on rows from before 2026-11-26 = received). */
-    orderStage: orderStage("order_stage"),
-    orderStageAt: timestamp("order_stage_at", { withTimezone: true }),
-    /** Owner-set quote for an order request (P51-3): dollars → cents, optional note. */
-    quoteCents: integer("quote_cents"),
-    quoteNote: text("quote_note"),
-    quotedAt: timestamp("quoted_at", { withTimezone: true }),
-    /** Set when the customer pays (Square webhook). */
-    paidAt: timestamp("paid_at", { withTimezone: true }),
+    // Stage, price and payment live on `orders` since 2026-11-26 (one order, many designs).
     /** "Order again": the order request this one repeats (same design and files). */
     reorderOf: uuid("reorder_of"),
+    /** Order items: the order this design belongs to (null for emailed mockups). */
+    orderId: uuid("order_id").references(() => orders.id, { onDelete: "cascade" }),
     /** Every original file, untouched, for production; image layers' `artwork` indexes this list. */
     artworks: jsonb("artworks").$type<MockupArtworkRecord[]>().notNull().default([]),
     /**
@@ -393,9 +442,9 @@ export const orderPayments = pgTable(
   "order_payments",
   {
     id: id(),
-    mockupId: uuid("mockup_id")
+    orderId: uuid("order_id")
       .notNull()
-      .references(() => mockups.id, { onDelete: "cascade" }),
+      .references(() => orders.id, { onDelete: "cascade" }),
     leadId: uuid("lead_id")
       .notNull()
       .references(() => leads.id),
@@ -414,13 +463,13 @@ export const orderPayments = pgTable(
     paidAt: timestamp("paid_at", { withTimezone: true }),
   },
   (t) => [
-    index("order_payments_mockup_idx").on(t.mockupId),
+    index("order_payments_order_idx").on(t.orderId),
     uniqueIndex("order_payments_idempotency_unique").on(t.idempotencyKey),
     uniqueIndex("order_payments_square_order_unique").on(t.squareOrderId),
     uniqueIndex("order_payments_square_payment_unique").on(t.squarePaymentId),
     // One saved-card charge in flight per order: a double click can't charge twice.
     uniqueIndex("order_payments_one_card_in_flight")
-      .on(t.mockupId)
+      .on(t.orderId)
       .where(sql`${t.method} = 'card_on_file' and ${t.status} = 'pending'`),
   ],
 );

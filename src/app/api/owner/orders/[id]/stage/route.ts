@@ -3,10 +3,10 @@ import { headers } from "next/headers";
 
 import { OrderStatusCustomerEmail } from "@/emails/order-status-customer";
 import { getDb, schema } from "@/lib/db";
-import { getGarment, type GarmentId } from "@/lib/garments";
 import { clip } from "@/lib/http";
 import { sendAccountEmail } from "@/lib/notify";
-import { checkOwnerStageLink, ORDER_STAGE_DESCRIPTIONS, ORDER_STAGE_LABELS, type OrderStage } from "@/lib/order-stage";
+import { checkOwnerStageLink, ORDER_STAGE_DESCRIPTIONS, ORDER_STAGE_LABELS } from "@/lib/order-stage";
+import { loadOrder, orderTitle } from "@/lib/payments";
 import { clientIp, LIMITS, rateLimit } from "@/lib/rate-limit";
 import { site } from "@/lib/site";
 
@@ -38,15 +38,7 @@ const invalid = () =>
     400,
   );
 
-async function load(id: string) {
-  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
-  const [row] = await getDb()
-    .select({ mockup: schema.mockups, lead: schema.leads })
-    .from(schema.mockups)
-    .innerJoin(schema.leads, eq(schema.leads.id, schema.mockups.leadId))
-    .where(eq(schema.mockups.id, id));
-  return row && row.mockup.kind === "order" ? row : null;
-}
+const load = (id: string) => loadOrder(getDb(), id);
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -59,8 +51,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   );
   const row = to ? await load(id) : null;
   if (!to || !row) return invalid();
-  const garment = getGarment(row.mockup.garment as GarmentId).name;
-  const current = ORDER_STAGE_LABELS[(row.mockup.orderStage ?? "received") as OrderStage];
+  const garment = orderTitle(row.items);
+  const current = ORDER_STAGE_LABELS[row.order.stage];
   const fields = ["to", "exp", "sig"]
     .map((k) => `<input type="hidden" name="${k}" value="${escape(url.searchParams.get(k)!)}">`)
     .join("");
@@ -89,9 +81,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const row = to ? await load(id) : null;
   if (!to || !row) return invalid();
 
-  if (row.mockup.orderStage !== to) {
-    await db.update(schema.mockups).set({ orderStage: to, orderStageAt: new Date() }).where(eq(schema.mockups.id, id));
-    const garment = getGarment(row.mockup.garment as GarmentId).name;
+  if (row.order.stage !== to) {
+    await db.update(schema.orders).set({ stage: to, stageAt: new Date() }).where(eq(schema.orders.id, id));
+    const garment = orderTitle(row.items);
     // Owner-triggered, so not under the per-recipient confirmation cap (that guards public forms).
     await sendAccountEmail(
       row.lead.email,

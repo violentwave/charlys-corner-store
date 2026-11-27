@@ -49,8 +49,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!parsed.success) return NextResponse.json({ error: "Pick a card." }, { status: 400 });
 
   const row = await loadQuotedOrder(db, id);
-  if (!row || row.mockup.userId !== v.user.id) return NextResponse.json({ error: "not found" }, { status: 404 });
-  if (row.mockup.paidAt) return NextResponse.json({ error: "This order is already paid." }, { status: 409 });
+  if (!row || row.order.userId !== v.user.id) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (row.order.paidAt) return NextResponse.json({ error: "This order is already paid." }, { status: 409 });
 
   const customerId = await existingSquareCustomerId(v.user.id);
   const card = customerId ? await getOwnedCard(parsed.data.cardId, customerId) : null;
@@ -63,7 +63,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const [inserted] = await db
       .insert(schema.orderPayments)
       .values({
-        mockupId: id,
+        orderId: id,
         leadId: row.lead.id,
         amountCents: pricing.totalCents,
         subtotalCents: pricing.subtotalCents,
