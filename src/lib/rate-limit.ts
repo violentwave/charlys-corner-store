@@ -57,9 +57,12 @@ export const LIMITS = {
   quote: { limit: 5, windowSeconds: 60 * 60 },
   upload: { limit: 10, windowSeconds: 60 * 60 },
   survey: { limit: 10, windowSeconds: 60 * 60 },
-  /** Mockup email gate (docs/04): 5 per hour per IP, plus `mockupEmail` per address. */
-  mockup: { limit: 5, windowSeconds: 60 * 60 },
-  mockupEmail: { limit: 3, windowSeconds: 24 * 60 * 60 },
+  /**
+   * Mockups + order requests (verified members only). Raised 2026-11-26 (Logan): 500 a day per
+   * member; the per-network cap only stops a runaway script (a shop on one Wi-Fi stays well under).
+   */
+  mockup: { limit: 300, windowSeconds: 60 * 60 },
+  mockupEmail: { limit: 500, windowSeconds: 24 * 60 * 60 },
   /** Restore-design deep link GET /api/mockups/[id] (design data only, no PII). */
   mockupRestore: { limit: 30, windowSeconds: 60 * 60 },
   /** Accounts (src/lib/auth). Signup per IP; login per IP and per email; codes per user. */

@@ -28,7 +28,7 @@ test("home has one h1, featured products with prices, and coupon CTA", async ({ 
   }
 
   // Scope to the design section: the site menu's Join card repeats the same coupon line.
-  await expect(page.locator("#design").getByText("15% off your 2nd order")).toBeVisible();
+  await expect(page.locator("#design").getByText(/15% off your next one/)).toBeVisible();
 
   const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
   const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);

@@ -12,7 +12,6 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 
 import { hashPassword } from "@/lib/auth/password";
 import { createSession } from "@/lib/auth/session";
-import { issueCoupon } from "@/lib/coupon-store";
 import { schema, type Db } from "@/lib/db";
 import { _clearOutbox, _outbox } from "@/lib/email";
 import { upsertLead } from "@/lib/leads";
@@ -152,13 +151,11 @@ describe.skipIf(!hasTestDb)("payments (real Postgres, mocked Square)", () => {
     return { user: user!, leadId };
   }
   async function order(userId: string | null, leadId: string, quoteCents: number | null = 4000) {
-    const coupon = await issueCoupon(db, leadId);
     const [row] = await db
       .insert(schema.mockups)
       .values({
         leadId,
         userId,
-        couponId: coupon.id,
         kind: "order",
         garment: "hoodie",
         colors: { body: "#ffffff" },
@@ -300,13 +297,15 @@ describe.skipIf(!hasTestDb)("payments (real Postgres, mocked Square)", () => {
     expect((await mockup(row.id)).paidAt).not.toBeNull();
     const [pay] = await rows(row.id);
     expect(pay!.status).toBe("paid");
-    const [coupon] = await db.select().from(schema.coupons).where(eq(schema.coupons.leadId, leadId));
-    expect(coupon!.status).toBe("eligible");
+    // No coupon existed before; the first payment creates it, unlocked, and emails the code.
+    const coupons = await db.select().from(schema.coupons).where(eq(schema.coupons.leadId, leadId));
+    expect(coupons).toHaveLength(1);
+    expect(coupons[0]!.status).toBe("eligible");
     expect(_outbox().map((m) => m.subject)).toEqual([
       expect.stringContaining("Payment received"),
       expect.stringContaining("Paid: $40.00"),
     ]);
-    expect(_outbox()[0]!.html).toContain("unlocked");
+    expect(_outbox()[0]!.html).toContain(coupons[0]!.code);
 
     const status = await payStatus(new Request(`${ORIGIN}/api/pay/${row.id}/status`), params(row.id));
     expect(((await status.json()) as { status: string }).status).toBe("paid");
@@ -315,7 +314,10 @@ describe.skipIf(!hasTestDb)("payments (real Postgres, mocked Square)", () => {
   it("2nd order: the unlocked 15% applies (server-side) and is redeemed when paid", async () => {
     const { user, leadId } = await member();
     const first = await order(user.id, leadId, 4000);
-    await checkout(json({}), params(first.id));
+    const before = await checkout(json({}), params(first.id));
+    expect(before.status).toBe(200);
+    const [firstPay] = await rows(first.id);
+    expect(firstPay!.discountCents).toBe(0); // no coupon before the first paid order
     await webhook(signedWebhook(paymentEvent("p1", "order-link-1")));
 
     const second = await order(user.id, leadId, 10000);

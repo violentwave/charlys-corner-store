@@ -27,9 +27,9 @@ export const faq: readonly FaqItem[] = [
     answer: "PNG or JPEG up to 20 MB. A transparent PNG looks best for designs placed on a garment.",
   },
   {
-    // Source: COUPON_RULES (src/lib/coupons.ts) and docs/00-PROJECT-BRIEF.md §6 (coupon confirmed 2026-11-23).
+    // Source: COUPON_RULES (src/lib/coupons.ts); issued after the first paid order (Logan, 2026-11-26).
     question: "How does the discount coupon work?",
-    answer: `Use the mockup builder to email yourself a mockup and you'll get a code for ${COUPON_RULES.percentOff}% off your 2nd order. It expires after ${COUPON_RULES.expiryDays} days, one per email, with a $${COUPON_RULES.minOrderCents / 100} minimum order.`,
+    answer: `After your first paid order we email you a code for ${COUPON_RULES.percentOff}% off your next order. It expires after ${COUPON_RULES.expiryDays} days, one per customer, with a $${COUPON_RULES.minOrderCents / 100} minimum order.`,
     links: [{ label: "Open the mockup builder", href: "/#design" }],
   },
   {

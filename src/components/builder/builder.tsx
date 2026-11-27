@@ -12,7 +12,7 @@ import { z } from "zod";
 import { detectArtworkKind, ARTWORK_MAX_BYTES } from "@/lib/artwork";
 import type { AccountUser } from "@/lib/auth-schema";
 import { getGarment, GARMENTS, isHexColor, luma, VIEW_LABELS, type GarmentId, type ViewId } from "@/lib/garments";
-import { effectiveMethod, methodBlocker, PRINT_METHODS } from "@/lib/print-methods";
+import { designMethodBlocker, PRINT_METHODS } from "@/lib/print-methods";
 import { MAX_LAYERS_PER_VIEW, MOCKUP_ARTWORK_KINDS, mockupViewSchema } from "@/lib/mockup-schema";
 import type { TextFontId } from "@/lib/text-fonts";
 import { track } from "@/lib/analytics";
@@ -33,6 +33,7 @@ import { MobileActionBar } from "./action-bar";
 import { ToolTabs } from "./tool-tabs";
 import {
   designFromRestore,
+  designPrintMethod,
   initialDesign,
   payloadPlan,
   usedFileIndexes,
@@ -597,22 +598,25 @@ export function Builder() {
    * view it flips the stage, then waits until the switched view is actually drawn
    * (re-renders can lag under load) before exporting.
    */
+  /**
+   * Renders one side to a PNG. Always asks the stage which side it is showing *now* and waits
+   * until that side's template and artwork are loaded: the old shortcut trusted a stale
+   * `activeViewId` mid-switch and exported an empty canvas (blank sleeve mockups, 2026-11-26).
+   * The caller restores the visitor's side once every export is done.
+   */
   const exportViewPng = async (viewId: ViewId): Promise<Blob | null> => {
-    if (viewId === activeViewId) return stageRef.current?.exportPng() ?? null;
-    const previous = activeViewId;
     setRequestedView(viewId);
-    try {
-      for (let attempt = 0; attempt < 30; attempt++) {
-        if (stageRef.current?.getView() === viewId) {
-          const blob = await stageRef.current.exportPng();
-          if (blob) return blob;
-        }
-        await raf();
+    // Up to ~10 s at 60 fps: a cold template on a slow phone can take a few seconds.
+    for (let attempt = 0; attempt < 600; attempt++) {
+      const stage = stageRef.current;
+      if (stage && stage.getView() === viewId && stage.isReady()) {
+        await raf(); // one more frame so Konva has drawn the loaded images
+        const blob = await stage.exportPng();
+        if (blob) return blob;
       }
-      return null;
-    } finally {
-      setRequestedView(previous);
+      await raf();
     }
+    return null;
   };
 
   /**
@@ -657,17 +661,21 @@ export function Builder() {
 
       setProgress("Uploading your mockup…");
       const blobs: Partial<Record<ViewId, Blob>> = {};
-      for (const view of plan.payload.views) {
-        const blob = await exportViewPng(view.view);
-        if (!blob) throw new Error(`could not render the ${view.view} view`);
-        blobs[view.view] = blob;
-        body.append(`mockup-${view.view}`, blob, `mockup-${view.view}.png`);
+      const sideBefore = activeViewId;
+      try {
+        for (const view of plan.payload.views) {
+          const blob = await exportViewPng(view.view);
+          if (!blob) throw new Error(`could not render the ${view.view} view`);
+          blobs[view.view] = blob;
+          body.append(`mockup-${view.view}`, blob, `mockup-${view.view}.png`);
+        }
+      } finally {
+        setRequestedView(sideBefore);
       }
 
       const res = await fetch("/api/mockups", { method: "POST", body });
       const json = (await res.json()) as
-        | { ok: true; mockupId: string; coupon: MockupResult["coupon"]; mockups: MockupResult["mockups"] }
-        | { ok: false; error: string };
+        { ok: true; mockupId: string; mockups: MockupResult["mockups"] } | { ok: false; error: string };
       if (!json.ok) {
         setSendError(json.error ?? "Something went wrong. Please try again or email us.");
         if (res.status === 401 || res.status === 403) {
@@ -684,7 +692,7 @@ export function Builder() {
         if (blob) urls[view as ViewId] = URL.createObjectURL(blob);
       }
       setExportedUrls(urls);
-      setSuccess({ mockupId: json.mockupId, intent, coupon: json.coupon, mockups: json.mockups });
+      setSuccess({ mockupId: json.mockupId, intent, mockups: json.mockups });
     } catch {
       setSendError("Something went wrong. Please try again or email us.");
     } finally {
@@ -866,7 +874,12 @@ export function Builder() {
     .filter(([, qty]) => qty > 0)
     .map(([size, qty]) => `${qty} × ${size}`);
 
-  const activeArea = activeView.printAreas.find((a) => a.id === activeViewState.printArea) ?? activeView.printAreas[0]!;
+  // One print method for the whole garment: offered only when it fits every printed side.
+  const printMethod = designPrintMethod(design, garment, activeViewId);
+  const methodOptions = PRINT_METHODS.map((m) => ({
+    ...m,
+    blocker: designMethodBlocker(m.id, garment, design.colors, printMethod.areas),
+  }));
 
   return (
     <div
@@ -948,6 +961,9 @@ export function Builder() {
           // Mobile step 3: goStep's scrollIntoView must land the panel below the sticky
           // canvas + tabs, not at the viewport top (which the sticky canvas covers).
           mobileStep3 && "scroll-mt-[calc(4rem+var(--canvas-h)+1rem)]",
+          // Desktop step 1: the panel is exactly as tall as the preview; the garment list
+          // scrolls inside it (Logan, 2026-11-26). h-0 + min-h-full = "the row's height".
+          step === 1 && !success && "lg:h-0 lg:min-h-full lg:self-stretch",
         )}
       >
         {success ? (
@@ -975,7 +991,12 @@ export function Builder() {
               </>
             ) : null}
 
-            <div className="bg-bg-2/60 rounded-2xl p-4 sm:p-6">
+            <div
+              className={cn(
+                "bg-bg-2/60 rounded-2xl p-4 sm:p-6",
+                step === 1 && "lg:flex lg:min-h-0 lg:flex-1 lg:flex-col",
+              )}
+            >
               {/* Below lg on step 3 the fixed tool shell replaces this card header. */}
               <header className={cn("mb-5 flex flex-col gap-1", mobileStep3 && "hidden")}>
                 <h2 className="font-heading text-text-1 text-xl tracking-wide uppercase">{stepInfo.headline}</h2>
@@ -1024,11 +1045,8 @@ export function Builder() {
                     onSetPrintArea={(viewId, areaId) =>
                       dispatch({ type: "setPrintArea", view: viewId, printAreaId: areaId })
                     }
-                    method={effectiveMethod(activeViewState.method, garment, design.colors, activeArea)}
-                    methodOptions={PRINT_METHODS.map((m) => ({
-                      ...m,
-                      blocker: methodBlocker(m.id, garment, design.colors, activeArea),
-                    }))}
+                    method={printMethod.method}
+                    methodOptions={methodOptions}
                     onSetPrintMethod={(viewId, method) => dispatch({ type: "setPrintMethod", view: viewId, method })}
                     onSelectLayer={(layerId) => dispatch({ type: "selectLayer", view: activeViewId, layerId })}
                     onTransform={(layerId, transform, mergeKey) =>
@@ -1080,11 +1098,8 @@ export function Builder() {
                     onSetPrintArea={(viewId, areaId) =>
                       dispatch({ type: "setPrintArea", view: viewId, printAreaId: areaId })
                     }
-                    method={effectiveMethod(activeViewState.method, garment, design.colors, activeArea)}
-                    methodOptions={PRINT_METHODS.map((m) => ({
-                      ...m,
-                      blocker: methodBlocker(m.id, garment, design.colors, activeArea),
-                    }))}
+                    method={printMethod.method}
+                    methodOptions={methodOptions}
                     onSetPrintMethod={(viewId, method) => dispatch({ type: "setPrintMethod", view: viewId, method })}
                     onSelectLayer={(layerId) => dispatch({ type: "selectLayer", view: activeViewId, layerId })}
                     onTransform={(layerId, transform, mergeKey) =>
@@ -1124,8 +1139,9 @@ export function Builder() {
               ) : null}
 
               {/* Below lg on step 3 these live in the fixed action bar instead (P51-1);
-                  conditionally rendered — never two copies in the DOM. */}
-              {!mobileStep3 ? (
+                  conditionally rendered — never two copies in the DOM. Step 1 has its own
+                  Continue under the garment list and nothing to go back to, so no footer. */}
+              {!mobileStep3 && step > 1 ? (
                 <div className="mt-6 flex flex-col gap-2">
                   <div className="flex items-center justify-between gap-3">
                     <Button

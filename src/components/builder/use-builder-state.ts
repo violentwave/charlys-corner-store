@@ -34,7 +34,7 @@ import {
   type ViewId,
 } from "@/lib/garments";
 import { TEXT_FONT_IDS, type TextFontId } from "@/lib/text-fonts";
-import { effectiveMethod, PRINT_METHOD_CHOICES, type PrintMethodChoice } from "@/lib/print-methods";
+import { effectiveDesignMethod, PRINT_METHOD_CHOICES, type PrintMethodChoice } from "@/lib/print-methods";
 import { REFERRAL_SOURCES } from "@/lib/schemas";
 
 import { fitIntoRect } from "./geometry";
@@ -333,11 +333,12 @@ export function builderReducer(state: BuilderState, action: BuilderAction): Buil
     }
 
     case "setPrintMethod": {
-      const current = state.design.views[action.view];
-      if (!current || (current.method ?? "recommend") === action.method) return state;
+      // One method for the whole garment: set it on every side.
+      const entries = Object.entries(state.design.views);
+      if (entries.every(([, v]) => (v?.method ?? "recommend") === action.method)) return state;
       return withHistory(state, {
         ...state.design,
-        views: { ...state.design.views, [action.view]: { ...current, method: action.method } },
+        views: Object.fromEntries(entries.map(([id, v]) => [id, v ? { ...v, method: action.method } : v])),
       });
     }
 
@@ -902,12 +903,11 @@ export function payloadPlan(design: BuilderDesign): {
       }
       return { type: "image", artwork: dense, transform: layer.transform };
     });
-    const area = view.printAreas.find((a) => a.id === saved.printArea) ?? view.printAreas[0]!;
     views.push({
       view: view.id,
       printArea: saved.printArea,
-      // A pick that no longer fits (color/area changed since) goes out as "recommend".
-      method: effectiveMethod(saved.method, garment, design.colors, area),
+      // One method for the garment; a pick that no longer fits every side goes out as "recommend".
+      method: designPrintMethod(design, garment).method,
       layers,
     });
   }
@@ -921,4 +921,27 @@ export function payloadPlan(design: BuilderDesign): {
     },
     filesInUse,
   };
+}
+
+/**
+ * The garment-wide print method (one per garment, Logan 2026-11-26) and the print areas it must
+ * fit: every side with layers, plus `activeView`'s area while it's being edited.
+ */
+export function designPrintMethod(
+  design: BuilderDesign,
+  garment: GarmentConfig,
+  activeView?: ViewId,
+): { method: PrintMethodChoice; areas: PrintArea[] } {
+  const areas: PrintArea[] = [];
+  let choice: PrintMethodChoice | undefined;
+  for (const view of garment.views) {
+    const saved = design.views[view.id];
+    if (!saved) continue;
+    choice ??= saved.method;
+    if (saved.layers.length === 0 && view.id !== activeView) continue;
+    const area = view.printAreas.find((a) => a.id === saved.printArea) ?? view.printAreas[0]!;
+    if (!areas.includes(area)) areas.push(area);
+  }
+  if (activeView) choice = design.views[activeView]?.method ?? choice;
+  return { method: effectiveDesignMethod(choice, garment, design.colors, areas), areas };
 }

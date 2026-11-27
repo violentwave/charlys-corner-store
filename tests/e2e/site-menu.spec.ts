@@ -141,3 +141,13 @@ test("Create account in the menu closes the menu and lands on /signup", async ({
   await expect(page).toHaveURL(/\/signup\?next=%2Ffaq$/);
   await expect(menuDialog(page)).toBeHidden();
 });
+
+test("the menu covers the full viewport height (not squeezed into the header)", async ({ page }) => {
+  await page.goto("/");
+  await openMenu(page);
+  const box = await menuDialog(page).boundingBox();
+  const viewport = page.viewportSize()!;
+  expect(box!.height).toBeGreaterThanOrEqual(viewport.height - 2);
+  // Every link is reachable without scrolling the page itself.
+  await expect(menuDialog(page).getByRole("link", { name: "Contact" })).toBeInViewport();
+});

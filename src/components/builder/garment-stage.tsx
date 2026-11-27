@@ -84,6 +84,11 @@ const loadTextFontSafe = (id: string) => import("./load-text-font").then((m) => 
 export interface GarmentStageHandle {
   /** The id of the view the stage is currently showing (exportViewPng waits for it). */
   getView(): ViewId;
+  /**
+   * True once the current view's garment template and every image layer's artwork are loaded
+   * and drawn: exporting earlier produced a blank PNG (a missing sleeve mockup, 2026-11-26).
+   */
+  isReady(): boolean;
   /** Renders the current view at native template size and returns a PNG blob. */
   exportPng(): Promise<Blob | null>;
 }
@@ -586,6 +591,10 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
 
   useImperativeHandle(ref, () => ({
     getView: () => view.id,
+    isReady: () =>
+      images !== null &&
+      !!stageRef.current &&
+      layers.every((l) => l.type !== "image" || Boolean(stageImages[l.fileIndex])),
     async exportPng() {
       const stage = stageRef.current;
       if (!stage) return null;

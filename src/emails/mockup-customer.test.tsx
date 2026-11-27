@@ -13,7 +13,6 @@ describe("MockupCustomerEmail", () => {
         garmentName: "T-Shirt",
         colors: [{ label: "Shirt", hex: "#2233aa", name: "Custom #2233aa" }],
         views: [{ view: "Front", area: "Full Front" }],
-        coupon: { code: "CHARLY-ABCD-EFGH", expiresAt: new Date("2027-11-25"), isNew: true },
         mockups: [{ view: "front", signedUrl: "https://r2.example/mockup-front.png" }],
         mockupId: "123e4567-e89b-42d3-a456-426614174000",
       }),
@@ -24,7 +23,6 @@ describe("MockupCustomerEmail", () => {
         garmentName: "T-Shirt",
         colors: [{ label: "Shirt", hex: "#2233aa", name: "Custom #2233aa" }],
         views: [{ view: "Front", area: "Full Front" }],
-        coupon: { code: "CHARLY-ABCD-EFGH", expiresAt: new Date("2027-11-25"), isNew: true },
         mockups: [{ view: "front", signedUrl: "https://r2.example/mockup-front.png" }],
         mockupId: "123e4567-e89b-42d3-a456-426614174000",
       }),
@@ -35,5 +33,7 @@ describe("MockupCustomerEmail", () => {
     expect(html).toMatch(expected);
     expect(html).toContain("Order this design");
     expect(text).toContain("Order this design");
+    // No coupon code before the first paid order (Logan, 2026-11-26).
+    expect(text).not.toMatch(/CHARLY-/);
   });
 });

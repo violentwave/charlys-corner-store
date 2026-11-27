@@ -76,7 +76,7 @@ async function pool(): Promise<Pool> {
   return new Pool({ connectionString: process.env.DATABASE_URL });
 }
 
-test("the wallet shows the coupon after an emailed mockup — with its status", async ({ page }) => {
+test("no coupon in the wallet after a mockup: it arrives with the first paid order", async ({ page }) => {
   const email = unique("wallet");
   await freshIp(page);
   await page.request.post("/api/test/session", { data: { email } });
@@ -87,10 +87,8 @@ test("the wallet shows the coupon after an emailed mockup — with its status", 
 
   await sendMockup(page, "email");
   await page.goto("/account");
-  const wallet = page.getByTestId("wallet");
-  await expect(wallet).toBeVisible({ timeout: 15_000 });
-  await expect(wallet.getByText(/CHARLY-[A-Z2-9]{4}-[A-Z2-9]{4}/)).toBeVisible(); // code + copy
-  await expect(page.getByTestId("wallet-status")).toHaveText("Unlocks after your first order");
+  await expect(page.getByRole("tablist", { name: "Your account" })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId("wallet")).toHaveCount(0);
 });
 
 test("order tracking: the owner's 'Mark as Ready' link moves the order", async ({ page }) => {

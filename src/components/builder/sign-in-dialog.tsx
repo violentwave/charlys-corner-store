@@ -29,7 +29,8 @@ const TITLES: Record<Step, string> = {
 };
 
 const BLURBS: Record<Step, string> = {
-  signup: "One quick account saves your designs and unlocks your mockup + 15% off your 2nd order.",
+  signup:
+    "One quick account saves your designs and emails you your mockup. Pay for one order and get 15% off the next.",
   login: "Log in to add your design. Your garment and colors are still right here.",
   twofactor: "Your account has two-step sign-in on — enter the code that proves it's you.",
   verify: "Enter the 6-digit code we just emailed you. This only happens once.",

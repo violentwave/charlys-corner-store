@@ -12,26 +12,12 @@ export interface OrderRequestCustomerEmailProps {
   views: { view: string; area: string; method?: string }[];
   /** "2 × M" entries for the sizes the customer ordered. */
   sizes: string[];
-  coupon: { code: string; expiresAt: Date; isNew: boolean };
   /** Deep link: /?mockup=<id>#design reopens the design in the builder (design data only, no PII). */
   mockupId: string;
 }
 
-/** Fixed to the shop's time zone so the printed expiry matches the CouponTicket on screen. */
-function formatExpiry(date: Date): string {
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "America/New_York",
-  });
-}
-
 /** Customer confirmation for an "Order this design" request (v2): no payment happened. */
 export function OrderRequestCustomerEmail(p: OrderRequestCustomerEmailProps) {
-  const terms = `${COUPON_RULES.percentOff}% off your 2nd order · $${(COUPON_RULES.minOrderCents / 100).toFixed(
-    0,
-  )} minimum · expires ${formatExpiry(p.coupon.expiresAt)} · one per email`;
   return (
     <Html>
       <Head />
@@ -50,9 +36,9 @@ export function OrderRequestCustomerEmail(p: OrderRequestCustomerEmailProps) {
           </Text>
           <Text>We&apos;ll confirm the price and send you an invoice — nothing is charged now.</Text>
           <Text>
-            Coupon code: <strong>{p.coupon.code}</strong>
+            Order and pay once, and we&apos;ll email you {COUPON_RULES.percentOff}% off your next order ($
+            {(COUPON_RULES.minOrderCents / 100).toFixed(0)} minimum).
           </Text>
-          <Text>{terms}</Text>
           <Button
             href={`${site.url}/?mockup=${p.mockupId}#design`}
             style={{

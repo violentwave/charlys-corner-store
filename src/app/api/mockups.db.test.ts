@@ -4,14 +4,17 @@
  * with the memory storage driver and the console email driver. A verified account is
  * required: identity (email/name/lead/user_id) comes from the session, not the payload.
  */
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 
+import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createSession } from "@/lib/auth/session";
 import { hashPassword } from "@/lib/auth/password";
 import { schema, type Db } from "@/lib/db";
 import { _clearOutbox, _outbox } from "@/lib/email";
+import { clientIp, LIMITS } from "@/lib/rate-limit";
 import { _memoryClear, _memoryKeys } from "@/lib/storage";
 import { upsertLead } from "@/lib/leads";
 import { hasTestDb, setupTestDb } from "@/test/db";
@@ -153,14 +156,13 @@ describe.skipIf(!hasTestDb)("POST /api/mockups (real Postgres)", () => {
     expect(_memoryKeys()).toHaveLength(0);
   });
 
-  it("happy path: account identity on the lead + row, coupon, files stored", async () => {
+  it("happy path: account identity on the lead + row, no coupon yet, files stored", async () => {
     const userId = await createVerifiedUser("charly@example.com", "Charly Dog");
     const res = await postMockup(buildRequest());
     expect(res.status).toBe(200);
-    const json = (await res.json()) as { ok: true; mockupId: string; coupon: { code: string; isNew: boolean } };
-
-    expect(json.coupon.code).toMatch(/^CHARLY-/);
-    expect(json.coupon.isNew).toBe(true);
+    const json = (await res.json()) as { ok: true; mockupId: string; coupon?: unknown };
+    // The 15% code comes with the first paid order (2026-11-26), never with a mockup.
+    expect(json.coupon).toBeUndefined();
 
     const mockupRows = await db.select().from(schema.mockups);
     expect(mockupRows).toHaveLength(1);
@@ -171,31 +173,26 @@ describe.skipIf(!hasTestDb)("POST /api/mockups (real Postgres)", () => {
     expect(mockupRows[0]!.kind).toBe("mockup");
     expect(mockupRows[0]!.views).toHaveLength(2);
     for (const view of mockupRows[0]!.views) expect(view.mockupKey).toMatch(/^mockups\//);
-    expect(mockupRows[0]!.couponId).toBeTruthy();
+    expect(mockupRows[0]!.couponId).toBeNull();
 
     const leads = await db.select().from(schema.leads);
     expect(leads).toHaveLength(1);
     expect(leads[0]!.email).toBe("charly@example.com");
     expect(leads[0]!.name).toBe("Charly Dog");
-    const coupons = await db.select().from(schema.coupons);
-    expect(coupons).toHaveLength(1);
-    expect(coupons[0]!.code).toBe(json.coupon.code);
+    expect(await db.select().from(schema.coupons)).toHaveLength(0);
 
     // 1 original artwork + 2 rendered mockups.
     expect(_memoryKeys()).toHaveLength(3);
   });
 
-  it("sending again from the same account reuses the coupon code (isNew false)", async () => {
+  it("sending again from the same account works and still issues no coupon", async () => {
     await createVerifiedUser("charly@example.com");
     const first = await postMockup(buildRequest());
     expect(first.status).toBe(200);
     const second = await postMockup(buildRequest({ payload: { views: [basePayload.views[0]] }, views: ["front"] }));
     expect(second.status).toBe(200);
-    const json = (await second.json()) as { coupon: { code: string; isNew: boolean } };
-    expect(json.coupon.isNew).toBe(false);
 
-    const coupons = await db.select().from(schema.coupons);
-    expect(coupons).toHaveLength(1);
+    expect(await db.select().from(schema.coupons)).toHaveLength(0);
     const rows = await db.select().from(schema.mockups);
     expect(rows).toHaveLength(2);
   });
@@ -270,27 +267,31 @@ describe.skipIf(!hasTestDb)("POST /api/mockups (real Postgres)", () => {
     expect(await db.select().from(schema.coupons)).toHaveLength(0);
   });
 
-  it("rate limit per account: 429 on the 4th send in a day", async () => {
-    await createVerifiedUser("charly@example.com");
-    let last: Response | undefined;
-    for (let i = 0; i < 4; i++) {
-      last = (await postMockup(
-        buildRequest({ payload: { views: [basePayload.views[0]] }, views: ["front"] }),
-      )) as Response;
-    }
-    expect(last!.status).toBe(429);
-    expect(await db.select().from(schema.mockups)).toHaveLength(3);
+  /** Fills a rate-limit counter to its limit (sending 500 real mockups would be slow). */
+  async function exhaust(key: string, limit: number) {
+    const hashed = createHash("sha256").update(key).digest("hex");
+    await db.execute(sql`insert into rate_limits (key, window_start, count) values (${hashed}, now(), ${limit})
+      on conflict (key) do update set count = ${limit}, window_start = now()`);
+  }
+
+  it("rate limit per account: 500 sends a day, then 429 (raised 2026-11-26)", async () => {
+    expect(LIMITS.mockupEmail.limit).toBe(500);
+    const userId = await createVerifiedUser("charly@example.com");
+    const one = () => postMockup(buildRequest({ payload: { views: [basePayload.views[0]] }, views: ["front"] }));
+    expect((await one()).status).toBe(200); // well under the cap: no "too many" for normal use
+    await exhaust(`mockup-user:${userId}`, LIMITS.mockupEmail.limit);
+    expect((await one()).status).toBe(429);
+    expect(await db.select().from(schema.mockups)).toHaveLength(1);
   });
 
-  it("rate limit per IP: 429 after 5 sends an hour even from different accounts", async () => {
-    for (let i = 0; i < 6; i++) {
-      sessionCookie.value = undefined;
-      await createVerifiedUser(`charly-${i}@example.com`);
-      const res = await postMockup(buildRequest({ payload: { views: [basePayload.views[0]] }, views: ["front"] }));
-      if (i < 5) expect(res.status).toBe(200);
-      else expect(res.status).toBe(429);
-    }
-    expect((await db.select().from(schema.mockups)).length).toBeLessThanOrEqual(5);
+  it("rate limit per network: 429 once the hourly cap is reached, even from another account", async () => {
+    await createVerifiedUser("charly-a@example.com");
+    const one = () => postMockup(buildRequest({ payload: { views: [basePayload.views[0]] }, views: ["front"] }));
+    expect((await one()).status).toBe(200);
+    await exhaust(`mockup:${clientIp(new Headers({ "x-forwarded-for": forwardedFor }))}`, LIMITS.mockup.limit);
+    sessionCookie.value = undefined;
+    await createVerifiedUser("charly-b@example.com");
+    expect((await one()).status).toBe(429);
   });
 
   it("mockup email never echoes the notes, owner email does", async () => {
@@ -305,7 +306,7 @@ describe.skipIf(!hasTestDb)("POST /api/mockups (real Postgres)", () => {
     const owner = _outbox().find((m) => m.to !== "charly@example.com")!;
     expect(owner.subject).toContain("New mockup lead: T-Shirt · charly@example.com");
     expect(owner.html + owner.text).toContain("SECRETNOTES-please-ignore");
-    expect(owner.html + owner.text).toMatch(/CHARLY-[A-Z2-9]{4}-[A-Z2-9]{4}/);
+    expect(owner.html + owner.text).not.toMatch(/CHARLY-[A-Z2-9]{4}-[A-Z2-9]{4}/);
   });
 
   it("emails name the colors and attach the rendered PNGs", async () => {
@@ -331,7 +332,7 @@ describe.skipIf(!hasTestDb)("POST /api/mockups (real Postgres)", () => {
     expect(_memoryKeys()).toEqual([]);
   });
 
-  it("intent 'order' is stored as an order and gets the order-request email with the coupon", async () => {
+  it("intent 'order' is stored as an order and gets the order-request email (no code yet)", async () => {
     await createVerifiedUser("charly@example.com", "Charly Dog");
     expect((await postMockup(buildRequest({ payload: { intent: "order", sizes: {} } }))).status).toBe(400);
     _clearOutbox();
@@ -344,7 +345,8 @@ describe.skipIf(!hasTestDb)("POST /api/mockups (real Postgres)", () => {
     expect(customer.subject).toBe("We got your order request 🐾");
     expect(customer.html + customer.text).toContain("confirm the price and send you an invoice");
     expect(customer.html + customer.text).toContain("3 × L");
-    expect(customer.html + customer.text).toMatch(/CHARLY-[A-Z2-9]{4}-[A-Z2-9]{4}/);
+    expect(customer.html + customer.text).not.toMatch(/CHARLY-[A-Z2-9]{4}-[A-Z2-9]{4}/);
+    expect(customer.text).toContain("15% off your next order");
     expect(customer.html + customer.text).not.toContain("SECRETNOTES-please-ignore");
 
     const owner = _outbox().find((m) => m.to !== "charly@example.com")!;

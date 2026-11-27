@@ -25,7 +25,7 @@ Replace the Weebly site with a **fully custom, fast, mobile-first website** that
 2. **Adds a best-in-class Build-Your-Own Mockup tool** (see `04-MOCKUP-BUILDER-SPEC.md`):
    - Garments: **T-shirt, baseball tee (raglan), hoodie, hat, polo, tank**
    - Custom garment color(s) plus upload of the customer's own design
-   - **Email gate:** the customer must enter their email to receive the mockup **and a 15% off your 2nd order coupon**
+   - **Email gate:** the customer must enter their email to receive the mockup **and a 15% off your 2nd order coupon** *(Changed 2026-11-26, Logan: the coupon is now emailed after the customer's first paid order, not with the mockup. See `02` decision log.)*
 3. Looks unmistakably **Miami Vice / neon synthwave / cyberpunk** (see `03-DESIGN-SYSTEM.md`) while staying readable, accessible, and trustworthy enough to take orders.
 4. Wins **local search** for "custom t-shirts Port St. Lucie" and nearby Treasure Coast terms (see `05-RESEARCH-DIGEST.md`).
 5. Gives Charly's a real **lead and order pipeline**: every mockup, upload, and quote request lands somewhere the owner can act on.

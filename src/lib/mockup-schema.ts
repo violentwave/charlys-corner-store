@@ -163,6 +163,13 @@ export const mockupPayloadSchema = z
       }
       if (seen.has(entry.view)) ctx.addIssue({ code: "custom", path: ["views", i, "view"], message: "Duplicate view" });
       seen.add(entry.view);
+      if (entry.method !== v.views[0]!.method) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["views", i, "method"],
+          message: "Use one print method for the whole garment",
+        });
+      }
       const printArea = view.printAreas.find((a) => a.id === entry.printArea);
       if (!printArea) {
         ctx.addIssue({ code: "custom", path: ["views", i, "printArea"], message: "Unknown print location" });

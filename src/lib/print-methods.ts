@@ -90,6 +90,34 @@ export function isMethodAllowed(
   return choice === "recommend" || methodBlocker(choice, garment, colors, area) === null;
 }
 
+/**
+ * One method per garment (Logan, 2026-11-26): a method is offered only when it fits every
+ * print area the design uses. Returns the first reason it doesn't, or null.
+ */
+export function designMethodBlocker(
+  method: PrintMethodId,
+  garment: GarmentConfig,
+  colors: Record<string, string>,
+  areas: readonly PrintArea[],
+): string | null {
+  for (const area of areas) {
+    const blocker = methodBlocker(method, garment, colors, area);
+    if (blocker) return areas.length > 1 ? `${blocker} (${area.label})` : blocker;
+  }
+  return null;
+}
+
+/** The garment-wide method to use: the pick when it still fits every area, else "recommend". */
+export function effectiveDesignMethod(
+  choice: PrintMethodChoice | undefined,
+  garment: GarmentConfig,
+  colors: Record<string, string>,
+  areas: readonly PrintArea[],
+): PrintMethodChoice {
+  if (!choice || choice === "recommend") return "recommend";
+  return designMethodBlocker(choice, garment, colors, areas) === null ? choice : "recommend";
+}
+
 /** The choice to use: the picked one when it still fits (colors/area may have changed), else "recommend". */
 export function effectiveMethod(
   choice: PrintMethodChoice | undefined,

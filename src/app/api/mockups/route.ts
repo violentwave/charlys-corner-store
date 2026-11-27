@@ -10,7 +10,6 @@ import { verifiedUser } from "@/lib/auth/session";
 import { checkArtwork } from "@/lib/artwork";
 import { getDb, schema } from "@/lib/db";
 import { clip, BodyTooLargeError, readFormDataLimited } from "@/lib/http";
-import { issueCoupon } from "@/lib/coupon-store";
 import { upsertLead } from "@/lib/leads";
 import { describeLayers, mockupSummary } from "@/lib/mockup-summary";
 import { ownerStageLinks, ownerQuoteUrl } from "@/lib/order-stage";
@@ -24,7 +23,7 @@ import {
   mockupPayloadSchema,
   type MockupArtworkRecord,
 } from "@/lib/mockup-schema";
-import { confirmCustomer, notifyOwner } from "@/lib/notify";
+import { notifyOwner, sendAccountEmail } from "@/lib/notify";
 import { clientIp, LIMITS, rateLimit } from "@/lib/rate-limit";
 import { buildObjectKey, getStorage } from "@/lib/storage";
 
@@ -192,7 +191,6 @@ export async function POST(request: Request) {
 
   let mockupId: string;
   let leadId: string;
-  let coupon: Awaited<ReturnType<typeof issueCoupon>>;
   try {
     // Identity comes from the account; the builder's referral answer + opt-in update the lead
     // (upsertLead never erases existing values with empty ones).
@@ -203,13 +201,13 @@ export async function POST(request: Request) {
       referralOther: data.referralOther || null,
       marketingOptIn: data.marketingOptIn,
     });
-    coupon = await issueCoupon(db, leadId);
+    // No coupon here (Logan, 2026-11-26): the 15% code is created and emailed when the
+    // customer's first order is paid (src/lib/payments.ts markOrderPaid).
     const [row] = await db
       .insert(schema.mockups)
       .values({
         userId: user.id,
         leadId,
-        couponId: coupon.id,
         garment: data.garment,
         colors: data.colors,
         views: data.views.map((entry) => ({ ...entry, mockupKey: keysByView.get(entry.view)! })),
@@ -264,7 +262,6 @@ export async function POST(request: Request) {
       layers: data.views.map((v) => ({ view: VIEW_LABELS[v.view], items: describeLayers(v.layers) })),
       sizes: sizeRows,
       notes: data.notes ? clip(data.notes, 2000) : undefined,
-      couponCode: coupon.code,
       kind: data.intent === "order" ? "order" : "mockup",
       artworks: artworkLinks,
       mockups: mockupUrls,
@@ -277,9 +274,8 @@ export async function POST(request: Request) {
   );
 
   if (data.intent === "order") {
-    // Order request: the price comes later, so the confirmation says so — plus the coupon.
-    await confirmCustomer(
-      db,
+    // Order request: the price comes later, so the confirmation says so.
+    await sendAccountEmail(
       user.email,
       "We got your order request 🐾",
       OrderRequestCustomerEmail({
@@ -288,26 +284,21 @@ export async function POST(request: Request) {
         colors: colorRows,
         views: viewRows,
         sizes: sizeRows,
-        coupon: { code: coupon.code, expiresAt: coupon.expiresAt, isNew: coupon.isNew },
         mockupId,
       }),
-      { mockupId, leadId },
     );
   } else {
-    await confirmCustomer(
-      db,
+    await sendAccountEmail(
       user.email,
-      "Your Charly's mockup is ready 🐾 + 15% off inside",
+      "Your Charly's mockup is ready 🐾",
       MockupCustomerEmail({
         name: user.name ? clip(user.name, 40) : "there",
         garmentName: garment.name,
         colors: colorRows,
         views: viewRows,
-        coupon: { code: coupon.code, expiresAt: coupon.expiresAt, isNew: coupon.isNew },
         mockups: mockupUrls,
         mockupId,
       }),
-      { mockupId, leadId },
       // Attach the PNGs too: inline images use signed URLs that expire after 7 days.
       renders.map((r) => ({
         filename: `charlys-mockup-${data.garment}-${r.view}.png`,
@@ -330,7 +321,6 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ok: true,
     mockupId,
-    coupon: { code: coupon.code, expiresAt: coupon.expiresAt, isNew: coupon.isNew },
     mockups,
   });
 }

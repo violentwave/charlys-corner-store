@@ -176,7 +176,7 @@ export function SendStep({
       </Field>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        {/* Path 1: the free mockup + coupon. */}
+        {/* Path 1: the free mockup. */}
         <section
           aria-label="Email me this mockup"
           className="border-border bg-bg-2/60 flex flex-col gap-3 rounded-2xl border p-4 sm:p-5"
@@ -190,8 +190,8 @@ export function SendStep({
             We&apos;ll email your mockup to{" "}
             <span className="text-text-1 font-medium [overflow-wrap:anywhere]">
               {accountEmail ?? "your account email"}
-            </span>{" "}
-            plus 15% off your 2nd order.
+            </span>
+            . Pay for an order once and we&apos;ll email you 15% off your next one.
           </p>
           <div className="flex items-start gap-3 text-sm">
             <Checkbox

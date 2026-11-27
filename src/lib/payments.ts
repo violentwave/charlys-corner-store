@@ -4,6 +4,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 
 import { PaymentReceivedCustomerEmail } from "@/emails/payment-received-customer";
 import { PaymentReceivedOwnerEmail } from "@/emails/payment-received-owner";
+import { issueCoupon } from "@/lib/coupon-store";
 import { checkCoupon, type CouponCheckResult, type CouponStatus } from "@/lib/coupons";
 import { schema, type Db } from "@/lib/db";
 import { ownerInbox } from "@/lib/email";
@@ -122,19 +123,27 @@ export async function markOrderPaid(
       sql`select count(*)::int as n from order_payments op join leads l on l.id = op.lead_id
           where lower(l.email) = lower(${lead!.email}) and op.status = 'paid'`,
     );
-    let unlocked = false;
-    if (Number(rows[0]?.n ?? 0) === 1) {
-      const changed = await tx
-        .update(schema.coupons)
-        .set({ status: "eligible" })
-        .where(and(eq(schema.coupons.leadId, pay.leadId), eq(schema.coupons.status, "issued")))
-        .returning({ id: schema.coupons.id });
-      unlocked = changed.length > 0;
-    }
+    const firstPaid = Number(rows[0]?.n ?? 0) === 1;
     const [mockup] = await tx.select().from(schema.mockups).where(eq(schema.mockups.id, pay.mockupId));
-    return { pay, lead: lead!, mockup: mockup!, unlocked };
+    return { pay, lead: lead!, mockup: mockup!, firstPaid };
   });
   if (!result) return false;
+
+  // First paid order → the customer's one 15% coupon is created (or an older, pre-2026-11-26
+  // one unlocked) and emailed. issueCoupon is idempotent per lead: one coupon per customer.
+  let coupon: { code: string; expiresAt: Date } | null = null;
+  if (result.firstPaid) {
+    try {
+      const issued = await issueCoupon(db, result.lead.id);
+      await db
+        .update(schema.coupons)
+        .set({ status: "eligible" })
+        .where(and(eq(schema.coupons.id, issued.id), eq(schema.coupons.status, "issued")));
+      coupon = { code: issued.code, expiresAt: issued.expiresAt };
+    } catch {
+      console.error("coupon issue after first payment failed", { leadId: result.lead.id });
+    }
+  }
 
   // Row first, email second: an email failure never undoes (or retries) the payment.
   const garmentName = getGarment(result.mockup.garment as GarmentId).name;
@@ -144,7 +153,7 @@ export async function markOrderPaid(
     PaymentReceivedCustomerEmail({
       garmentName,
       amountCents: result.pay.amountCents,
-      unlockedCoupon: result.unlocked,
+      coupon,
     }),
   ).catch(() => undefined);
   await sendAccountEmail(

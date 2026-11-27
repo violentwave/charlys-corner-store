@@ -12,7 +12,7 @@ import { reorderSchema, sizesTotal } from "@/lib/member-schemas";
 import { mockupViewSchema } from "@/lib/mockup-schema";
 import { describeLayers, mockupSummary } from "@/lib/mockup-summary";
 import { confirmCustomer, notifyOwner } from "@/lib/notify";
-import { ownerStageLinks } from "@/lib/order-stage";
+import { ownerQuoteUrl, ownerStageLinks } from "@/lib/order-stage";
 import { LIMITS, rateLimit } from "@/lib/rate-limit";
 import { getStorage } from "@/lib/storage";
 
@@ -52,7 +52,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     .values({
       userId: user.id,
       leadId: original.leadId,
-      couponId: original.couponId,
       garment: original.garment,
       colors: original.colors,
       views: original.views,
@@ -80,9 +79,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const storage = getStorage();
   const link = (key: string) => storage.signedUrl(key).catch(() => `(link unavailable; storage key ${key})`);
   const views = original.views.map((v) => mockupViewSchema.parse(v));
-  const [coupon] = original.couponId
-    ? await db.select().from(schema.coupons).where(eq(schema.coupons.id, original.couponId))
-    : [];
   await notifyOwner(
     `ORDER REQUEST (again): ${garment.name} · ${user.email}`,
     MockupOwnerEmail({
@@ -94,7 +90,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       layers: views.map((v) => ({ view: VIEW_LABELS[v.view], items: describeLayers(v.layers) })),
       sizes: sizeRows,
       notes: read.data.notes ? clip(read.data.notes, 2000) : undefined,
-      couponCode: coupon?.code ?? "",
       kind: "order",
       artworks: await Promise.all(
         original.artworks.map(async (a) => ({ ...a, signedUrl: await link(a.key), usedOn: [] as string[] })),
@@ -103,27 +98,25 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         original.views.map(async (v, i) => ({ view: viewRows[i]!.view, signedUrl: await link(v.mockupKey) })),
       ),
       stageLinks: ownerStageLinks(mockupId),
+      quoteUrl: ownerQuoteUrl(mockupId),
       reorderOf: original.id,
     }),
     user.email,
     { mockupId, reorderOf: original.id },
   );
-  if (coupon) {
-    await confirmCustomer(
-      db,
-      user.email,
-      "We got your order request 🐾",
-      OrderRequestCustomerEmail({
-        name: user.name ? clip(user.name, 40) : "there",
-        garmentName: garment.name,
-        colors: colorRows,
-        views: viewRows,
-        sizes: sizeRows,
-        coupon: { code: coupon.code, expiresAt: coupon.expiresAt, isNew: false },
-        mockupId,
-      }),
-      { mockupId },
-    );
-  }
+  await confirmCustomer(
+    db,
+    user.email,
+    "We got your order request 🐾",
+    OrderRequestCustomerEmail({
+      name: user.name ? clip(user.name, 40) : "there",
+      garmentName: garment.name,
+      colors: colorRows,
+      views: viewRows,
+      sizes: sizeRows,
+      mockupId,
+    }),
+    { mockupId },
+  );
   return NextResponse.json({ ok: true, mockupId });
 }

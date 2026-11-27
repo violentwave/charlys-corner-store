@@ -150,7 +150,9 @@ function JoinCard({ pathname, googleEnabled, close }: { pathname: string; google
   return (
     <div className="border-border bg-bg-2 mx-3 rounded-2xl border p-4">
       <p className="font-heading text-text-1 text-sm tracking-wide uppercase">Join the pack</p>
-      <p className="text-text-2 mt-1 text-sm">Save designs, track orders, and get 15% off your 2nd order.</p>
+      <p className="text-text-2 mt-1 text-sm">
+        Save designs, track orders, and get 15% off your next order after your first.
+      </p>
       <div className="mt-3 flex flex-col gap-2">
         <GoogleButton next={pathname} googleEnabled={googleEnabled} />
         <Link
