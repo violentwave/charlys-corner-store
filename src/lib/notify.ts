@@ -12,9 +12,21 @@ async function renderBoth(email: ReactElement) {
 }
 
 /** Owner notification. Never throws: the submission is already stored (row first, email second). */
-export async function notifyOwner(subject: string, email: ReactElement, replyTo: string, logContext: object) {
+export async function notifyOwner(
+  subject: string,
+  email: ReactElement,
+  replyTo: string,
+  logContext: object,
+  attachments?: EmailMessage["attachments"],
+) {
   try {
-    const res = await sendEmail({ to: ownerInbox(), subject: oneLine(subject), ...(await renderBoth(email)), replyTo });
+    const res = await sendEmail({
+      to: ownerInbox(),
+      subject: oneLine(subject),
+      ...(await renderBoth(email)),
+      replyTo,
+      attachments,
+    });
     if (!res.ok) console.error("owner email failed", logContext);
   } catch {
     console.error("owner email failed", logContext);

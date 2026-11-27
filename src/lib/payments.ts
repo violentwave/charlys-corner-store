@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 
 import { PaymentReceivedCustomerEmail } from "@/emails/payment-received-customer";
 import { PaymentReceivedOwnerEmail } from "@/emails/payment-received-owner";
@@ -18,17 +18,42 @@ import { deletePaymentLink, squareConfigured } from "@/lib/square";
  * Amounts are integer cents and always come from the DB (the owner's quote), never the client.
  */
 
-export type OrderRow = { mockup: typeof schema.mockups.$inferSelect; lead: typeof schema.leads.$inferSelect };
+export type OrderRow = {
+  order: typeof schema.orders.$inferSelect;
+  lead: typeof schema.leads.$inferSelect;
+  /** The order's designs, oldest first (always at least one). */
+  items: (typeof schema.mockups.$inferSelect)[];
+};
 
-/** The order request + its lead, or null when it isn't a quoted order request. */
-export async function loadQuotedOrder(db: Db, id: string): Promise<OrderRow | null> {
-  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+const UUID = /^[0-9a-f-]{36}$/i;
+
+/** An order with its lead and items, or null. */
+export async function loadOrder(db: Db, id: string): Promise<OrderRow | null> {
+  if (!UUID.test(id)) return null;
   const [row] = await db
-    .select({ mockup: schema.mockups, lead: schema.leads })
+    .select({ order: schema.orders, lead: schema.leads })
+    .from(schema.orders)
+    .innerJoin(schema.leads, eq(schema.leads.id, schema.orders.leadId))
+    .where(eq(schema.orders.id, id));
+  if (!row) return null;
+  const items = await db
+    .select()
     .from(schema.mockups)
-    .innerJoin(schema.leads, eq(schema.leads.id, schema.mockups.leadId))
-    .where(eq(schema.mockups.id, id));
-  return row && row.mockup.kind === "order" && row.mockup.quoteCents != null ? row : null;
+    .where(eq(schema.mockups.orderId, id))
+    .orderBy(asc(schema.mockups.createdAt), asc(schema.mockups.id));
+  return items.length ? { ...row, items } : null;
+}
+
+/** The order + lead + items, or null when it isn't priced yet. */
+export async function loadQuotedOrder(db: Db, id: string): Promise<OrderRow | null> {
+  const row = await loadOrder(db, id);
+  return row && row.order.quoteCents != null ? row : null;
+}
+
+/** "Classic tee" for one design, "Classic tee + 2 more" for several (emails, Square, pages). */
+export function orderTitle(items: { garment: string }[]): string {
+  const first = getGarment(items[0]!.garment as GarmentId).name;
+  return items.length > 1 ? `${first} + ${items.length - 1} more` : first;
 }
 
 export type Pricing = {
@@ -50,7 +75,7 @@ async function paidOrdersForEmail(db: Db, email: string): Promise<number> {
 }
 
 export async function priceOrder(db: Db, row: OrderRow): Promise<Pricing> {
-  const subtotalCents = row.mockup.quoteCents!;
+  const subtotalCents = row.order.quoteCents!;
   const [coupon] = await db
     .select()
     .from(schema.coupons)
@@ -83,8 +108,7 @@ export const PAY_ERRORS = {
 } as const;
 export type PayErrorCode = keyof typeof PAY_ERRORS;
 
-export const lineItemName = (row: OrderRow) =>
-  `Custom order · ${getGarment(row.mockup.garment as GarmentId).name} · #${row.mockup.id.slice(0, 8)}`;
+export const lineItemName = (row: OrderRow) => `Custom order · ${orderTitle(row.items)} · #${row.order.id.slice(0, 8)}`;
 export const COUPON_LINE = "15% off your 2nd order";
 
 /**
@@ -110,7 +134,7 @@ export async function markOrderPaid(
       .where(and(where, sql`${schema.orderPayments.status} <> 'paid'`))
       .returning();
     if (!pay) return null;
-    await tx.update(schema.mockups).set({ paidAt: now }).where(eq(schema.mockups.id, pay.mockupId));
+    await tx.update(schema.orders).set({ paidAt: now }).where(eq(schema.orders.id, pay.orderId));
     if (pay.couponId) {
       await tx
         .update(schema.coupons)
@@ -124,8 +148,12 @@ export async function markOrderPaid(
           where lower(l.email) = lower(${lead!.email}) and op.status = 'paid'`,
     );
     const firstPaid = Number(rows[0]?.n ?? 0) === 1;
-    const [mockup] = await tx.select().from(schema.mockups).where(eq(schema.mockups.id, pay.mockupId));
-    return { pay, lead: lead!, mockup: mockup!, firstPaid };
+    const items = await tx
+      .select({ garment: schema.mockups.garment })
+      .from(schema.mockups)
+      .where(eq(schema.mockups.orderId, pay.orderId))
+      .orderBy(asc(schema.mockups.createdAt), asc(schema.mockups.id));
+    return { pay, lead: lead!, items, firstPaid };
   });
   if (!result) return false;
 
@@ -146,7 +174,7 @@ export async function markOrderPaid(
   }
 
   // Row first, email second: an email failure never undoes (or retries) the payment.
-  const garmentName = getGarment(result.mockup.garment as GarmentId).name;
+  const garmentName = result.items.length ? orderTitle(result.items) : "Custom order";
   await sendAccountEmail(
     result.lead.email,
     `Payment received · ${garmentName} 🐾`,
@@ -158,18 +186,18 @@ export async function markOrderPaid(
   ).catch(() => undefined);
   await sendAccountEmail(
     ownerInbox(),
-    `Paid: $${(result.pay.amountCents / 100).toFixed(2)} · ${garmentName} · #${result.mockup.id.slice(0, 8)}`,
-    PaymentReceivedOwnerEmail({ garmentName, amountCents: result.pay.amountCents, mockupId: result.mockup.id }),
+    `Paid: $${(result.pay.amountCents / 100).toFixed(2)} · ${garmentName} · #${result.pay.orderId.slice(0, 8)}`,
+    PaymentReceivedOwnerEmail({ garmentName, amountCents: result.pay.amountCents, mockupId: result.pay.orderId }),
   ).catch(() => undefined);
   return true;
 }
 
 /** Re-quote: older unpaid links stop working (rows canceled, Square links deleted, best-effort). */
-export async function cancelPendingPayments(db: Db, mockupId: string): Promise<void> {
+export async function cancelPendingPayments(db: Db, orderId: string): Promise<void> {
   const canceled = await db
     .update(schema.orderPayments)
     .set({ status: "canceled" })
-    .where(and(eq(schema.orderPayments.mockupId, mockupId), inArray(schema.orderPayments.status, ["pending"])))
+    .where(and(eq(schema.orderPayments.orderId, orderId), inArray(schema.orderPayments.status, ["pending"])))
     .returning({ linkId: schema.orderPayments.squarePaymentLinkId });
   if (!squareConfigured()) return;
   for (const { linkId } of canceled) {

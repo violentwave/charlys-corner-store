@@ -63,6 +63,8 @@ export const LIMITS = {
    */
   mockup: { limit: 300, windowSeconds: 60 * 60 },
   mockupEmail: { limit: 500, windowSeconds: 24 * 60 * 60 },
+  /** Cart (2026-11-26): adds, edits and removals per member (sending the cart shares mockupEmail). */
+  cart: { limit: 300, windowSeconds: 60 * 60 },
   /** Restore-design deep link GET /api/mockups/[id] (design data only, no PII). */
   mockupRestore: { limit: 30, windowSeconds: 60 * 60 },
   /** Accounts (src/lib/auth). Signup per IP; login per IP and per email; codes per user. */

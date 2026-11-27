@@ -77,10 +77,17 @@ mockups      id, lead_id, coupon_id, garment, colors jsonb, views jsonb
 users        id, email (unique, lowercase), password_hash (scrypt), name, email_verified_at, lead_id, created_at, updated_at
 sessions     id, user_id, token_hash (sha256 of cookie token, unique), created_at, expires_at (30 days)
 auth_tokens  id, user_id, purpose (verify_email|reset_password), token_hash, attempts, expires_at, used_at
-             mockups also carry kind (mockup|order) and user_id
+             mockups also carry kind (mockup|order), user_id and order_id (order items only)
 coupons      id, lead_id (unique: one per email), code (unique), percent_off, min_order_cents,
              status (issued|eligible|redeemed|expired), issued_at, expires_at, redeemed_order_ref
-orders       id, lead_id, provider (square|stripe), provider_order_id, total_cents, coupon_id, created_at
+orders       an order request (2026-11-26): id, lead_id, user_id?, notes?, stage (order_stage), stage_at, quote_cents?,
+             quote_note?, quoted_at?, paid_at?, hidden_by_user_at?, reorder_of?, created_at. Its designs are mockups rows
+             (kind order, order_id). A one-design order shares its id with the design (builder orders, "order again",
+             one-item carts, and every order from before carts: migration 0012 backfilled them with the same id)
+order_payments  id, order_id, lead_id, amount/subtotal/discount_cents, coupon_id, method (payment_link|card_on_file),
+             status, idempotency_key, square_payment_link_id/order_id/payment_id, url, created_at, paid_at
+cart_items   a member's cart: id, user_id, garment, colors, views (mockupKey under mockups/cart/), artworks, sizes, notes,
+             created_at, updated_at. Max 20 per member. Sent as ONE order: files copied to orders/, rows deleted
 uploads      the Home order form (P52-1, 2026-11-26; new + existing orders, guests or members): id, lead_id, user_id?,
              order_type (new|existing), first_name, last_name?, email, phone?, company?, order_number?, fulfillment (pickup|ship)?,
              address jsonb?, items text[], colors?, print_method (recommend|method id), print_locations text[], sizes jsonb,
@@ -161,6 +168,7 @@ See `.env.example`. Never commit `.env*` (except the example). Secrets live in t
 | 2026-11-26 | **Mockup limits raised (Logan):** 500 sends a day per member (`LIMITS.mockupEmail`), 300 an hour per network; member emails to their own verified address skip the 3-a-day confirmation cap (that cap is for public forms). Only verified members can send mockups. | Logan |
 | 2026-11-26 | **One print method per garment (Logan)**, not per side: offered only when it fits every printed side; the server rejects mixed methods. | Logan |
 | 2026-11-26 | **Print methods (Logan): every in-house method is listed** (screen printing, DTF, DTG, embroidery, sublimation, heat-transfer vinyl) **and filtered** per garment fabric, color and print area; "Recommend one for me" is the default. Rules in `src/lib/print-methods.ts`, re-checked server-side. | Logan |
+| 2026-11-26 | **Cart and multi-design orders (Logan: account required).** A first-class `orders` table holds stage, price and payment; designs are its items. Members add designs to a saved cart (`cart_items`, files under `mockups/cart/` so the 30-day rule clears abandoned carts) and send it as one order: one owner price, one payment, one tracker. Owner gets a spreadsheet-style email (one row per design, every side's mockup, every original) plus `order.csv`. Existing orders were migrated with the same ids, so links already emailed keep working. | Logan (choices) / Claude (implementation) |
 | 2026-11-26 | **Performance tees (Logan):** add Gildan **42000** Performance Tee (19 colors) and **42400** Performance Long Sleeve (8 colors, hemmed cuffs), 100% polyester, S–3XL. Gildan's spec sheets make **no UPF claim**, so the site doesn't advertise UV protection until the owner confirms (Brief Q13). | Logan |
 |            | Payments provider                                                                                                                                                            | ✅ Square (2026-11-26, above)                                                              |
 |            | Coupon enforcement approach                                                                                                                                                  | DECIDE (default (b))                                                                      |

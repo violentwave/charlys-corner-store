@@ -7,7 +7,7 @@ import { currentUser } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { getGarment, type GarmentId } from "@/lib/garments";
 import { checkPayToken } from "@/lib/order-stage";
-import { loadQuotedOrder, PAY_ERRORS, priceOrder, type PayErrorCode, type Pricing } from "@/lib/payments";
+import { loadQuotedOrder, orderTitle, PAY_ERRORS, priceOrder, type PayErrorCode, type Pricing } from "@/lib/payments";
 import { existingSquareCustomerId, listCards, squareConfigured, type SavedCard } from "@/lib/square";
 import { PayWithSavedCard } from "./pay-with-card";
 
@@ -17,6 +17,7 @@ type LoadResult = {
   id: string;
   token: string | null;
   garment: string;
+  items: { id: string; name: string; pieces: number }[];
   note: string | null;
   paidAt: Date | null;
   pricing: Pricing;
@@ -29,13 +30,13 @@ async function load(id: string, token: string | null): Promise<LoadResult | null
   const row = await loadQuotedOrder(db, id);
   if (!row) return null;
   const user = await currentUser(db);
-  const isOwner = Boolean(user && row.mockup.userId === user.id);
+  const isOwner = Boolean(user && row.order.userId === user.id);
   if (!isOwner && !checkPayToken(id, token)) return null;
 
   // Saved cards: only for the member who owns the order, and only if they already have a
   // Square customer (viewing this page never creates one).
   let savedCards: SavedCard[] = [];
-  if (isOwner && user && squareConfigured() && !row.mockup.paidAt) {
+  if (isOwner && user && squareConfigured() && !row.order.paidAt) {
     const customerId = await existingSquareCustomerId(user.id);
     if (customerId) savedCards = await listCards(customerId).catch(() => []);
   }
@@ -43,9 +44,14 @@ async function load(id: string, token: string | null): Promise<LoadResult | null
   return {
     id,
     token,
-    garment: getGarment(row.mockup.garment as GarmentId).name,
-    note: row.mockup.quoteNote,
-    paidAt: row.mockup.paidAt,
+    garment: orderTitle(row.items),
+    items: row.items.map((m) => ({
+      id: m.id,
+      name: getGarment(m.garment as GarmentId).name,
+      pieces: Object.values(m.sizes).reduce((n, q) => n + (q ?? 0), 0),
+    })),
+    note: row.order.quoteNote,
+    paidAt: row.order.paidAt,
     pricing: await priceOrder(db, row),
     savedCards,
     isOwner,
@@ -72,6 +78,16 @@ async function PayGate({ id, token, error }: { id: string; token: string | null;
       <p className="text-text-2 mt-2">
         {data.garment} · #{id.slice(0, 8)}
       </p>
+      {data.items.length > 1 ? (
+        <ul className="text-text-2 mt-4 space-y-1 text-sm" data-testid="pay-items">
+          {data.items.map((item) => (
+            <li key={item.id} className="flex justify-between gap-2">
+              <span>{item.name}</span>
+              <span className="font-mono">{item.pieces} pcs</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
       {data.note ? <p className="text-text-2 mt-4">{data.note}</p> : null}
       <div className="border-border bg-bg-2 mt-6 rounded-2xl border p-4">
         <div className="flex justify-between">

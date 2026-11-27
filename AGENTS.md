@@ -40,7 +40,7 @@ src/lib/text-fonts.ts text-tool fonts (ids, families, weights)   src/lib/garment
 src/lib/auth/        accounts: password (scrypt), session (currentUser, verifiedUser), email-tokens, origin   src/lib/auth-schema.ts shared auth Zod schemas
 src/app/api/auth/    signup, verify, resend, login, logout, forgot, reset, me   src/lib/gildan-colors.ts Gildan palettes
 src/lib/print-methods.ts print methods + fit rules (server-checked)   src/lib/square.ts Square API (plain fetch)   src/lib/payments.ts pricing, markOrderPaid, re-quote
-src/lib/coupon-store.ts issueCoupon() (idempotent, server-only)   scripts/garments/ garment template generator (writes public/garments)
+src/lib/coupon-store.ts issueCoupon() (idempotent, server-only)   src/lib/cart.ts cart + submitCart() (one order)   src/lib/mockup-upload.ts parseMockupUpload() (builder multipart)   src/lib/order-csv.ts owner order.csv   scripts/garments/ garment template generator (writes public/garments)
 tests/e2e/          Playwright specs             public/brand/        logo for the web
 render.yaml         Render blueprint (the only host-specific file)
 ```
