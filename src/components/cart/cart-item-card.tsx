@@ -174,7 +174,7 @@ export function CartItemCard({
       data-testid="cart-item"
       data-error={error ? "true" : undefined}
       className={cn(
-        "focus-visible:ring-neon-cyan flex flex-col gap-4 focus-visible:ring-2 focus-visible:outline-none",
+        "border-border bg-bg-1/90 focus-visible:ring-neon-cyan flex flex-col gap-4 shadow-[var(--glow-panel)] focus-visible:ring-2 focus-visible:outline-none",
         error && "border-danger",
       )}
     >

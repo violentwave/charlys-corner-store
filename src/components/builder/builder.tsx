@@ -47,6 +47,7 @@ import {
 } from "./use-builder-state";
 import { SendStep, type CartAddState } from "./send-step";
 import { buildMockupUpload } from "./upload-body";
+import { CheckIcon, GarmentIcon, MailIcon, PaletteIcon, RedoIcon, SaveIcon, TextIcon, UndoIcon } from "./studio-icons";
 import { StartOverButton } from "./start-over-dialog";
 import { SaveDraftDialog } from "./save-draft-dialog";
 import { SuccessScreen, type MockupResult } from "./success-screen";
@@ -74,6 +75,9 @@ const STEPS: { id: BuilderStep; label: string; headline: string; helper: string 
 ];
 
 const raf = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+/** Panel header icon per step (P52-2b). */
+const STEP_ICONS = { 1: GarmentIcon, 2: PaletteIcon, 3: TextIcon, 4: MailIcon } as const;
 
 const DEFAULT_TEXT = "Your text";
 const DEFAULT_TEXT_FONT = "anton";
@@ -888,41 +892,66 @@ export function Builder() {
      the flow everywhere, and inside the mobile tool shell on step 3 (the flow copy is
      display:none there — one visible instance per size). */
   const stepProgress = (
-    <div className="flex flex-col gap-2" data-testid="builder-progress">
-      <div className="flex items-center justify-between gap-3">
-        <ol className="flex flex-wrap items-center gap-1.5" aria-label="Builder steps">
-          {STEPS.map(({ id, label }) => (
-            <li key={id} className="flex items-center gap-1.5" aria-current={step === id ? "step" : undefined}>
-              <button
-                type="button"
-                onClick={() => goStep(id)}
-                aria-label={`Step ${id}: ${label}`}
-                className={
-                  step === id
-                    ? "bg-neon-pink text-bg-0 focus-visible:ring-neon-cyan flex h-9 items-center rounded-full px-3 text-xs font-semibold focus-visible:ring-2 focus-visible:outline-none"
-                    : "bg-bg-2 text-text-2 focus-visible:ring-neon-cyan hover:text-text-1 flex h-9 items-center rounded-full px-3 text-xs focus-visible:ring-2 focus-visible:outline-none"
-                }
+    <div className="border-border bg-bg-1/90 overflow-hidden rounded-xl border" data-testid="builder-progress">
+      <div className="flex items-center gap-2 p-2">
+        <ol className="flex min-w-0 flex-1 items-center gap-1" aria-label="Builder steps">
+          {STEPS.map(({ id, label }) => {
+            const done = id < step;
+            return (
+              <li
+                key={id}
+                // Phones: the other steps shrink to their number and the current one takes
+                // the room its label needs. From 401px up they share the row evenly.
+                className={cn("min-w-0 flex-1", step !== id && "max-[400px]:flex-none")}
+                aria-current={step === id ? "step" : undefined}
               >
-                {/* Phones: other steps show just their number so the row fits on one line and the
-                    tool panel keeps its room (the aria-label still names the step). */}
-                {id}
-                {step === id ? `. ${label}` : <span className="max-sm:hidden">. {label}</span>}
-              </button>
-              {id < STEPS.length ? (
-                <span aria-hidden="true" className="text-text-3 text-xs">
-                  →
-                </span>
-              ) : null}
-            </li>
-          ))}
+                <button
+                  type="button"
+                  onClick={() => goStep(id)}
+                  aria-label={`Step ${id}: ${label}`}
+                  className={cn(
+                    "focus-visible:ring-neon-cyan flex min-h-11 w-full items-center gap-1.5 rounded-lg px-1 text-left text-[11px] font-semibold transition-colors duration-[var(--motion-fast)] focus-visible:ring-2 focus-visible:outline-none sm:text-xs",
+                    step === id
+                      ? "bg-studio-active text-text-1"
+                      : done
+                        ? "text-text-2 hover:bg-bg-2"
+                        : "text-text-3 hover:bg-bg-2",
+                  )}
+                >
+                  {/* The number is CSS content: the visible text (the label) is then a subset
+                      of `aria-label="Step n: Label"`, which WCAG 2.5.3 requires. */}
+                  <span
+                    aria-hidden="true"
+                    data-n={String(id).padStart(2, "0")}
+                    className={cn(
+                      "grid h-6 w-6 shrink-0 place-items-center rounded-md border font-mono text-[10px] before:content-[attr(data-n)] sm:h-7 sm:w-7 sm:text-[11px]",
+                      step === id
+                        ? "border-neon-pink bg-neon-pink text-bg-0 font-bold"
+                        : done
+                          ? "border-neon-cyan/40 text-neon-cyan"
+                          : "border-border bg-bg-3 text-text-2",
+                    )}
+                  >
+                    {done ? <CheckIcon className="h-3.5 w-3.5" /> : null}
+                  </span>
+                  {/* Phones: only the current step's label shows (numbers otherwise) so the
+                      row fits on one line — the aria-label still names every step. */}
+                  <span className={cn("truncate", step !== id && "max-[400px]:hidden")}>{label}</span>
+                </button>
+              </li>
+            );
+          })}
         </ol>
-        <p aria-hidden="true" className={cn("text-text-3 shrink-0 font-mono text-xs", step === 3 && "max-sm:hidden")}>
+        <p
+          aria-hidden="true"
+          className={cn("text-text-3 shrink-0 font-mono text-[11px]", step === 3 && "max-sm:hidden")}
+        >
           Step {step} of {STEPS.length}
         </p>
       </div>
-      <div className="bg-bg-3 h-1 overflow-hidden rounded-full" role="presentation">
+      <div className="bg-bg-3 h-[3px]" role="presentation">
         <div
-          className="bg-neon-pink h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none"
+          className="bg-sunset h-full transition-[width] duration-300 motion-reduce:transition-none"
           style={{ width: `${(step / STEPS.length) * 100}%` }}
         />
       </div>
@@ -962,6 +991,7 @@ export function Builder() {
 
   return (
     <div
+      data-testid="builder-studio"
       className={cn(
         "mt-8 flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-start",
         // Mobile step 3 (P51-1): the canvas height budget and the surrounding chrome
@@ -973,64 +1003,91 @@ export function Builder() {
         mobileStep3 && "pt-[calc(var(--canvas-h)+1rem)]",
       )}
     >
+      {/* The stepper spans the studio (P52-2b), like the reference: full width above the
+          canvas and the panel. Mobile step 3 keeps its own copy inside the tool shell. */}
+      {!mobileStep3 ? (
+        <div className="flex flex-col gap-3 lg:col-span-2">
+          {notices}
+          {stepProgress}
+        </div>
+      ) : null}
+
       <div
         className={cn(
-          "flex min-w-0 flex-col gap-2 lg:sticky lg:top-24",
+          "flex min-w-0 flex-col lg:sticky lg:top-24",
+          "border-border bg-bg-1/90 overflow-hidden rounded-2xl border shadow-[var(--glow-panel)]",
           // Mobile step 3: FIXED, not sticky — a sticky element can only travel within
           // its parent, so it unsticks exactly when the visitor reads the panel below.
           // Fixed keeps the canvas on screen for the whole step; content scrolls under it.
-          mobileStep3 && "bg-bg-0 fixed inset-x-0 top-16 z-30 pb-4",
+          // The panel chrome (header + padding) is desktop-only so --canvas-h stays exact.
+          mobileStep3 && "bg-bg-0 fixed inset-x-0 top-16 z-30 gap-2 rounded-none border-0 pb-4 shadow-none",
         )}
       >
-        <GarmentStage
-          ref={stageRef}
-          garmentName={garment.name}
-          view={activeView}
-          printAreaId={activeViewState.printArea}
-          colors={design.colors}
-          layers={activeViewState.layers}
-          selectedLayerId={activeViewState.selectedLayerId}
-          images={Object.fromEntries(files.map((f, i) => [i, f.img]))}
-          fitContainerHeight={mobileStep3}
-          emptyState={
-            step === 3
-              ? {
-                  files: chooserFiles,
-                  onUse: useSameDesign,
-                  onUploadDifferent: () => void attemptUpload(),
-                }
-              : undefined
-          }
-          lockRatio={lockRatio}
-          onSelectLayer={(layerId) => dispatch({ type: "selectLayer", view: activeViewId, layerId })}
-          onTransformCommit={(layerId, transform) =>
-            dispatch({ type: "updateLayer", view: activeViewId, layerId, patch: { transform } })
-          }
-          onRemoveLayer={(layerId) => removeLayer(activeViewId, layerId)}
-          onDuplicateLayer={(layerId) => dispatch({ type: "duplicateLayer", view: activeViewId, layerId })}
-          onMoveLayer={(layerId, to) => dispatch({ type: "moveLayer", view: activeViewId, layerId, to })}
-          onCycleLayer={cycleLayer}
-          onUndo={undo}
-          onRedo={redo}
-        />
-        <p className={cn("text-text-3 text-xs", mobileStep3 && "sr-only")}>
-          Preview on a neutral studio background — the exported mockup is exactly what we print.
-        </p>
-        {/* The gated file picker: opened by attemptUpload, never before the account check. */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".png,.jpg,.jpeg,.webp,.svg,image/png,image/jpeg,image/webp,image/svg+xml"
-          className="sr-only"
-          data-testid="builder-file-input"
-          aria-hidden="true"
-          tabIndex={-1}
-          onChange={(e) => {
-            const selected = e.target.files?.[0];
-            if (selected) void handleFileSelected(selected);
-            e.target.value = "";
-          }}
-        />
+        {/* Canvas panel head (P52-2b): LIVE PREVIEW + the current side. */}
+        <div className="border-border hidden h-[var(--canvas-head)] items-center justify-between gap-2 border-b px-3 lg:flex">
+          <p className="text-neon-cyan flex items-center gap-2 font-mono text-[10px] font-bold tracking-[0.2em] uppercase">
+            <span aria-hidden="true" className="bg-neon-cyan h-1.5 w-1.5 rounded-full" />
+            Live preview
+          </p>
+          <span className="border-border bg-bg-3 text-text-2 rounded-full border px-2.5 py-0.5 text-[11px]">
+            {activeView.label} view
+          </span>
+        </div>
+        <div className={cn("flex flex-col gap-2", mobileStep3 ? "p-0" : "p-2")}>
+          <GarmentStage
+            ref={stageRef}
+            garmentName={garment.name}
+            view={activeView}
+            printAreaId={activeViewState.printArea}
+            colors={design.colors}
+            layers={activeViewState.layers}
+            selectedLayerId={activeViewState.selectedLayerId}
+            images={Object.fromEntries(files.map((f, i) => [i, f.img]))}
+            fitContainerHeight={mobileStep3}
+            emptyState={
+              step === 3
+                ? {
+                    files: chooserFiles,
+                    onUse: useSameDesign,
+                    onUploadDifferent: () => void attemptUpload(),
+                  }
+                : undefined
+            }
+            lockRatio={lockRatio}
+            onSelectLayer={(layerId) => dispatch({ type: "selectLayer", view: activeViewId, layerId })}
+            onTransformCommit={(layerId, transform) =>
+              dispatch({ type: "updateLayer", view: activeViewId, layerId, patch: { transform } })
+            }
+            onRemoveLayer={(layerId) => removeLayer(activeViewId, layerId)}
+            onDuplicateLayer={(layerId) => dispatch({ type: "duplicateLayer", view: activeViewId, layerId })}
+            onMoveLayer={(layerId, to) => dispatch({ type: "moveLayer", view: activeViewId, layerId, to })}
+            onCycleLayer={cycleLayer}
+            onUndo={undo}
+            onRedo={redo}
+            views={garment.views}
+            onViewChange={setRequestedView}
+            canUndo={canUndo}
+            canRedo={canRedo}
+          />
+          <p className={cn("text-text-3 text-xs", mobileStep3 && "sr-only")}>
+            Preview on a neutral studio background — the exported mockup is exactly what we print.
+          </p>
+          {/* The gated file picker: opened by attemptUpload, never before the account check. */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".png,.jpg,.jpeg,.webp,.svg,image/png,image/jpeg,image/webp,image/svg+xml"
+            className="sr-only"
+            data-testid="builder-file-input"
+            aria-hidden="true"
+            tabIndex={-1}
+            onChange={(e) => {
+              const selected = e.target.files?.[0];
+              if (selected) void handleFileSelected(selected);
+              e.target.value = "";
+            }}
+          />
+        </div>
       </div>
 
       <div
@@ -1052,7 +1109,7 @@ export function Builder() {
           default="none"
         >
           {success ? (
-            <div className="bg-bg-2/60 rounded-2xl p-4 sm:p-6">
+            <div className="border-border bg-bg-1/90 rounded-2xl border p-4 shadow-[var(--glow-panel)] sm:p-6">
               <SuccessScreen
                 garmentId={design.garment}
                 summary={{ garmentName: garment.name, colorNames, sizeEntries }}
@@ -1067,25 +1124,34 @@ export function Builder() {
             </div>
           ) : (
             <>
-              {/* Notices + step navigation. On mobile step 3 these render inside the fixed
-                tool shell instead (conditionally — never two copies in the DOM). */}
-              {!mobileStep3 ? (
-                <>
-                  {notices}
-                  {stepProgress}
-                </>
-              ) : null}
-
               <div
                 className={cn(
-                  "bg-bg-2/60 rounded-2xl p-4 sm:p-6",
+                  "border-border bg-bg-1/90 rounded-2xl border p-4 shadow-[var(--glow-panel)] sm:p-6",
                   step === 1 && "lg:flex lg:min-h-0 lg:flex-1 lg:flex-col",
                 )}
               >
                 {/* Below lg on step 3 the fixed tool shell replaces this card header. */}
-                <header className={cn("mb-5 flex flex-col gap-1", mobileStep3 && "hidden")}>
-                  <h2 className="font-heading text-text-1 text-xl tracking-wide uppercase">{stepInfo.headline}</h2>
-                  <p className="text-text-2 text-sm">{stepInfo.helper}</p>
+                <header
+                  className={cn("border-border mb-5 flex items-start gap-3 border-b pb-4", mobileStep3 && "hidden")}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="border-neon-pink/40 bg-neon-pink/10 text-neon-pink flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border"
+                  >
+                    {(() => {
+                      const StepIcon = STEP_ICONS[step];
+                      return <StepIcon className="h-5 w-5" />;
+                    })()}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-neon-cyan font-mono text-[9px] font-bold tracking-[0.14em] uppercase">
+                      Step {String(step).padStart(2, "0")} / {stepInfo.label}
+                    </p>
+                    <h2 className="font-heading text-text-1 mt-0.5 text-xl tracking-wide uppercase">
+                      {stepInfo.headline}
+                    </h2>
+                    <p className="text-text-2 mt-1 text-sm">{stepInfo.helper}</p>
+                  </div>
                 </header>
 
                 {step === 1 ? (
@@ -1231,43 +1297,61 @@ export function Builder() {
                   conditionally rendered — never two copies in the DOM. Step 1 has its own
                   Continue under the garment list and nothing to go back to, so no footer. */}
                 {!mobileStep3 && step > 1 ? (
-                  <div className="mt-6 flex flex-col gap-2">
-                    <div className="flex items-center justify-between gap-3">
+                  <div className="border-border bg-bg-0/40 -mx-4 mt-6 border-t px-2 py-2 sm:-mx-6">
+                    <div className="flex flex-wrap items-center gap-1">
                       <Button
                         variant="ghost"
                         size="sm"
+                        className="min-h-11"
                         onClick={() => goStep((step - 1) as BuilderStep)}
-                        disabled={step === 1}
                       >
                         ← Back
                       </Button>
-                      {step < 4 ? (
-                        <Button size="sm" onClick={() => goStep((step + 1) as BuilderStep)}>
-                          Continue →
-                        </Button>
-                      ) : null}
-                    </div>
-                    {/* Secondary actions on their own row, so the footer never overflows at 360px. */}
-                    {step > 1 ? (
-                      <div className="flex flex-wrap items-center gap-1">
+                      <span className="ml-auto flex flex-wrap items-center gap-1">
                         {step === 3 ? (
                           <>
-                            <Button variant="ghost" size="sm" onClick={undo} disabled={!canUndo} data-testid="undo">
-                              Undo
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-11 w-11 px-0"
+                              onClick={undo}
+                              disabled={!canUndo}
+                              data-testid="undo"
+                              aria-label="Undo"
+                            >
+                              <UndoIcon className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={redo} disabled={!canRedo} data-testid="redo">
-                              Redo
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={startSaveDraft} data-testid="save-draft">
-                              Save draft
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-11 w-11 px-0"
+                              onClick={redo}
+                              disabled={!canRedo}
+                              data-testid="redo"
+                              aria-label="Redo"
+                            >
+                              <RedoIcon className="h-4 w-4" />
                             </Button>
                           </>
                         ) : null}
-                        <span className="ml-auto">
-                          <StartOverButton onConfirm={designAnother} />
-                        </span>
-                      </div>
-                    ) : null}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="min-h-11"
+                          onClick={startSaveDraft}
+                          data-testid="save-draft"
+                        >
+                          <SaveIcon className="h-4 w-4" />
+                          Save draft
+                        </Button>
+                        {step < 4 ? (
+                          <Button size="sm" className="min-h-11" onClick={() => goStep((step + 1) as BuilderStep)}>
+                            Continue →
+                          </Button>
+                        ) : null}
+                      </span>
+                      <StartOverButton onConfirm={designAnother} />
+                    </div>
                   </div>
                 ) : null}
               </div>

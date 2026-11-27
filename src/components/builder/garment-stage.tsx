@@ -22,6 +22,9 @@ import { getTextFont } from "@/lib/text-fonts";
 import type { GarmentView, ViewId } from "@/lib/garments";
 import type { MockupColors } from "@/lib/mockup-schema";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/cn";
+
+import { FitIcon, RedoIcon, UndoIcon } from "./studio-icons";
 
 import { composeArtworkLayer, composeGarment, composeTextLayer, type TemplateImages } from "./compositor";
 import { centerToTopLeft, nudgeTransform, rotateAroundCenter, scaleAroundCenter, topLeftToCenter } from "./geometry";
@@ -127,6 +130,11 @@ export interface GarmentStageProps {
   onCycleLayer: (backwards: boolean) => void;
   onUndo?: () => void;
   onRedo?: () => void;
+  /** Canvas toolbar (P52-2b): the side pill, wired to the builder's requested view. */
+  views?: GarmentView[];
+  onViewChange?: (view: ViewId) => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
 }
 
 /** How close (CSS px on screen) a dragged layer's center gets to the print area's middle before it snaps. */
@@ -285,6 +293,10 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
     onCycleLayer,
     onUndo,
     onRedo,
+    views,
+    onViewChange,
+    canUndo = false,
+    canRedo = false,
   },
   ref,
 ) {
@@ -909,48 +921,93 @@ export const GarmentStage = forwardRef<GarmentStageHandle, GarmentStageProps>(fu
           )}
         </div>
       ) : null}
-      {/* View-only zoom controls (P51-1): "−", badge, "Fit", "+" on the canvas corner. */}
-      <div
-        role="group"
-        aria-label="Canvas zoom"
-        className="bg-bg-0/80 border-border absolute top-2 left-2 z-10 flex items-center gap-1 rounded-full border p-1 backdrop-blur-sm"
-      >
-        <button
-          type="button"
-          data-testid="canvas-zoom-out"
-          aria-label="Zoom out"
-          disabled={zoom <= 1}
-          onClick={() => zoomStep(-1)}
-          className="text-text-1 hover:bg-bg-2 focus-visible:ring-neon-cyan inline-flex h-11 w-11 items-center justify-center rounded-full text-base transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"
-        >
-          <span aria-hidden="true">−</span>
-        </button>
-        <span
-          data-testid="canvas-zoom-badge"
-          aria-live="polite"
-          className="text-text-2 w-10 text-center font-mono text-xs"
-        >
-          {`${Math.round(zoom * 10) / 10}×`}
-        </span>
-        <button
-          type="button"
-          data-testid="canvas-zoom-fit"
-          aria-label="Fit the whole garment at 1×"
-          onClick={zoomFit}
-          className="text-text-1 hover:bg-bg-2 focus-visible:ring-neon-cyan inline-flex h-11 items-center justify-center rounded-full px-2.5 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
-        >
-          Fit
-        </button>
-        <button
-          type="button"
-          data-testid="canvas-zoom-in"
-          aria-label="Zoom in"
-          disabled={zoom >= 3}
-          onClick={() => zoomStep(1)}
-          className="text-text-1 hover:bg-bg-2 focus-visible:ring-neon-cyan inline-flex h-11 w-11 items-center justify-center rounded-full text-base transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"
-        >
-          <span aria-hidden="true">+</span>
-        </button>
+      {/* Canvas toolbar (P51-1 zoom, P52-2b shell): − / level / Fit / + on the left, the
+          side pill in the middle, undo/redo on the right (desktop; phones keep them in More). */}
+      <div className="border-border bg-bg-1/95 absolute inset-x-2 bottom-2 z-10 flex items-center justify-between gap-1 rounded-xl border p-1 shadow-[var(--glow-panel)] backdrop-blur-sm">
+        <div role="group" aria-label="Canvas zoom" className="flex items-center gap-0.5">
+          <button
+            type="button"
+            data-testid="canvas-zoom-out"
+            aria-label="Zoom out"
+            disabled={zoom <= 1}
+            onClick={() => zoomStep(-1)}
+            className="text-text-1 hover:bg-bg-2 focus-visible:ring-neon-cyan inline-flex h-9 w-9 items-center justify-center rounded-lg text-base transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"
+          >
+            <span aria-hidden="true">−</span>
+          </button>
+          <span
+            data-testid="canvas-zoom-badge"
+            aria-live="polite"
+            className="text-text-2 w-9 text-center font-mono text-[11px]"
+          >
+            {`${Math.round(zoom * 10) / 10}×`}
+          </span>
+          <button
+            type="button"
+            data-testid="canvas-zoom-fit"
+            aria-label="Fit the whole garment at 1×"
+            onClick={zoomFit}
+            className="text-text-1 hover:bg-bg-2 focus-visible:ring-neon-cyan inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-2 text-[11px] font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+          >
+            <FitIcon className="h-3.5 w-3.5" />
+            Fit
+          </button>
+          <button
+            type="button"
+            data-testid="canvas-zoom-in"
+            aria-label="Zoom in"
+            disabled={zoom >= 3}
+            onClick={() => zoomStep(1)}
+            className="text-text-1 hover:bg-bg-2 focus-visible:ring-neon-cyan inline-flex h-9 w-9 items-center justify-center rounded-lg text-base transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"
+          >
+            <span aria-hidden="true">+</span>
+          </button>
+        </div>
+
+        {views && views.length > 1 && onViewChange ? (
+          <div role="group" aria-label="Canvas side" className="bg-bg-3 flex items-center gap-0.5 rounded-lg p-0.5">
+            {views.map((v) => (
+              <button
+                key={v.id}
+                type="button"
+                aria-pressed={v.id === view.id}
+                data-testid={`canvas-view-${v.id}`}
+                onClick={() => onViewChange(v.id)}
+                className={cn(
+                  "focus-visible:ring-neon-cyan inline-flex h-8 items-center rounded-md px-2.5 text-[11px] font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
+                  v.id === view.id ? "border-border bg-bg-1 text-text-1 border" : "text-text-2 hover:text-text-1",
+                )}
+              >
+                {v.label}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <span />
+        )}
+
+        <div className="hidden items-center gap-0.5 lg:flex">
+          <button
+            type="button"
+            data-testid="canvas-undo"
+            aria-label="Undo"
+            disabled={!canUndo}
+            onClick={() => onUndo?.()}
+            className="text-text-2 hover:bg-bg-2 hover:text-text-1 focus-visible:ring-neon-cyan inline-flex h-9 w-9 items-center justify-center rounded-lg transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"
+          >
+            <UndoIcon className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            data-testid="canvas-redo"
+            aria-label="Redo"
+            disabled={!canRedo}
+            onClick={() => onRedo?.()}
+            className="text-text-2 hover:bg-bg-2 hover:text-text-1 focus-visible:ring-neon-cyan inline-flex h-9 w-9 items-center justify-center rounded-lg transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"
+          >
+            <RedoIcon className="h-4 w-4" />
+          </button>
+        </div>
       </div>
       <p className="sr-only" aria-live="polite" data-testid="builder-transform">
         {selectedLayerId

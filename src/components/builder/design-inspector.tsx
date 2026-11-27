@@ -22,6 +22,7 @@ import { isOutsideArea } from "./geometry";
 import { InspectorSection } from "./inspector-section";
 import { LayersPanel } from "./layers-panel";
 import { LayerControls } from "./layer-controls";
+import { LogoIcon, TextIcon, UploadIcon } from "./studio-icons";
 import type { BuilderLayer, BuilderViewState, TextPatch } from "./use-builder-state";
 
 /** Props shared by every section (the builder passes one object down to both shells). */
@@ -184,25 +185,42 @@ export function AddButtons({
   onAddLogo,
 }: Pick<InspectorSectionsProps, "capReached" | "logo" | "onAddText" | "onAddLogo"> & { onUploadClick: () => void }) {
   return (
-    <div className={logo?.url ? "grid grid-cols-3 gap-2" : "grid grid-cols-2 gap-2"}>
-      <Button type="button" onClick={onUploadClick} disabled={capReached} data-testid="upload-image">
-        Upload image
-      </Button>
-      <Button type="button" variant="secondary" onClick={onAddText} disabled={capReached} data-testid="add-text">
-        Add text
-      </Button>
-      {logo?.url ? (
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={onAddLogo}
-          disabled={capReached}
-          data-testid="add-my-logo"
-          title={logo.name}
-        >
-          Add my logo
+    <div className="flex flex-col gap-2">
+      {/* The dashed drop zone (P52-2b): click, or drop a file on the panel/canvas. */}
+      <button
+        type="button"
+        onClick={onUploadClick}
+        disabled={capReached}
+        data-testid="upload-image"
+        className="border-neon-cyan/40 bg-neon-cyan/[0.04] hover:border-neon-cyan hover:bg-neon-cyan/10 focus-visible:ring-neon-cyan flex min-h-28 w-full flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed px-4 py-4 text-center transition-colors duration-[var(--motion-fast)] ease-[var(--ease-out-neon)] focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <span className="text-neon-cyan flex items-center gap-2 text-sm font-semibold">
+          <UploadIcon className="h-4 w-4" />
+          Upload image
+        </span>
+        <span className="text-text-2 text-[11px] leading-snug">
+          Drop a PNG, JPG, SVG or WEBP here. Transparent PNG works best.
+        </span>
+      </button>
+      <div className={logo?.url ? "grid grid-cols-3 gap-2" : "grid grid-cols-2 gap-2"}>
+        <Button type="button" variant="secondary" onClick={onAddText} disabled={capReached} data-testid="add-text">
+          <TextIcon className="h-4 w-4" />
+          Add text
         </Button>
-      ) : null}
+        {logo?.url ? (
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onAddLogo}
+            disabled={capReached}
+            data-testid="add-my-logo"
+            title={logo.name}
+          >
+            <LogoIcon className="h-4 w-4" />
+            Add my logo
+          </Button>
+        ) : null}
+      </div>
     </div>
   );
 }
