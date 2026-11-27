@@ -1,11 +1,6 @@
-"use client";
-
-import Link from "next/link";
-
 import { BuilderLoader } from "@/components/builder/builder-loader";
-import { PageHeader } from "@/components/sections/page-header";
+import { StudioHero } from "@/components/builder/studio-hero";
 import { Section } from "@/components/sections/section";
-import { site } from "@/lib/site";
 import { COUPON_RULES } from "@/lib/coupons";
 
 const minOrderDollars = (COUPON_RULES.minOrderCents / 100).toLocaleString("en-US", {
@@ -14,24 +9,24 @@ const minOrderDollars = (COUPON_RULES.minOrderCents / 100).toLocaleString("en-US
   minimumFractionDigits: 0,
 });
 
-/** Home #design: the mockup builder is the first thing on the page (Logan, 2026-11-25). */
+/**
+ * Home #design: the studio hero band, then the mockup builder (Logan, 2026-11-25).
+ * The hero carries the id so "Design Your Own" lands on the chrome title (the section's
+ * focus target); the coupon line stays inside it for the Home copy.
+ */
 export function DesignSection() {
   return (
-    <Section id="design" className="pt-8 sm:pt-12">
-      <PageHeader
-        eyebrow={`${site.city}, ${site.region} · Custom apparel`}
-        title="Design your own custom gear"
-        description={`Pick a tee, performance shirt, raglan, hoodie, hat, polo, or tank, choose your colors and print method, and drop in your art. We'll email you the mockup, and after your first paid order, ${COUPON_RULES.percentOff}% off your next one (${minOrderDollars} minimum).`}
+    <>
+      <StudioHero
+        id="design"
+        srTitle="Design your own custom gear"
+        titleAs="h2"
+        sectionHeading
+        note={`After your first paid order, ${COUPON_RULES.percentOff}% off your next one (${minOrderDollars} minimum).`}
       />
-      <p className="text-text-2 mt-3 text-sm">
-        Already ordered?{" "}
-        <Link href="#upload" className="text-neon-cyan underline-offset-4 hover:underline">
-          Upload your artwork ↓
-        </Link>
-      </p>
-      <div className="mt-8">
+      <Section className="pt-6 sm:pt-8">
         <BuilderLoader />
-      </div>
-    </Section>
+      </Section>
+    </>
   );
 }

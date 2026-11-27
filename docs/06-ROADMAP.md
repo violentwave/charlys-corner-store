@@ -100,8 +100,9 @@ Each page prompt is shipped by the agent (Ship section); Claude reviews every me
 - [x] More realistic garments: fix sleeve views, better shading/texture on every template (Claude)
 - [x] Order form (P52-1): new + existing orders, guests welcome, full width, with artwork upload (replaces the old uploader)
 - [x] Cart + multi-design orders, backend (Claude): `orders` table (stage, price, payment per order), saved cart API (`/api/cart`), send the cart as one order, spreadsheet owner email + `order.csv`
-- [ ] Cart screens + studio restyle (opencode, prompt P52-2): Add to cart in the builder, `/cart`, header badge, multi-design order in My designs and on the pay page; visual shell from `docs/design/figma-studio/` (our templates, colors and canvas stay)
+- [x] Cart screens + studio restyle (opencode, prompt P52-2): Add to cart in the builder, `/cart`, header badge, multi-design order in My designs and on the pay page; visual shell from `docs/design/figma-studio/` (our templates, colors and canvas stay)
   - [x] Cart screens (P52-2a): Add to cart in step 4, `/cart` (sizes, notes, whole-cart send), header + menu badge, designs grouped by order in My designs; `?cart=` editing
+  - [x] Studio restyle (P52-2b): hero band, glowing stepper + progress bar, dark panels, garment cards, tool tabs + upload zone, canvas toolbar, send cards, `/cart` empty + items; every Gildan colour and our Konva templates unchanged
 
 ## Phase 5: Shop and checkout (Square, decided 2026-11-26)
 

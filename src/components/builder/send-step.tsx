@@ -30,6 +30,7 @@ import type { SizeSet } from "@/lib/size-sets";
 import { combineSizesAndRoster, sizesTotal } from "@/lib/member-schemas";
 import { toast } from "@/components/ui/toast";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { CartIcon, MailIcon, ReceiptIcon } from "./studio-icons";
 
 /** The last Add to cart attempt, shown inline under the cards (no success screen). */
 export type CartAddState =
@@ -201,15 +202,20 @@ export function SendStep({
         />
       </Field>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {/* The three paths stack: the step-4 panel is ~500px wide, so three cards across
+          would squeeze the size grid under 24px targets. Same order as the reference. */}
+      <div className="grid gap-3">
         {/* Path 1: the free mockup. */}
         <section
           aria-label="Email me this mockup"
-          className="border-border bg-bg-2/60 flex flex-col gap-3 rounded-2xl border p-4 sm:p-5"
+          className="border-border bg-bg-1/90 flex h-full flex-col gap-3 rounded-2xl border p-4 shadow-[var(--glow-panel)] sm:p-5"
           data-testid="path-email"
         >
-          <span aria-hidden="true" className="text-2xl">
-            ✉️
+          <span
+            aria-hidden="true"
+            className="border-neon-cyan/40 bg-neon-cyan/10 text-neon-cyan flex h-10 w-10 items-center justify-center rounded-lg border"
+          >
+            <MailIcon className="h-5 w-5" />
           </span>
           <h3 className="font-heading text-text-1 text-base tracking-wide uppercase">Email me this mockup</h3>
           <p className="text-text-2 text-sm">
@@ -248,11 +254,14 @@ export function SendStep({
         {/* Path 2: the order request (sizes/quantities; price confirmed later). */}
         <section
           aria-label="Order this design"
-          className="border-border bg-bg-2/60 flex flex-col gap-3 rounded-2xl border p-4 sm:p-5"
+          className="border-border bg-bg-1/90 flex h-full flex-col gap-3 rounded-2xl border p-4 shadow-[var(--glow-panel)] sm:p-5"
           data-testid="path-order"
         >
-          <span aria-hidden="true" className="text-2xl">
-            🧾
+          <span
+            aria-hidden="true"
+            className="border-neon-pink/40 bg-neon-pink/10 text-neon-pink flex h-10 w-10 items-center justify-center rounded-lg border"
+          >
+            <ReceiptIcon className="h-5 w-5" />
           </span>
           <h3 className="font-heading text-text-1 text-base tracking-wide uppercase">Order this design</h3>
           <p className="text-text-2 text-sm">
@@ -320,11 +329,14 @@ export function SendStep({
         {/* Path 3: collect designs and send them as one order (docs/04 §5b). */}
         <section
           aria-label="Add to cart"
-          className="border-border bg-bg-2/60 flex flex-col gap-3 rounded-2xl border p-4 sm:p-5"
+          className="border-border bg-bg-1/90 flex h-full flex-col gap-3 rounded-2xl border p-4 shadow-[var(--glow-panel)] sm:p-5"
           data-testid="path-cart"
         >
-          <span aria-hidden="true" className="text-2xl">
-            🛒
+          <span
+            aria-hidden="true"
+            className="border-neon-purple/40 bg-neon-purple/10 text-neon-purple flex h-10 w-10 items-center justify-center rounded-lg border"
+          >
+            <CartIcon className="h-5 w-5" />
           </span>
           <h3 className="font-heading text-text-1 text-base tracking-wide uppercase">Add to cart</h3>
           <p className="text-text-2 text-sm">

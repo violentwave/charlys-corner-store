@@ -16,6 +16,7 @@ import { cn } from "@/lib/cn";
 
 import { AddButtons, SelectedItemSection, SideSection, type InspectorSectionsProps } from "./design-inspector";
 import { LayersPanel } from "./layers-panel";
+import { AddIcon, ItemIcon, LayersIcon, SideIcon } from "./studio-icons";
 
 type ToolTab = "item" | "add" | "side" | "layers";
 
@@ -31,7 +32,7 @@ export interface ToolTabsProps extends InspectorSectionsProps {
 }
 
 const triggerClass =
-  "focus-visible:ring-neon-cyan focus-visible:ring-offset-bg-0 data-[state=active]:bg-bg-3 data-[state=active]:text-neon-cyan data-[state=active]:shadow-glow-cyan text-text-2 flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-sm px-2 text-xs font-medium transition-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none";
+  "focus-visible:ring-neon-cyan focus-visible:ring-offset-bg-0 data-[state=active]:bg-bg-2 data-[state=active]:text-neon-cyan data-[state=active]:shadow-[inset_0_-2px_0_var(--neon-cyan)] text-text-2 flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-md px-2 text-xs font-medium transition-colors duration-[var(--motion-fast)] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none";
 
 export function ToolTabs(props: ToolTabsProps) {
   const { viewState } = props;
@@ -101,30 +102,25 @@ export function ToolTabs(props: ToolTabsProps) {
         {/* Sits right under the fixed canvas (top = header + canvas + the wrapper's
             pb-4); the panel below scrolls inside itself, so the page never moves. */}
         <div className="bg-bg-0 z-20 pt-1 pb-1">
-          <TabsList aria-label="Design tools" className="p-1">
+          <TabsList
+            aria-label="Design tools"
+            className="border-border bg-bg-1/90 rounded-lg p-1 shadow-[var(--glow-panel)]"
+          >
             <TabsTrigger value="item" data-testid="tool-tab-item" className={cn(triggerClass, "w-11")}>
-              <span aria-hidden="true" className="text-sm leading-none">
-                ✥
-              </span>
+              <ItemIcon className="h-4 w-4" />
               Item
             </TabsTrigger>
             <TabsTrigger value="add" data-testid="tool-tab-add" className={triggerClass}>
-              <span aria-hidden="true" className="text-sm leading-none">
-                ＋
-              </span>
+              <AddIcon className="h-4 w-4" />
               Add
             </TabsTrigger>
             <TabsTrigger value="side" data-testid="tool-tab-side" className={triggerClass}>
-              <span aria-hidden="true" className="text-sm leading-none">
-                ⇄
-              </span>
+              <SideIcon className="h-4 w-4" />
               Side
             </TabsTrigger>
             {layerCount > 0 ? (
               <TabsTrigger value="layers" data-testid="tool-tab-layers" className={triggerClass}>
-                <span aria-hidden="true" className="text-sm leading-none">
-                  ☰
-                </span>
+                <LayersIcon className="h-4 w-4" />
                 Layers
                 <span
                   aria-hidden="true"

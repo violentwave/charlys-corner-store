@@ -13,6 +13,8 @@ import { Card } from "@/components/ui/card";
 import type { CartItemView } from "@/lib/cart";
 import { CART_CHANGED_EVENT } from "@/lib/cart-events";
 
+import { CartIcon } from "@/components/builder/studio-icons";
+
 import { CartItemCard } from "./cart-item-card";
 import { CartSummary } from "./cart-summary";
 
@@ -122,7 +124,10 @@ export function CartView() {
 
   if (sent) {
     return (
-      <Card className="flex flex-col items-start gap-4" data-testid="cart-sent">
+      <Card
+        className="border-border bg-bg-1/90 flex flex-col items-start gap-4 shadow-[var(--glow-panel)]"
+        data-testid="cart-sent"
+      >
         <p className="font-heading text-text-1 text-xl tracking-wide uppercase">Order request sent!</p>
         <p className="text-text-2 text-sm">
           We&apos;ll email you the price for your {sent.itemCount} {sent.itemCount === 1 ? "design" : "designs"} once
@@ -161,8 +166,17 @@ export function CartView() {
 
   if (items.length === 0) {
     return (
-      <Card className="flex flex-col items-center py-12 text-center" data-testid="cart-empty">
-        <p className="font-heading text-text-1 text-lg tracking-wide uppercase">Your cart is empty — for now</p>
+      <Card
+        className="border-border bg-bg-1/90 flex flex-col items-center px-6 py-16 text-center shadow-[var(--glow-panel)]"
+        data-testid="cart-empty"
+      >
+        <span
+          aria-hidden="true"
+          className="border-neon-cyan/40 bg-neon-cyan/10 text-neon-cyan mb-5 flex h-14 w-14 items-center justify-center rounded-full border"
+        >
+          <CartIcon className="h-6 w-6" />
+        </span>
+        <p className="font-heading text-text-1 text-xl tracking-wide uppercase">Your cart is empty — for now</p>
         <p className="text-text-2 mx-auto mt-2 max-w-sm text-sm">
           Collect a few designs here and send them together: one price for the whole order.
         </p>

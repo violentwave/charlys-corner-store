@@ -75,6 +75,20 @@ Scale (rem): 0.75 · 0.875 · 1 · 1.125 · 1.25 · 1.5 · 2 · 2.5 · 3.5 · 5 
 - **Coupon ticket:** dashed yellow border, mono code, "copy" button.
 - **Charly mascot:** simple line-art neon dog (commission or illustrate; ask the owner for photos) for empty states, 404, loading ("Fetching your mockup…"), and success screens.
 
+## Studio (P52-2b)
+
+The builder (`#design`) and `/cart` wear the Figma studio shell (`docs/design/figma-studio/`). CSS/SVG only — our Konva stage, templates and colours are untouched.
+
+- **Hero band** (`src/components/builder/studio-hero.tsx`): sunset wash (`--studio-hero-glow`), scanline-cut sun (`bg-studio-sun`), perspective grid (`bg-studio-grid`), palm silhouettes, chrome heading (`text-gradient-chrome`). Decoration is `aria-hidden`; nothing animates.
+- **Stepper**: four numbered pills — done steps get a cyan check, the current one the pink wash (`--studio-active`), above a 3px gradient bar (`bg-sunset`). At ≤ 400px only the current step's label shows; the `aria-label` still names every step.
+- **Panel**: `--bg-1` at 90% + 1px `--border` + 16px radius and `--glow-panel` (a static shadow, never animated). Header: icon chip, `STEP 0n / LABEL` mono eyebrow, Orbitron headline, helper line.
+- **Canvas**: head with `LIVE PREVIEW` + the side chip; bottom toolbar with zoom (− / level / Fit / +), the Front/Back pill and desktop undo/redo.
+- **Garment card**: full-bleed template thumbnail on `--builder-backdrop`, name, one-liner, `Performance polyester` badge where the blank is polyester; selected = cyan ring + check (`--glow-selected`).
+- **Bottom bar**: Back · Save draft · Continue · start over, split off by a top border; phones keep the fixed `MobileActionBar` with safe-area padding on step 3.
+- **Cart**: the same hero, an empty state with a cyan cart medallion, and item/summary panels on the same tokens.
+
+New tokens: `--studio-sun`, `--studio-active`, `--studio-hero-glow`, `--glow-panel`, `--glow-selected`, `--canvas-head`. New utilities in `globals.css`: `text-gradient-chrome`, `bg-studio-hero`, `bg-studio-sun`, `bg-studio-grid`, `bg-studio-active`.
+
 ## Motion (P52-3)
 
 Tokens (in `src/styles/tokens.css`): `--motion-fast: 120ms`, `--motion-base: 200ms`, `--ease-out-neon: cubic-bezier(0.22, 1, 0.36, 1)`. Nothing runs longer than 250 ms; use the tokens, never a hard-coded duration.

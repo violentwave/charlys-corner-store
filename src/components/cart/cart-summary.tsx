@@ -25,8 +25,12 @@ export function CartSummary({
   const notesId = "cart-order-notes";
   const hint = `Optional — ${notes.length}/2000.`;
   return (
-    <Card className="flex flex-col gap-4 lg:sticky lg:top-24" data-testid="cart-summary">
-      <h2 className="font-heading text-text-1 text-lg tracking-wide uppercase">Your order</h2>
+    <Card
+      className="border-border bg-bg-1/90 flex flex-col gap-4 shadow-[var(--glow-panel)] lg:sticky lg:top-24"
+      data-testid="cart-summary"
+    >
+      <p className="text-neon-pink font-mono text-[10px] font-bold tracking-[0.18em] uppercase">Summary</p>
+      <h2 className="font-heading text-text-1 -mt-2 text-lg tracking-wide uppercase">Your order</h2>
       <dl className="text-text-2 grid grid-cols-2 gap-2 text-sm">
         <dt>Designs</dt>
         <dd className="text-text-1 text-right font-mono" data-testid="cart-designs">

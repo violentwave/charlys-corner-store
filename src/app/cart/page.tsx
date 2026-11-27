@@ -4,7 +4,7 @@ import { Suspense } from "react";
 
 import { CartView } from "@/components/cart/cart-view";
 import { PageTransition } from "@/components/layout/page-transition";
-import { PageHeader } from "@/components/sections/page-header";
+import { StudioHero } from "@/components/builder/studio-hero";
 import { Section } from "@/components/sections/section";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -19,24 +19,23 @@ export const metadata: Metadata = {
 export default function CartPage() {
   return (
     <PageTransition>
-      <Section>
+      <StudioHero
+        eyebrow="One order, one price"
+        title="Your cart"
+        subtitle="Collect designs here, add sizes, then send the whole lot at once. We'll check everything and email you one price."
+        uploadLink={false}
+      />
+      <Section className="pt-8 sm:pt-10">
         <div className="mx-auto w-full max-w-6xl">
-          <PageHeader
-            eyebrow="One order, one price"
-            title="Your cart"
-            description="Collect designs here, add sizes, then send the whole lot at once. We'll check everything and email you one price."
-          />
-          <div className="mt-8">
-            <Suspense
-              fallback={
-                <p role="status" className="text-text-2 animate-pulse text-sm">
-                  Fetching your cart…
-                </p>
-              }
-            >
-              <CartGate />
-            </Suspense>
-          </div>
+          <Suspense
+            fallback={
+              <p role="status" className="text-text-2 animate-pulse text-sm">
+                Fetching your cart…
+              </p>
+            }
+          >
+            <CartGate />
+          </Suspense>
         </div>
       </Section>
     </PageTransition>
