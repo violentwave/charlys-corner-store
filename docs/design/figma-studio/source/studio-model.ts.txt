@@ -1,0 +1,332 @@
+export const garments = [
+  ['T-Shirt', 'Classic cotton crewneck', 'cotton'],
+  ['Long Sleeve Tee', 'Cotton with ribbed cuffs', 'cotton'],
+  ['Performance Tee', 'Lightweight, moisture-wicking', 'poly'],
+  ['Performance Long Sleeve', 'Coverage that breathes', 'poly'],
+  ['Baseball Tee', 'Three-quarter raglan sleeves', 'cotton'],
+  ['Hoodie', 'Cozy fleece pullover', 'blend'],
+  ['Trucker Hat', 'Structured front, mesh back', 'blend'],
+  ['Polo', 'Collared with a button placket', 'blend'],
+  ['Tank', 'Easy, sleeveless fit', 'cotton'],
+] as const
+export type Side = 'Front' | 'Back' | 'Left sleeve' | 'Right sleeve'
+export const sidesFor = (item: number): Side[] =>
+  item === 6
+    ? ['Front', 'Back']
+    : [1, 3, 4, 5].includes(item)
+      ? ['Front', 'Back', 'Left sleeve', 'Right sleeve']
+      : ['Front', 'Back']
+export const swatches = [
+  ['Black', '#232325'],
+  ['Charcoal', '#45484b'],
+  ['Sport Grey', '#a9a9a9'],
+  ['White', '#f5f4ef'],
+  ['Natural', '#e3d7c1'],
+  ['Sand', '#cab49a'],
+  ['Chocolate', '#4b3027'],
+  ['Maroon', '#732a40'],
+  ['Red', '#bf303c'],
+  ['Coral', '#e77871'],
+  ['Orange', '#dc6b34'],
+  ['Gold', '#eab647'],
+  ['Military Green', '#666747'],
+  ['Forest Green', '#364f44'],
+  ['Irish Green', '#28865d'],
+  ['Sapphire', '#277dad'],
+  ['Royal', '#35559a'],
+  ['Navy', '#222b43'],
+  ['Purple', '#634785'],
+  ['Light Pink', '#e8bac9'],
+] as const
+export const raglan = [
+  ['White / Black', '#f5f4ef', '#232325'],
+  ['White / Red', '#f5f4ef', '#bf303c'],
+  ['White / Navy', '#f5f4ef', '#222b43'],
+  ['Sport Grey / Charcoal', '#a9a9a9', '#45484b'],
+] as const
+export const trucker = [
+  ['Black / White / Black', '#232325', '#f5f4ef', '#232325'],
+  ['Navy / White / Navy', '#222b43', '#f5f4ef', '#222b43'],
+  ['Charcoal / Black / Black', '#45484b', '#232325', '#232325'],
+  ['White / White / White', '#f5f4ef', '#f5f4ef', '#f5f4ef'],
+] as const
+export const colorsFor = (item: number) => (item === 4 ? raglan : item === 6 ? trucker : swatches)
+export type Area = {
+  label: string
+  w: number
+  h: number
+  x: number
+  y: number
+  width: number
+  height: number
+}
+const box = (
+  label: string,
+  w: number,
+  h: number,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+): Area => ({ label, w, h, x, y, width, height })
+export function areasFor(item: number, side: Side) {
+  if (item === 6)
+    return side === 'Front'
+      ? [box('Hat Front', 4, 2, 29, 30, 41, 22)]
+      : [box('Hat Back', 3, 1, 32, 38, 35, 12)]
+  if (side === 'Back')
+    return [box('Full Back', 12, 14, 31, 26, 38, 44), box('Upper Back', 10, 4, 34, 25, 32, 13)]
+  if (side.endsWith('sleeve'))
+    return [box('Upper Sleeve', 4, 4, 37, 24, 26, 26), box('Full Sleeve', 4, 12, 37, 24, 26, 57)]
+  return [
+    box('Full Front', 12, 14, 31, 27, 38, 44),
+    box('Front Chest', 10, 4, 34, 26, 32, 13),
+    box('Left Chest', 4, 4, 53, 26, 13, 13),
+  ]
+}
+export const methods = [
+  'Recommend one for me',
+  'Screen printing',
+  'DTF',
+  'DTG',
+  'Embroidery',
+  'Sublimation',
+  'Heat-transfer vinyl',
+] as const
+export const fonts = [
+  'Orbitron Bold',
+  'Orbitron Medium',
+  'Orbitron Light',
+  'Poppins Black',
+  'Poppins Bold',
+  'Poppins Medium',
+  'JetBrains Mono Bold',
+  'JetBrains Mono Regular',
+] as const
+export const inks = [
+  '#F5F3FF',
+  '#0A0A14',
+  '#FF2E97',
+  '#00F0FF',
+  '#B026FF',
+  '#FF6B35',
+  '#FFE14D',
+  '#39FF88',
+]
+export const sizes = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL', 'OSFA'] as const
+export type Layer = {
+  id: string
+  kind: 'text' | 'image'
+  name: string
+  text: string
+  src: string
+  pixels: number
+  pixelHeight: number
+  font: number
+  ink: string
+  outline: string
+  stroke: number
+  arch: number
+  spacing: number
+  x: number
+  y: number
+  w: number
+  h: number
+  rotation: number
+  flip: boolean
+  lock: boolean
+}
+export type Design = {
+  item: number
+  color: number
+  method: number
+  notes: string
+  quantities: number[]
+  areas: Partial<Record<Side, number>>
+  layers: Partial<Record<Side, Layer[]>>
+}
+export const emptyDesign = (): Design => ({
+  item: 0,
+  color: 0,
+  method: 0,
+  notes: '',
+  quantities: Array(10).fill(0),
+  areas: {},
+  layers: {},
+})
+export const getArea = (d: Design, side: Side) => {
+  const options = areasFor(d.item, side)
+  return options[d.areas[side] ?? 0] ?? options[0]
+}
+export const totalOf = (d: Design) =>
+  d.quantities.reduce((a, b, i) => ((d.item === 6 ? i === 9 : i < 9) ? a + b : a), 0)
+export const markedSides = (d: Design) =>
+  sidesFor(d.item).filter((side) => !!d.layers[side]?.length)
+export const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n))
+export const textStyle = (font: number) => ({
+  fontFamily: font < 3 ? 'Orbitron' : font < 6 ? 'Poppins' : 'JetBrains Mono',
+  fontWeight: [800, 600, 400, 900, 700, 500, 700, 400][font] ?? 700,
+})
+export function methodReason(d: Design, index: number) {
+  const material = garments[d.item][2]
+  if (index === 3 && material !== 'cotton') return 'DTG needs cotton'
+  if (index === 3 && d.item === 6) return 'DTG needs a flat garment'
+  if (index === 5 && material !== 'poly') return 'Sublimation needs polyester'
+  if (index === 5 && ![3, 4, 5, 9, 11, 19].includes(d.color))
+    return 'Sublimation needs a light shirt color'
+  if (index === 4) {
+    const large = markedSides(d).find((s) => getArea(d, s).w > 5 || getArea(d, s).h > 5)
+    if (large) return `Too big to embroider (${getArea(d, large).label})`
+  }
+  if (d.item === 6 && [1, 5].includes(index)) return 'This method needs a flat garment'
+  return ''
+}
+export function fitLayer(layer: Layer, a: Area) {
+  const rad = (layer.rotation * Math.PI) / 180
+  const w = Math.abs(layer.w * Math.cos(rad)) + Math.abs(layer.h * Math.sin(rad))
+  const h = Math.abs(layer.h * Math.cos(rad)) + Math.abs(layer.w * Math.sin(rad))
+  const scale = Math.min(a.width / w, a.height / h) * 0.92
+  return {
+    ...layer,
+    x: a.x + a.width / 2,
+    y: a.y + a.height / 2,
+    w: layer.w * scale,
+    h: layer.h * scale,
+  }
+}
+export function outside(layer: Layer, a: Area) {
+  const r = (layer.rotation * Math.PI) / 180
+  const w = (Math.abs(layer.w * Math.cos(r)) + Math.abs(layer.h * Math.sin(r))) / 2
+  const h = (Math.abs(layer.h * Math.cos(r)) + Math.abs(layer.w * Math.sin(r))) / 2
+  return (
+    layer.x - w < a.x - 0.05 ||
+    layer.x + w > a.x + a.width + 0.05 ||
+    layer.y - h < a.y - 0.05 ||
+    layer.y + h > a.y + a.height + 0.05
+  )
+}
+export const inkHex = (value: unknown): value is string =>
+  typeof value === 'string' && /^#[a-fA-F0-9]{6}$/.test(value)
+const asset = /^data:image\/(?:png|jpeg|webp);base64,[0-9a-z+/=]+$/i
+const record = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === 'object' && !Array.isArray(value)
+const validNumber = (value: unknown, min: number, max: number, integer = false): value is number =>
+  typeof value === 'number' &&
+  Number.isFinite(value) &&
+  value >= min &&
+  value <= max &&
+  (!integer || Number.isInteger(value))
+export function readDesign(value: unknown): Design | null {
+  if (
+    !record(value) ||
+    !validNumber(value.item, 0, 8, true) ||
+    !validNumber(value.color, 0, colorsFor(value.item).length - 1, true) ||
+    !validNumber(value.method, 0, 6, true) ||
+    typeof value.notes !== 'string' ||
+    value.notes.length > 2000 ||
+    !record(value.areas) ||
+    !record(value.layers) ||
+    !Array.isArray(value.quantities) ||
+    value.quantities.length !== 10 ||
+    value.quantities.some((n) => !validNumber(n, 0, 999, true))
+  )
+    return null
+  const result: Design = {
+    item: value.item,
+    color: value.color,
+    method: value.method,
+    notes: value.notes,
+    quantities: value.quantities,
+    areas: {},
+    layers: {},
+  }
+  for (const side of sidesFor(value.item)) {
+    const a = value.areas[side]
+    if (a !== undefined && !validNumber(a, 0, areasFor(value.item, side).length - 1, true))
+      return null
+    if (a !== undefined) result.areas[side] = a
+    const layers = value.layers[side]
+    if (layers === undefined) continue
+    if (!Array.isArray(layers) || layers.length > 8) return null
+    const ids = new Set()
+    result.layers[side] = []
+    for (const l of layers) {
+      if (
+        !record(l) ||
+        typeof l.id !== 'string' ||
+        !/^[\w-]{1,64}$/.test(l.id) ||
+        ids.has(l.id) ||
+        (l.kind !== 'text' && l.kind !== 'image') ||
+        typeof l.name !== 'string' ||
+        l.name.length > 120 ||
+        typeof l.text !== 'string' ||
+        l.text.length > 60 ||
+        typeof l.src !== 'string' ||
+        l.src.length > 8_000_000 ||
+        (l.kind === 'image' ? !asset.test(l.src) : l.src !== '') ||
+        !inkHex(l.ink) ||
+        !inkHex(l.outline) ||
+        typeof l.lock !== 'boolean' ||
+        typeof l.flip !== 'boolean' ||
+        !validNumber(l.x, 0, 100) ||
+        !validNumber(l.y, 0, 100) ||
+        !validNumber(l.w, 0.01, 160) ||
+        !validNumber(l.h, 0.01, 160) ||
+        !validNumber(l.rotation, -180, 180) ||
+        !validNumber(l.pixels, 0, 65535) ||
+        !validNumber(l.pixelHeight, 0, 65535) ||
+        !validNumber(l.font, 0, 7, true) ||
+        !validNumber(l.stroke, 0, 10) ||
+        !validNumber(l.arch, -100, 100) ||
+        !validNumber(l.spacing, 0, 12)
+      )
+        return null
+      const {
+        id,
+        kind,
+        name,
+        text,
+        src,
+        pixels,
+        pixelHeight,
+        x,
+        y,
+        w,
+        h,
+        rotation,
+        flip,
+        lock,
+        font,
+        ink,
+        outline,
+        stroke,
+        arch,
+        spacing,
+      } = l
+      ids.add(id)
+      result.layers[side]?.push({
+        id,
+        kind,
+        name,
+        text,
+        src,
+        pixels,
+        pixelHeight,
+        x,
+        y,
+        w,
+        h,
+        rotation,
+        flip,
+        lock,
+        font,
+        ink,
+        outline,
+        stroke,
+        arch,
+        spacing,
+      })
+    }
+  }
+  return methodReason(result, result.method) ? null : result
+}
