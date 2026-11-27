@@ -991,6 +991,7 @@ export function Builder() {
 
   return (
     <div
+      data-testid="builder-studio"
       className={cn(
         "mt-8 flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-start",
         // Mobile step 3 (P51-1): the canvas height budget and the surrounding chrome

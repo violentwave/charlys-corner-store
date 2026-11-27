@@ -75,25 +75,27 @@ test("every step renders the studio shell at both sizes, axe-clean", async ({ pa
     });
     await settle(page);
     await page.screenshot({ path: `${SHOTS}/${vp.name}-step1-garment.png` });
-    expect(await axeViolations(page, "#design"), `${vp.name} step 1`).toEqual([]);
+    // #design is the hero; the studio (stepper, canvas, panel) is its own region.
+    expect(await axeViolations(page, "#design"), `${vp.name} hero`).toEqual([]);
+    expect(await axeViolations(page, '[data-testid="builder-studio"]'), `${vp.name} step 1`).toEqual([]);
 
     await goTo(page, 2, "Colors");
     await expect(page.getByTestId("color-name-body")).toBeVisible();
     await settle(page);
     await page.screenshot({ path: `${SHOTS}/${vp.name}-step2-colors.png` });
-    expect(await axeViolations(page, "#design"), `${vp.name} step 2`).toEqual([]);
+    expect(await axeViolations(page, '[data-testid="builder-studio"]'), `${vp.name} step 2`).toEqual([]);
 
     await goTo(page, 3, "Design");
     await expect(page.getByTestId("upload-image")).toBeVisible();
     await settle(page);
     await page.screenshot({ path: `${SHOTS}/${vp.name}-step3-design.png` });
-    expect(await axeViolations(page, "#design"), `${vp.name} step 3`).toEqual([]);
+    expect(await axeViolations(page, '[data-testid="builder-studio"]'), `${vp.name} step 3`).toEqual([]);
 
     await goTo(page, 4, "Send");
     await expect(page.getByTestId("send-step")).toBeVisible();
     await settle(page);
     await page.screenshot({ path: `${SHOTS}/${vp.name}-step4-send.png`, fullPage: true });
-    expect(await axeViolations(page, "#design"), `${vp.name} step 4`).toEqual([]);
+    expect(await axeViolations(page, '[data-testid="builder-studio"]'), `${vp.name} step 4`).toEqual([]);
   }
 });
 
