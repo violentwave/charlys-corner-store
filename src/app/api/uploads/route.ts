@@ -7,9 +7,11 @@ import { zodFieldErrors } from "@/lib/action-result";
 import { ARTWORK_MAX_BYTES, checkArtwork } from "@/lib/artwork";
 import { currentUser } from "@/lib/auth/session";
 import { getDb, schema } from "@/lib/db";
+import { GARMENTS } from "@/lib/garments";
 import { BodyTooLargeError, clip, fileParts, readFormDataLimited } from "@/lib/http";
 import { upsertLead } from "@/lib/leads";
 import { confirmCustomer, notifyOwner } from "@/lib/notify";
+import { printMethodName } from "@/lib/print-methods";
 import { clientIp, LIMITS, rateLimit } from "@/lib/rate-limit";
 import { orderFormSchema } from "@/lib/schemas";
 import { buildObjectKey, getStorage } from "@/lib/storage";
@@ -56,6 +58,11 @@ export async function POST(request: Request) {
   const parsed = orderFormSchema.safeParse(raw);
   if (!parsed.success) return fail("Please fix the highlighted fields.", 400, zodFieldErrors(parsed.error));
   const data = parsed.data;
+  // Item types are the builder's garment names (plus the form's "Other"): nothing free-form.
+  const allowedItems = new Set(GARMENTS.map((g) => g.name));
+  if (data.items.some((item) => !allowedItems.has(item))) {
+    return fail("Please fix the highlighted fields.", 400, { items: "Pick from the list" });
+  }
 
   const files = fileParts(form, "files");
   if (files.length > 5) return fail("You can attach at most 5 files.", 400);
@@ -144,7 +151,9 @@ export async function POST(request: Request) {
   );
 
   await notifyOwner(
-    data.orderType === "existing" ? `ARTWORK for order #${data.orderNumber || "—"}: ${data.firstName} · ${data.email}` : `NEW ORDER (form): ${data.firstName} · ${data.email}`,
+    data.orderType === "existing"
+      ? `ARTWORK for order #${clip(data.orderNumber || "—", 40)}: ${clip(data.firstName, 40)} · ${data.email}`
+      : `NEW ORDER (form): ${clip(data.firstName, 40)} · ${data.email}`,
     OrderFormOwnerEmail({
       orderType: data.orderType,
       firstName: data.firstName,
@@ -158,7 +167,7 @@ export async function POST(request: Request) {
       items: data.items ?? [],
       otherItem: data.otherItem ?? false,
       colors: data.colors || null,
-      printMethod: data.printMethod || null,
+      printMethod: printMethodName(data.printMethod),
       printLocations: data.printLocations ?? [],
       sizes: (data.sizes ?? {}) as Record<string, number>,
       neededBy: data.neededBy || null,

@@ -4,6 +4,8 @@
  */
 import { z } from "zod";
 
+import { PRINT_METHOD_CHOICES } from "./print-methods";
+
 export const REFERRAL_SOURCES = ["search", "ad", "friend", "other"] as const;
 export const referralLabels: Record<(typeof REFERRAL_SOURCES)[number], string> = {
   search: "Internet Search",
@@ -77,6 +79,18 @@ export type ContactInput = z.infer<typeof contactSchema>;
 export type QuoteInput = z.infer<typeof quoteSchema>;
 export type ReferralInput = z.infer<typeof referralSchema>;
 /** Order form (home #upload): new or existing order, with optional artwork. */
+/** Order-form choice lists, shared by the form and the server (no free-form values). */
+export const ORDER_FORM_SIZES = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL", "5XL", "OSFA"] as const;
+export const ORDER_FORM_LOCATIONS = [
+  "Front",
+  "Back",
+  "Left sleeve",
+  "Right sleeve",
+  "Left chest",
+  "Hat front",
+  "Other",
+] as const;
+
 export const orderFormSchema = z
   .object({
     orderType: z.enum(["new", "existing"]).default("new"),
@@ -90,19 +104,26 @@ export const orderFormSchema = z
     street: z.string().trim().max(200).optional().or(z.literal("")),
     unit: z.string().trim().max(60).optional().or(z.literal("")),
     city: z.string().trim().max(100).optional().or(z.literal("")),
-    state: z.string().trim().max(2).optional().or(z.literal("")),
+    state: z
+      .string()
+      .trim()
+      .regex(/^[A-Za-z]{2}$/, "Pick a state")
+      .transform((s) => s.toUpperCase())
+      .optional()
+      .or(z.literal("")),
     zip: z
       .string()
       .trim()
       .regex(/^(\d{5}|\d{5}-\d{4})$/, "ZIP must be 5 or 9 digits")
       .optional()
       .or(z.literal("")),
-    items: z.array(z.string()).default([]),
+    // Garment names from GARMENTS (checked in the route against the live list), max 20.
+    items: z.array(z.string().trim().min(1).max(60)).max(20).default([]),
     otherItem: z.preprocess((v) => v === "true" || v === true, z.boolean().optional()),
     colors: z.string().trim().max(200).optional().or(z.literal("")),
-    printMethod: z.string().trim().max(60).optional().or(z.literal("")),
-    printLocations: z.array(z.string()).default([]),
-    sizes: z.record(z.string(), z.number().int().min(0).max(10000)).default({}),
+    printMethod: z.enum(PRINT_METHOD_CHOICES).default("recommend"),
+    printLocations: z.array(z.enum(ORDER_FORM_LOCATIONS)).max(ORDER_FORM_LOCATIONS.length).default([]),
+    sizes: z.partialRecord(z.enum(ORDER_FORM_SIZES), z.number().int().min(0).max(10000)).default({}),
     neededBy: z.iso.date("Please pick a valid date").optional().or(z.literal("")),
     files: z.array(z.any()).optional(),
     notes: z.string().trim().max(2000).optional().or(z.literal("")),
