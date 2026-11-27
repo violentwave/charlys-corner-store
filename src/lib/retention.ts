@@ -2,7 +2,9 @@
  * How long stored files live (Logan, 2026-11-26: 3 days, then 30 days the same night;
  * R2 rule "delete-mockups-30-days"). The deleting itself is an R2 bucket
  * lifecycle rule (Cloudflare dashboard → R2 → bucket → Settings → Object lifecycle rules):
- * objects under `mockups/` are deleted after MOCKUP_FILES_RETENTION_DAYS. Keep that rule and
+ * objects under `mockups/` are deleted after MOCKUP_FILES_RETENTION_DAYS. That includes
+ * `mockups/cart/` (a member's cart; files move to `orders/` when the cart is sent), so an
+ * abandoned cart cleans itself up. Keep that rule and
  * this constant in step. Order requests (`orders/`), existing-order uploads (`uploads/`) and
  * quote files (`quotes/`) are kept; the owner cleans those up.
  */

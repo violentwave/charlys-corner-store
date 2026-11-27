@@ -99,6 +99,8 @@ Each page prompt is shipped by the agent (Ship section); Claude reviews every me
 - [x] Builder mobile layout: canvas stays in view, tools in a bottom sheet, fewer taps (Claude)
 - [x] More realistic garments: fix sleeve views, better shading/texture on every template (Claude)
 - [x] Order form (P52-1): new + existing orders, guests welcome, full width, with artwork upload (replaces the old uploader)
+- [x] Cart + multi-design orders, backend (Claude): `orders` table (stage, price, payment per order), saved cart API (`/api/cart`), send the cart as one order, spreadsheet owner email + `order.csv`
+- [ ] Cart screens + studio restyle (opencode, prompt P52-2): Add to cart in the builder, `/cart`, header badge, multi-design order in My designs and on the pay page; visual shell from `docs/design/figma-studio/` (our templates, colors and canvas stay)
 
 ## Phase 5: Shop and checkout (Square, decided 2026-11-26)
 
