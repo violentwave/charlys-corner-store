@@ -1,0 +1,1582 @@
+'use client'
+
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { RenderDesign, renderPng, StudioCanvas } from './studio-canvas'
+import {
+  CharlyLine,
+  ColorPicker,
+  DesignSummary,
+  GarmentPicker,
+  LayerControls,
+  MethodPicker,
+  Notes,
+  Notice,
+  PanelHeading,
+  Quantities,
+  SidePicker,
+  Stepper,
+  Tools,
+} from './studio-controls'
+import {
+  clamp,
+  colorsFor,
+  emptyDesign,
+  fitLayer,
+  garments,
+  getArea,
+  markedSides,
+  methodReason,
+  outside,
+  readDesign,
+  sidesFor,
+  totalOf,
+  type Design,
+  type Layer,
+  type Side,
+} from './studio-model'
+import { Button, ChromeHeading, Dog, Icon, Sunset } from './studio-ui'
+
+type ID = string | number
+type Saved = { id: ID; name: string; design: Design }
+type Order = { id: ID; designs: Design[] }
+type Member = { email: string; roster?: number[]; logo?: Layer }
+type View = 'editor' | 'cart' | 'email' | 'order' | 'library'
+type Modal = 'auth' | 'reset' | 'help' | 'cart-size' | 'email' | 'verify' | 'remove' | null
+const api = '/studio-api'
+const uid = () => crypto.randomUUID()
+const demoDesign = (): Design => ({ ...emptyDesign(), quantities: [0, 0, 6, 8, 6, 2, 0, 0, 0, 0] })
+
+async function apiCall(action?: string, data: Record<string, unknown> = {}) {
+  const response = await fetch(
+    api,
+    action
+      ? {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', 'x-charlys-studio': '1' },
+          body: JSON.stringify({ action, ...data }),
+        }
+      : { cache: 'no-store' },
+  )
+  const json = await response.json()
+  if (!response.ok) throw new Error(json.error || 'Network error. Try again.')
+  return json
+}
+
+function Dialog({
+  title,
+  close,
+  children,
+}: {
+  title: string
+  close: () => void
+  children: ReactNode
+}) {
+  const ref = useRef<HTMLDialogElement>(null)
+  useEffect(() => {
+    const dialog = ref.current
+    dialog?.showModal()
+    return () => {
+      dialog?.close()
+    }
+  }, [])
+  return (
+    <dialog
+      ref={ref}
+      className="studio-dialog"
+      aria-labelledby="dialog-title"
+      onCancel={(e) => {
+        e.preventDefault()
+        close()
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          const r = e.currentTarget.getBoundingClientRect()
+          if (
+            e.clientX < r.left ||
+            e.clientX > r.right ||
+            e.clientY < r.top ||
+            e.clientY > r.bottom
+          )
+            close()
+        }
+      }}
+    >
+      <div className="dialog-head">
+        <h2 id="dialog-title">{title}</h2>
+        <Button icon="close" aria-label="Close dialog" onClick={close} />
+      </div>
+      <div className="dialog-body">{children}</div>
+    </dialog>
+  )
+}
+
+function initialLayer(d: Design, side: Side, kind: Layer['kind']): Layer {
+  const a = getArea(d, side)
+  return {
+    id: uid(),
+    kind,
+    name: kind === 'text' ? 'Text' : 'Artwork',
+    text: kind === 'text' ? 'Your text' : '',
+    src: '',
+    pixels: 0,
+    pixelHeight: 0,
+    font: 0,
+    ink: '#F5F3FF',
+    outline: '#0A0A14',
+    stroke: 0,
+    arch: 0,
+    spacing: 0,
+    x: a.x + a.width / 2,
+    y: a.y + a.height / 2,
+    w: a.width * 0.8,
+    h: a.height * 0.42,
+    rotation: 0,
+    flip: false,
+    lock: true,
+  }
+}
+async function readArtwork(file: File, d: Design, side: Side) {
+  const allowed = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp']
+  if (!allowed.includes(file.type))
+    throw new Error('Wrong file type. Choose a PNG, JPG, SVG or WEBP.')
+  if (file.size > 10 * 1024 * 1024)
+    throw new Error('Your file is too big. Choose an image under 10 MB.')
+  const url = URL.createObjectURL(file)
+  try {
+    const image = new Image()
+    image.src = url
+    try {
+      await image.decode()
+    } catch {
+      throw new Error('This image couldn’t be opened. Try exporting it again.')
+    }
+    const svg = file.type === 'image/svg+xml'
+    const ratio = image.naturalWidth / Math.max(1, image.naturalHeight)
+    const scale = Math.min(svg ? 12 : 1, 2400 / Math.max(image.naturalWidth, image.naturalHeight))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale))
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale))
+    canvas.getContext('2d')!.drawImage(image, 0, 0, canvas.width, canvas.height)
+    const l = initialLayer(d, side, 'image'),
+      a = getArea(d, side)
+    l.src = canvas.toDataURL('image/webp', 0.92)
+    l.name = file.name.slice(0, 120)
+    l.pixels = canvas.width
+    l.pixelHeight = canvas.height
+    l.w = Math.min(a.width * 0.8, a.height * 0.8 * ratio)
+    l.h = l.w / ratio
+    return l
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
+
+export default function Studio() {
+  const [design, setDesign] = useState<Design>(emptyDesign),
+    [step, setStep] = useState(0),
+    [tab, setTab] = useState('Item'),
+    [side, setSide] = useState<Side>('Front')
+  const [view, setView] = useState<View>('editor'),
+    [modal, setModal] = useState<Modal>(null),
+    [selected, setSelected] = useState('')
+  const [past, setPast] = useState<Design[]>([]),
+    [future, setFuture] = useState<Design[]>([])
+  const [user, setUser] = useState<Member | null>(null),
+    [drafts, setDrafts] = useState<Saved[]>([]),
+    [cart, setCart] = useState<Saved[]>([]),
+    [orders, setOrders] = useState<Order[]>([])
+  const [activeDraft, setActiveDraft] = useState<ID>(),
+    [activeCart, setActiveCart] = useState<ID>()
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login'),
+    [authError, setAuthError] = useState(''),
+    [working, setWorking] = useState(''),
+    [ready, setReady] = useState(false)
+  const [restored, setRestored] = useState(false),
+    [notice, setNotice] = useState(''),
+    [problem, setProblem] = useState(''),
+    [more, setMore] = useState(false),
+    [orderForm, setOrderForm] = useState(false)
+  const [marketing, setMarketing] = useState(false),
+    [drop, setDrop] = useState(false),
+    [sample, setSample] = useState(false)
+  const [orderDesigns, setOrderDesigns] = useState<Design[]>([]),
+    [deleteId, setDeleteId] = useState<ID>(),
+    [epoch, setEpoch] = useState(0)
+  const retry = useRef<null | (() => void)>(null),
+    [canRetry, setCanRetry] = useState(false),
+    toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const fileInput = useRef<HTMLInputElement>(null),
+    pending = useRef<null | ((email: string) => void)>(null),
+    uploadMode = useRef<'layer' | 'brand'>('layer')
+  const exportSvgs = useRef<Partial<Record<Side, SVGSVGElement>>>({})
+  const bodyScroll = useRef<HTMLDivElement>(null)
+  const currentArea = getArea(design, side),
+    layers = design.layers[side] ?? []
+  const active = layers.find((l) => l.id === selected) ?? layers.at(-1)
+  const setOfSides = sidesFor(design.item)
+  const exportSides = setOfSides
+  const didInit = useRef(false)
+
+  function say(message: string) {
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+    setNotice(message)
+    toastTimer.current = setTimeout(() => setNotice(''), 4300)
+  }
+  function fail(error: unknown, again?: () => void) {
+    retry.current = again ?? null
+    setCanRetry(!!again)
+    setProblem(error instanceof Error ? error.message : 'Something went wrong. Try again.')
+  }
+  async function refresh() {
+    const data = await apiCall()
+    setUser(data.user)
+    setDrafts(data.drafts ?? [])
+    setCart(data.cart ?? [])
+    setOrders(data.orders ?? [])
+  }
+  useEffect(() => {
+    if (didInit.current) return
+    didInit.current = true
+    const q = new URLSearchParams(window.location.search)
+    const frame = q.get('frame')
+    const routes: Record<string, number> = { garment: 0, colors: 1, design: 2, send: 3 }
+    if (frame && frame in routes) {
+      setStep(routes[frame])
+      setTab(routes[frame] === 2 ? 'Add' : 'Item')
+    }
+    if (frame === 'cart' || frame === 'email' || frame === 'order') {
+      setSample(true)
+      setView(frame)
+      if (frame === 'cart') setCart([{ id: 'sample', name: 'T-Shirt', design: demoDesign() }])
+      if (frame === 'order') setOrderDesigns([demoDesign()])
+    }
+    const state = q.get('state')
+    if (state === 'auth' || state === 'verify' || state === 'reset') setModal(state)
+    if (state === 'restore') setRestored(true)
+    if (state === 'placement' || state === 'dpi' || state === 'methods') {
+      setStep(2)
+      setTab(state === 'methods' ? 'Item' : 'Layers')
+      const d = state === 'methods' ? { ...emptyDesign(), item: 2 } : emptyDesign()
+      if (state === 'placement') {
+        const l = initialLayer(d, 'Front', 'text')
+        l.text = 'CHARLY’S'
+        l.x = 64
+        d.layers.Front = [l]
+      }
+      if (state === 'dpi') {
+        const l = initialLayer(d, 'Front', 'image')
+        l.src = '/garments/0.webp'
+        l.name = 'Artwork preview'
+        l.pixels = 100
+        l.pixelHeight = 60
+        d.layers.Front = [l]
+      }
+      setDesign(d)
+    }
+    if (state === 'network' || state === 'rate' || state === 'type' || state === 'large') {
+      setProblem(
+        state === 'network'
+          ? 'Network error. Check your connection and try again.'
+          : state === 'rate'
+            ? 'Too many requests. Give it a minute and try again.'
+            : state === 'type'
+              ? 'Wrong file type. Choose a PNG, JPG, SVG or WEBP.'
+              : 'Your file is too big. Choose an image under 10 MB.',
+      )
+      if (state === 'rate' || state === 'network') {
+        retry.current = () => {
+          setProblem('')
+          say('Ready to try again.')
+        }
+        setCanRetry(true)
+      }
+    }
+    if (state === 'loading' || q.get('loading') === '1') {
+      return
+    }
+    if (frame === 'cart' || frame === 'email' || frame === 'order') {
+      setReady(true)
+      return
+    }
+    refresh()
+      .catch((e) =>
+        fail(e, () => {
+          void refresh().catch(fail)
+        }),
+      )
+      .finally(() => setReady(true))
+  }, [])
+  useEffect(() => {
+    bodyScroll.current?.scrollTo({ top: 0 })
+  }, [step, tab])
+  function commit(next: Design, remember = true) {
+    if (methodReason(next, next.method)) next = { ...next, method: 0 }
+    if (remember) {
+      setPast((p) => [...p.slice(-39), design])
+      setFuture([])
+    }
+    setDesign(next)
+  }
+  function moveLayer(id: string, patch: Partial<Layer>, remember = true) {
+    const current = design.layers[side] ?? []
+    commit(
+      {
+        ...design,
+        layers: {
+          ...design.layers,
+          [side]: current.map((l) => (l.id === id ? { ...l, ...patch } : l)),
+        },
+      },
+      remember,
+    )
+  }
+  function undo() {
+    const last = past.at(-1)
+    if (!last) return
+    setFuture((f) => [design, ...f])
+    setPast((p) => p.slice(0, -1))
+    setDesign(last)
+    if (!sidesFor(last.item).includes(side)) setSide('Front')
+  }
+  function redo() {
+    const next = future[0]
+    if (!next) return
+    setPast((p) => [...p, design])
+    setFuture((f) => f.slice(1))
+    setDesign(next)
+    if (!sidesFor(next.item).includes(side)) setSide('Front')
+  }
+  function go(n: number) {
+    const next = clamp(n, 0, 3)
+    setStep(next)
+    setTab(next === 2 ? 'Add' : 'Item')
+    setView('editor')
+    setMore(false)
+  }
+  function tool(s: string) {
+    if (step < 2 && s === 'Item') return
+    if (step !== 2) {
+      setStep(2)
+      setView('editor')
+    }
+    setTab(s)
+  }
+  function changeItem(item: number) {
+    if (item === design.item) return
+    const allowed = sidesFor(item)
+    const next = {
+      ...design,
+      item,
+      color: 0,
+      layers: Object.fromEntries(
+        Object.entries(design.layers).filter(([s]) => allowed.includes(s as Side)),
+      ),
+      areas: {},
+    }
+    commit(next)
+    setSide('Front')
+    setEpoch((v) => v + 1)
+  }
+  function chooseSide(s: Side) {
+    setSide(s)
+    setSelected('')
+    setEpoch((v) => v + 1)
+  }
+  function addLayer(layer: Layer) {
+    if (layers.length >= 8) {
+      say('Each side can have up to 8 layers.')
+      return
+    }
+    commit({ ...design, layers: { ...design.layers, [side]: [...layers, layer] } })
+    setSelected(layer.id)
+    setTab('Layers')
+  }
+  function removeLayer() {
+    if (!active) return
+    commit({
+      ...design,
+      layers: { ...design.layers, [side]: layers.filter((l) => l.id !== active.id) },
+    })
+    setSelected('')
+  }
+  function reorder(id: string, delta: number) {
+    const i = layers.findIndex((l) => l.id === id),
+      j = i + delta
+    if (i < 0 || j < 0 || j >= layers.length) return
+    const updated = [...layers]
+    ;[updated[i], updated[j]] = [updated[j], updated[i]]
+    commit({ ...design, layers: { ...design.layers, [side]: updated } })
+  }
+  function requireMember(run: (email: string) => void) {
+    if (user) {
+      run(user.email)
+      return
+    }
+    pending.current = run
+    setAuthError('')
+    setAuthMode('login')
+    setModal('auth')
+  }
+  async function authenticate(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const form = new FormData(e.currentTarget)
+    setWorking('auth')
+    setAuthError('')
+    try {
+      const result = await apiCall(authMode, {
+        email: form.get('email'),
+        password: form.get('password'),
+      })
+      setUser(result.user)
+      setModal(null)
+      const next = pending.current
+      pending.current = null
+      try {
+        await refresh()
+      } catch (e) {
+        fail(e)
+      }
+      say(authMode === 'signup' ? 'Welcome to Charly’s studio.' : 'You’re signed in.')
+      next?.(result.user.email)
+    } catch (e) {
+      setAuthError(e instanceof Error ? e.message : 'Try again.')
+    } finally {
+      setWorking((w) => (w === 'auth' ? '' : w))
+    }
+  }
+  function openUpload(mode: 'layer' | 'brand' = 'layer') {
+    if (!user) {
+      requireMember(() => say('You’re signed in. Select Upload image to choose your artwork.'))
+      return
+    }
+    uploadMode.current = mode
+    fileInput.current?.click()
+  }
+  function addLogo() {
+    if (!user) {
+      requireMember(() => say('You’re signed in. Select Add my logo to open your brand kit.'))
+      return
+    }
+    if (user.logo) {
+      addLayer(fitLayer({ ...user.logo, id: uid() }, currentArea))
+      return
+    }
+    openUpload('brand')
+  }
+  async function ingest(file: File, mode: 'layer' | 'brand' = 'layer') {
+    setWorking('upload')
+    setProblem('')
+    try {
+      const l = await readArtwork(file, design, side)
+      if (mode === 'brand') {
+        await apiCall('logo', { logo: l })
+        setUser((u) => (u ? { ...u, logo: l } : u))
+        say('Logo saved to your brand kit.')
+      }
+      addLayer(l)
+    } catch (e) {
+      fail(e)
+    } finally {
+      setWorking('')
+    }
+  }
+  function onDrop(file?: File) {
+    if (!file) return
+    requireMember(() => {
+      void ingest(file)
+    })
+  }
+  async function perform(key: string, run: () => Promise<void>) {
+    setWorking(key)
+    setProblem('')
+    try {
+      await run()
+    } catch (e) {
+      fail(e, () => {
+        void perform(key, run)
+      })
+    } finally {
+      setWorking('')
+    }
+  }
+  function save() {
+    requireMember(() => {
+      void perform('draft', async () => {
+        const { id } = await apiCall('draft', { id: activeDraft, design })
+        setActiveDraft(id)
+        say('Draft saved.')
+        await refresh()
+      })
+    })
+  }
+  function putInCart() {
+    if (!totalOf(design)) {
+      setOrderForm(true)
+      setModal('cart-size')
+      return
+    }
+    requireMember(() => {
+      void perform('cart', async () => {
+        await apiCall('cart', { id: activeCart, design })
+        await refresh()
+        if (activeCart !== undefined) {
+          setActiveCart(undefined)
+          setView('cart')
+          say('Cart design updated.')
+        } else {
+          say('Added to cart. Keep designing!')
+          newDesign()
+        }
+      })
+    })
+  }
+  function order(fromCart = false) {
+    if (!fromCart && !totalOf(design)) {
+      say('Add at least one garment to send an order request.')
+      return
+    }
+    requireMember(() => {
+      void perform('order', async () => {
+        const result = await apiCall('order', { design, fromCart })
+        setOrderDesigns(result.designs)
+        setView('order')
+        setOrderForm(false)
+        setActiveCart(undefined)
+        if (fromCart) setCart([])
+        if (!result.cartCleared) say('Request sent. Some items may still appear in your cart.')
+        try {
+          await refresh()
+        } catch {
+          say('Request sent. Open My designs again to refresh your list.')
+        }
+      })
+    })
+  }
+  function newDesign() {
+    setDesign(emptyDesign())
+    setPast([])
+    setFuture([])
+    setActiveDraft(undefined)
+    setActiveCart(undefined)
+    setSide('Front')
+    setSelected('')
+    setOrderForm(false)
+    setProblem('')
+    setRestored(false)
+    setSample(false)
+    setEpoch((v) => v + 1)
+    go(0)
+  }
+  function openSaved(d: Saved, kind: 'draft' | 'cart') {
+    setDesign(d.design)
+    setPast([])
+    setFuture([])
+    setSide('Front')
+    setSelected('')
+    setActiveDraft(kind === 'draft' ? d.id : undefined)
+    setActiveCart(kind === 'cart' ? d.id : undefined)
+    setRestored(true)
+    setEpoch((v) => v + 1)
+    go(kind === 'draft' ? 2 : 3)
+  }
+  function restoreLegacy() {
+    try {
+      const old = JSON.parse(localStorage.getItem('thread-studio-draft') ?? 'null')
+      if (!old) {
+        say('No earlier browser draft found.')
+        return
+      }
+      const next = emptyDesign()
+      next.item = [0, 0, 1, 5][old.product] ?? 0
+      next.color = [3, 0, 2, 5, 6, 19, 10, 11, 13, 12, 17, 15][old.color] ?? 0
+      if (old.art && typeof old.text === 'string' && !old.image) {
+        const l = initialLayer(next, 'Front', 'text')
+        l.text = old.text.slice(0, 60)
+        l.rotation = clamp(Number(old.rotation) || 0, -180, 180)
+        l.w *= clamp(Number(old.size) || 100, 50, 140) / 100
+        next.layers.Front = [l]
+      }
+      if (old.art && typeof old.image === 'string') {
+        const l = initialLayer(next, 'Front', 'image')
+        l.src = old.image
+        l.name = 'Saved artwork'
+        next.layers.Front = [l]
+      }
+      const validated = readDesign(next)
+      if (!validated) throw new Error()
+      setDesign(validated)
+      setRestored(true)
+      go(2)
+    } catch {
+      say('This browser draft couldn’t be opened.')
+    }
+  }
+  async function download(s: Side) {
+    const svg = exportSvgs.current[s]
+    if (!svg) return
+    try {
+      const a = document.createElement('a')
+      a.href = await renderPng(svg)
+      a.download = `charlys-${s.toLowerCase().replaceAll(' ', '-')}.png`
+      a.click()
+      say(`${s} PNG downloaded.`)
+    } catch (e) {
+      fail(e)
+    }
+  }
+  function saveRoster() {
+    requireMember(() => {
+      void perform('roster', async () => {
+        await apiCall('roster', { quantities: design.quantities })
+        setUser((u) => (u ? { ...u, roster: design.quantities } : u))
+        say('Size set saved.')
+      })
+    })
+  }
+  function loadRoster() {
+    requireMember(() => {
+      void perform('roster', async () => {
+        const data = await apiCall()
+        const roster = data.user?.roster
+        if (roster) {
+          commit({ ...design, quantities: roster })
+          say('Loaded your size set.')
+        } else say('Save a size set to load it here next time.')
+      })
+    })
+  }
+  const quantities = (
+    <Quantities
+      design={design}
+      change={(i, n) =>
+        commit({ ...design, quantities: design.quantities.map((q, j) => (i === j ? n : q)) })
+      }
+      load={loadRoster}
+      save={saveRoster}
+    />
+  )
+  const shownTab = step === 2 ? tab : 'Item'
+  const errorBanner = problem && (
+    <Notice icon="warning" tone="error">
+      {problem}
+      <div className="flex flex-wrap gap-2">
+        {canRetry && <Button onClick={() => retry.current?.()}>Retry</Button>}
+        <Button onClick={() => setProblem('')}>Dismiss</Button>
+      </div>
+    </Notice>
+  )
+
+  return (
+    <div className="studio-app">
+      <a href="#studio-workspace" className="studio-skip">
+        Skip to studio
+      </a>
+      <header className="studio-header">
+        <div className="header-inner">
+          <a href="/" className="brand-link" aria-label="Charly's Corner Store home">
+            <span className="brand-mark">
+              <Dog className="size-8" />
+            </span>
+            <span>
+              <strong>CHARLY’S</strong>
+              <small>
+                CORNER STORE <i>·</i> TEES & APPAREL
+              </small>
+            </span>
+          </a>
+          <div className="header-label">
+            <span />
+            <span>MOCKUP STUDIO</span>
+          </div>
+          <div className="header-actions">
+            <Button
+              icon="bag"
+              className="header-button"
+              aria-label={`Cart, ${cart.length} designs`}
+              onClick={() => {
+                setView(view === 'cart' ? 'editor' : 'cart')
+                setSample(false)
+              }}
+            >
+              <span>Cart</span>
+              {cart.length > 0 && <b className="cart-badge">{cart.length}</b>}
+            </Button>
+            <Button
+              icon="user"
+              tone="secondary"
+              className="header-button"
+              aria-label={user ? 'My designs' : 'Sign in'}
+              onClick={() => {
+                if (user) {
+                  setView('library')
+                  return
+                }
+                requireMember(() => setView('library'))
+              }}
+            >
+              <span>{user ? 'My designs' : 'Sign in'}</span>
+            </Button>
+          </div>
+        </div>
+      </header>
+      <main className="studio-main" id="studio-workspace">
+        {view === 'editor' ? (
+          <>
+            <div className="studio-intro">
+              <Sunset />
+              <div className="intro-copy">
+                <div className="intro-kicker">
+                  <span /> THE CUSTOM APPAREL STUDIO <span />
+                </div>
+                <ChromeHeading text="Build-Your-Own Mockup" />
+                <p>Pick your blank. Make it yours. We’ll take it from there.</p>
+              </div>
+            </div>
+            <Stepper step={step} go={go} />
+            <div className="workspace-grid">
+              <StudioCanvas
+                key={epoch}
+                design={design}
+                side={side}
+                editing={step === 2}
+                selected={active?.id ?? ''}
+                onSelect={(id) => {
+                  setSelected(id)
+                  setTab('Layers')
+                }}
+                onMove={(id, patch) => moveLayer(id, patch, false)}
+                onBegin={() => {
+                  setPast((p) => [...p.slice(-39), design])
+                  setFuture([])
+                }}
+                nudge={(x, y) => {
+                  if (active)
+                    moveLayer(active.id, {
+                      x: clamp(active.x + x, 0, 100),
+                      y: clamp(active.y + y, 0, 100),
+                    })
+                }}
+                view={chooseSide}
+                setView={setOfSides}
+                undo={undo}
+                redo={redo}
+                canUndo={!!past.length}
+                canRedo={!!future.length}
+                add={() => tool('Add')}
+                fit={() =>
+                  commit({
+                    ...design,
+                    layers: {
+                      ...design.layers,
+                      [side]: layers.map((l) =>
+                        outside(l, currentArea) ? fitLayer(l, currentArea) : l,
+                      ),
+                    },
+                  })
+                }
+              />
+              <section
+                className="control-panel surface"
+                aria-label={`${['Garment', 'Colors', 'Design', 'Send'][step]} controls`}
+              >
+                <div className={step === 2 ? '' : 'mobile-tools'}>
+                  <Tools tab={shownTab} setTab={tool} />
+                </div>
+                <div
+                  className="panel-scroll"
+                  ref={bodyScroll}
+                  id="studio-panel"
+                  role={step === 2 ? 'tabpanel' : undefined}
+                  aria-labelledby={step === 2 ? `tool-tab-${tab}` : undefined}
+                >
+                  <PanelHeading step={step} tab={tab} />
+                  <div className="panel-content" key={`${step}-${tab}`}>
+                    {restored && (
+                      <Notice icon="check" tone="success">
+                        Loaded your saved design.{' '}
+                        <button className="text-cyan underline" onClick={() => setRestored(false)}>
+                          Dismiss
+                        </button>
+                      </Notice>
+                    )}
+                    {errorBanner}
+                    {step === 0 && <GarmentPicker value={design.item} onChange={changeItem} />}
+                    {step === 1 && (
+                      <ColorPicker
+                        design={design}
+                        change={(color) => commit({ ...design, color })}
+                      />
+                    )}
+                    {step === 2 && (
+                      <>
+                        {tab === 'Item' && (
+                          <>
+                            <DesignSummary design={design} />
+                            <MethodPicker
+                              design={design}
+                              change={(method) => commit({ ...design, method })}
+                            />
+                            <Notes
+                              design={design}
+                              change={(notes) => commit({ ...design, notes })}
+                            />
+                            <div className="flex flex-wrap gap-2">
+                              <Button tone="secondary" icon="shirt" onClick={() => go(0)}>
+                                Change garment
+                              </Button>
+                              <Button icon="palette" onClick={() => go(1)}>
+                                Change color
+                              </Button>
+                            </div>
+                          </>
+                        )}
+                        {tab === 'Side' && (
+                          <>
+                            <SidePicker
+                              design={design}
+                              side={side}
+                              choose={chooseSide}
+                              location={(value) =>
+                                commit({ ...design, areas: { ...design.areas, [side]: value } })
+                              }
+                            />
+                            <MethodPicker
+                              design={design}
+                              change={(method) => commit({ ...design, method })}
+                            />
+                          </>
+                        )}
+                        {tab === 'Add' && (
+                          <>
+                            <div
+                              className={`upload-box ${drop ? 'dragging' : ''}`}
+                              onDragOver={(e) => {
+                                e.preventDefault()
+                                setDrop(true)
+                              }}
+                              onDragLeave={() => setDrop(false)}
+                              onDrop={(e) => {
+                                e.preventDefault()
+                                setDrop(false)
+                                onDrop(e.dataTransfer.files[0])
+                              }}
+                            >
+                              <Button
+                                icon="upload"
+                                className="upload-action"
+                                onClick={() => openUpload()}
+                                disabled={working === 'upload' || layers.length >= 8}
+                              >
+                                {working === 'upload' ? 'Adding image…' : 'Upload image'}
+                              </Button>
+                              <p>Drop a PNG, JPG, SVG or WEBP here</p>
+                              <small>Transparent PNG works best · up to 10 MB</small>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <Button
+                                icon="type"
+                                tone="secondary"
+                                disabled={layers.length >= 8}
+                                onClick={() => addLayer(initialLayer(design, side, 'text'))}
+                              >
+                                Add text
+                              </Button>
+                              <Button
+                                tone="secondary"
+                                icon="image"
+                                onClick={addLogo}
+                                disabled={layers.length >= 8}
+                              >
+                                Add my logo
+                              </Button>
+                            </div>
+                            {!user && (
+                              <Notice>
+                                Sign in to upload artwork and save it to your brand kit.
+                              </Notice>
+                            )}
+                            {layers.length > 0 && (
+                              <Button icon="layers" onClick={() => setTab('Layers')}>
+                                Edit {layers.length === 1 ? 'layer' : `${layers.length} layers`}
+                              </Button>
+                            )}
+                            <MethodPicker
+                              design={design}
+                              change={(method) => commit({ ...design, method })}
+                            />
+                            <Notes
+                              design={design}
+                              change={(notes) => commit({ ...design, notes })}
+                            />
+                          </>
+                        )}
+                        {tab === 'Layers' && (
+                          <LayerControls
+                            design={design}
+                            side={side}
+                            selected={active?.id ?? ''}
+                            select={setSelected}
+                            update={(patch) => {
+                              if (active) moveLayer(active.id, patch)
+                            }}
+                            duplicate={() => {
+                              if (active)
+                                addLayer({
+                                  ...active,
+                                  id: uid(),
+                                  x: clamp(active.x + 2, 0, 100),
+                                  y: clamp(active.y + 2, 0, 100),
+                                })
+                            }}
+                            remove={removeLayer}
+                            reorder={reorder}
+                            add={() => setTab('Add')}
+                          />
+                        )}
+                      </>
+                    )}
+                    {step === 3 && (
+                      <>
+                        <DesignSummary design={design} />
+                        <div className="send-options">
+                          <button onClick={() => setModal('email')}>
+                            <span className="panel-icon">
+                              <Icon name="mail" />
+                            </span>
+                            <span>
+                              <strong>Email me this mockup</strong>
+                              <small>Keep a copy of your design.</small>
+                            </span>
+                            <Icon name="arrow" />
+                          </button>
+                          <button aria-expanded={orderForm} onClick={() => setOrderForm((v) => !v)}>
+                            <span className="panel-icon">
+                              <Icon name="order" />
+                            </span>
+                            <span>
+                              <strong>Order this design</strong>
+                              <small>Choose sizes and send a request.</small>
+                            </span>
+                            <Icon name={orderForm ? 'expand' : 'arrow'} />
+                          </button>
+                          {orderForm && (
+                            <div className="order-box">
+                              {quantities}
+                              <Notes
+                                design={design}
+                                change={(notes) => commit({ ...design, notes })}
+                              />
+                              <p className="field-help">
+                                We’ll confirm the price and send you a payment link. Nothing is
+                                charged now.
+                              </p>
+                              <Button
+                                tone="primary"
+                                icon="order"
+                                onClick={() => order()}
+                                disabled={!!working || !totalOf(design)}
+                              >
+                                Send order request
+                              </Button>
+                            </div>
+                          )}
+                          <button onClick={putInCart} disabled={!!working}>
+                            <span className="panel-icon">
+                              <Icon name="bag" />
+                            </span>
+                            <span>
+                              <strong>
+                                {activeCart !== undefined ? 'Update cart design' : 'Add to cart'}
+                              </strong>
+                              <small>Save this design and keep creating.</small>
+                            </span>
+                            <Icon name="arrow" />
+                          </button>
+                        </div>
+                        {!orderForm && (
+                          <Notes design={design} change={(notes) => commit({ ...design, notes })} />
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="panel-actions">
+                  {more && (
+                    <div className="more-menu">
+                      <Button
+                        icon="undo"
+                        onClick={() => {
+                          undo()
+                          setMore(false)
+                        }}
+                        disabled={!past.length}
+                      >
+                        Undo
+                      </Button>
+                      <Button
+                        icon="redo"
+                        onClick={() => {
+                          redo()
+                          setMore(false)
+                        }}
+                        disabled={!future.length}
+                      >
+                        Redo
+                      </Button>
+                      <Button
+                        icon="rotate"
+                        onClick={() => {
+                          setMore(false)
+                          setModal('reset')
+                        }}
+                      >
+                        Start over
+                      </Button>
+                    </div>
+                  )}
+                  <Button
+                    icon="back"
+                    className="back-action"
+                    onClick={() => go(step - 1)}
+                    disabled={step === 0}
+                  >
+                    Back
+                  </Button>
+                  <Button icon="save" className="save-action" onClick={save} disabled={!!working}>
+                    {working === 'draft' ? 'Saving…' : 'Save draft'}
+                  </Button>
+                  {step < 3 ? (
+                    <Button tone="primary" className="continue-action" onClick={() => go(step + 1)}>
+                      Continue <Icon name="arrow" />
+                    </Button>
+                  ) : (
+                    <Button
+                      tone="primary"
+                      className="continue-action"
+                      onClick={() => {
+                        if (orderForm && totalOf(design)) order()
+                        else setOrderForm(true)
+                      }}
+                      disabled={!!working}
+                    >
+                      {orderForm && totalOf(design) ? 'Send request' : 'Continue'}{' '}
+                      <Icon name="arrow" />
+                    </Button>
+                  )}
+                  <Button
+                    icon="more"
+                    aria-label="More options"
+                    aria-expanded={more}
+                    className="more-action"
+                    onClick={() => setMore(!more)}
+                  />
+                </div>
+              </section>
+            </div>
+            <div className="workspace-meta">
+              <span>
+                <Icon name="info" /> Studio preview · Garment colors may vary slightly.
+              </span>
+              <span>
+                <span
+                  className="meta-swatch"
+                  style={{ backgroundColor: colorsFor(design.item)[design.color][1] }}
+                />
+                {garments[design.item][0]} <i /> {colorsFor(design.item)[design.color][0]}
+              </span>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="studio-intro result-intro">
+              <Sunset />
+              <div className="intro-copy">
+                <div className="intro-kicker">
+                  <span /> CHARLY’S MOCKUP STUDIO <span />
+                </div>
+                <ChromeHeading
+                  text={
+                    view === 'cart'
+                      ? 'Your cart'
+                      : view === 'library'
+                        ? 'My designs'
+                        : view === 'order'
+                          ? 'Order request sent!'
+                          : 'Your mockup is ready!'
+                  }
+                />
+                <p>
+                  {view === 'cart'
+                    ? 'Review your designs and send one request for everything.'
+                    : view === 'library'
+                      ? 'Pick up where you left off.'
+                      : view === 'order'
+                        ? 'We’ll email you the price.'
+                        : 'Take your designs with you, one side at a time.'}
+                </p>
+              </div>
+            </div>
+            <section className="surface result-panel">
+              {sample && <Notice>Example screen · No email or order request was sent.</Notice>}
+              {errorBanner}
+              {view === 'cart' && (
+                <>
+                  {cart.length ? (
+                    <>
+                      <div className="section-label">
+                        <span>DESIGNS IN YOUR CART</span>
+                        <span className="mono">
+                          {cart.length} DESIGNS / {cart.reduce((n, d) => n + totalOf(d.design), 0)}{' '}
+                          TOTAL
+                        </span>
+                      </div>
+                      {cart.map((item) => (
+                        <div key={item.id} className="saved-card">
+                          <DesignSummary design={item.design} />
+                          <div>
+                            <Button onClick={() => openSaved(item, 'cart')}>Edit</Button>
+                            <Button
+                              icon="copy"
+                              onClick={() => {
+                                if (sample) {
+                                  setCart((c) => [...c, { ...item, id: uid() }])
+                                  return
+                                }
+                                void perform('cart', async () => {
+                                  await apiCall('cart', { design: item.design })
+                                  await refresh()
+                                  say('Design duplicated.')
+                                })
+                              }}
+                            >
+                              Duplicate
+                            </Button>
+                            <Button
+                              icon="trash"
+                              onClick={() => {
+                                if (sample) {
+                                  setCart((c) => c.filter((d) => d.id !== item.id))
+                                  return
+                                }
+                                setDeleteId(item.id)
+                                setModal('remove')
+                              }}
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                      <p className="field-help">
+                        We’ll confirm the price and send you a payment link. Nothing is charged now.
+                      </p>
+                      <Button
+                        tone="primary"
+                        icon="order"
+                        disabled={!!working || sample}
+                        onClick={() => order(true)}
+                      >
+                        Send order request
+                      </Button>
+                    </>
+                  ) : (
+                    <div className="studio-empty">
+                      <span className="panel-icon">
+                        <Icon name="bag" />
+                      </span>
+                      <h2>Your cart is empty</h2>
+                      <p>Design something you’d love to wear, then add it to your cart.</p>
+                      <Button tone="primary" onClick={() => setView('editor')}>
+                        Back to studio
+                      </Button>
+                    </div>
+                  )}
+                  {cart.length > 0 && (
+                    <Button
+                      icon="back"
+                      onClick={() => {
+                        setSample(false)
+                        setView('editor')
+                      }}
+                    >
+                      Keep designing
+                    </Button>
+                  )}
+                </>
+              )}
+              {view === 'library' && (
+                <>
+                  {!ready ? (
+                    <div className="skeleton-row" aria-label="Loading your designs" />
+                  ) : (
+                    <>
+                      <div className="section-label">
+                        <span>SAVED DRAFTS</span>
+                        <span className="mono">{drafts.length} / 10</span>
+                      </div>
+                      {drafts.length ? (
+                        drafts.map((d) => (
+                          <div key={d.id} className="saved-card">
+                            <DesignSummary design={d.design} />
+                            <div>
+                              <Button tone="secondary" onClick={() => openSaved(d, 'draft')}>
+                                Open draft
+                              </Button>
+                              <Button
+                                icon="trash"
+                                onClick={() => {
+                                  setDeleteId(d.id)
+                                  setModal('remove')
+                                }}
+                              >
+                                Remove
+                              </Button>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <Notice>
+                          No drafts saved yet. Save a design to come back to it later.
+                        </Notice>
+                      )}
+                      {orders.length > 0 && (
+                        <>
+                          <div className="section-label">ORDER REQUESTS</div>
+                          {orders.map((o) => (
+                            <div key={o.id}>
+                              {o.designs.map((d, i) => (
+                                <DesignSummary key={i} design={d} />
+                              ))}
+                            </div>
+                          ))}
+                        </>
+                      )}
+                      <div className="flex flex-wrap gap-2">
+                        <Button tone="primary" onClick={() => setView('editor')}>
+                          Back to studio
+                        </Button>
+                        <Button onClick={restoreLegacy}>Open earlier browser draft</Button>
+                        <Button
+                          onClick={() => {
+                            void perform('logout', async () => {
+                              await apiCall('logout')
+                              await refresh()
+                              setView('editor')
+                              say('You’re signed out.')
+                            })
+                          }}
+                        >
+                          Sign out
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+              {view === 'order' && (
+                <>
+                  <div className="result-celebrate">
+                    <Dog className="size-20" />
+                    <span className="panel-icon">
+                      <Icon name="check" />
+                    </span>
+                  </div>
+                  {orderDesigns.map((d, i) => (
+                    <DesignSummary key={i} design={d} />
+                  ))}
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      tone="primary"
+                      icon="user"
+                      onClick={() => {
+                        setView('library')
+                        setSample(false)
+                      }}
+                    >
+                      View in My designs
+                    </Button>
+                    <Button tone="secondary" icon="plus" onClick={newDesign}>
+                      Design another
+                    </Button>
+                  </div>
+                  <CharlyLine />
+                </>
+              )}
+              {view === 'email' && (
+                <>
+                  <div className="result-celebrate">
+                    <Dog className="size-20" />
+                    <Icon name="spark" />
+                  </div>
+                  <div className="export-grid">
+                    {exportSides.map((s) => (
+                      <div key={s} className="export-card">
+                        <div>
+                          <RenderDesign design={design} side={s} />
+                        </div>
+                        <Button
+                          icon="download"
+                          onClick={() => {
+                            void download(s)
+                          }}
+                        >
+                          Download {s} PNG
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      tone="primary"
+                      onClick={() => {
+                        setSample(false)
+                        go(3)
+                        setOrderForm(true)
+                      }}
+                    >
+                      Order this design <Icon name="arrow" />
+                    </Button>
+                    <Button tone="secondary" icon="plus" onClick={newDesign}>
+                      Design another
+                    </Button>
+                  </div>
+                  <CharlyLine />
+                </>
+              )}
+            </section>
+          </>
+        )}
+      </main>
+      <footer className="studio-footer">
+        <div>
+          <span>
+            <Icon name="pin" /> Port St. Lucie, Florida
+          </span>
+          <CharlyLine />
+          <span>
+            <a href="/components">Component sheet</a>
+            <Button icon="help" onClick={() => setModal('help')}>
+              Need help?
+            </Button>
+          </span>
+        </div>
+      </footer>
+      <div className="sr-only" aria-hidden="true">
+        {exportSides.map((s) => (
+          <RenderDesign
+            key={s}
+            design={design}
+            side={s}
+            svgRef={(svg) => {
+              if (svg) exportSvgs.current[s] = svg
+            }}
+          />
+        ))}
+      </div>
+      <input
+        type="file"
+        ref={fileInput}
+        accept="image/png,image/jpeg,image/svg+xml,image/webp"
+        hidden
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          e.target.value = ''
+          if (file) void ingest(file, uploadMode.current)
+        }}
+      />
+      {notice && (
+        <div className="studio-toast" role="status">
+          <Icon name="check" />
+          {notice}
+          <Button icon="close" aria-label="Dismiss notification" onClick={() => setNotice('')} />
+        </div>
+      )}
+      {modal === 'auth' && (
+        <Dialog
+          title="Sign in to keep creating"
+          close={() => {
+            setModal(null)
+            pending.current = null
+          }}
+        >
+          <p>Save drafts, upload artwork and keep your designs together.</p>
+          <div className="auth-tabs">
+            <Button
+              tone={authMode === 'login' ? 'secondary' : 'ghost'}
+              aria-pressed={authMode === 'login'}
+              onClick={() => {
+                setAuthMode('login')
+                setAuthError('')
+              }}
+            >
+              Log in
+            </Button>
+            <Button
+              tone={authMode === 'signup' ? 'secondary' : 'ghost'}
+              aria-pressed={authMode === 'signup'}
+              onClick={() => {
+                setAuthMode('signup')
+                setAuthError('')
+              }}
+            >
+              Sign up
+            </Button>
+          </div>
+          {authError && (
+            <Notice tone="error" icon="warning">
+              {authError}
+            </Notice>
+          )}
+          {!ready ? (
+            <div className="skeleton-row" aria-label="Loading sign in" />
+          ) : (
+            <form className="tool-stack" onSubmit={authenticate}>
+              <label className="field-title">
+                Email
+                <input type="email" name="email" autoComplete="email" maxLength={254} required />
+              </label>
+              <label className="field-title">
+                Password
+                <input
+                  type="password"
+                  name="password"
+                  minLength={authMode === 'signup' ? 10 : 1}
+                  maxLength={128}
+                  autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'}
+                  required
+                />
+              </label>
+              <Button tone="primary" type="submit" disabled={working === 'auth'}>
+                {working === 'auth'
+                  ? 'One moment…'
+                  : authMode === 'signup'
+                    ? 'Create account'
+                    : 'Log in'}{' '}
+                <Icon name="arrow" />
+              </Button>
+            </form>
+          )}
+          <Button tone="secondary" disabled>
+            Continue with Google
+          </Button>
+          <small className="field-help">Google sign-in isn’t configured.</small>
+        </Dialog>
+      )}
+      {modal === 'verify' && (
+        <Dialog title="Verify your email" close={() => setModal(null)}>
+          <Notice icon="mail">
+            Check your inbox for the verification link, then come back to your design.
+          </Notice>
+          <p className="field-help">Example state · Email verification isn’t enabled.</p>
+          <Button tone="secondary" onClick={() => setModal('auth')}>
+            Back to sign in
+          </Button>
+        </Dialog>
+      )}
+      {modal === 'reset' && (
+        <Dialog title="Start over?" close={() => setModal(null)}>
+          <p>Your current unsaved changes will be lost. Drafts and cart designs will stay saved.</p>
+          <div className="flex flex-wrap gap-2">
+            <Button tone="secondary" onClick={() => setModal(null)}>
+              Keep designing
+            </Button>
+            <Button
+              tone="primary"
+              onClick={() => {
+                setModal(null)
+                newDesign()
+              }}
+            >
+              Start over
+            </Button>
+          </div>
+        </Dialog>
+      )}
+      {modal === 'remove' && (
+        <Dialog title="Remove this design?" close={() => setModal(null)}>
+          <p>This removes the saved copy. It does not change any order requests already sent.</p>
+          <div className="flex gap-2">
+            <Button tone="secondary" onClick={() => setModal(null)}>
+              Cancel
+            </Button>
+            <Button
+              tone="primary"
+              onClick={() => {
+                const id = deleteId
+                setModal(null)
+                void perform('remove', async () => {
+                  await apiCall('remove', { id })
+                  if (id === activeDraft) setActiveDraft(undefined)
+                  if (id === activeCart) setActiveCart(undefined)
+                  await refresh()
+                  say('Design removed.')
+                })
+              }}
+            >
+              Remove
+            </Button>
+          </div>
+        </Dialog>
+      )}
+      {modal === 'cart-size' && (
+        <Dialog title="Choose sizes for the cart" close={() => setModal(null)}>
+          {quantities}
+          <Button
+            tone="primary"
+            icon="bag"
+            disabled={!totalOf(design)}
+            onClick={() => {
+              setModal(null)
+              putInCart()
+            }}
+          >
+            Add to cart
+          </Button>
+        </Dialog>
+      )}
+      {modal === 'email' && (
+        <Dialog title="Email me this mockup" close={() => setModal(null)}>
+          <p>Sound good? Pay for an order once and we’ll email you 15% off your next one.</p>
+          <label className="check-label">
+            <input
+              type="checkbox"
+              checked={marketing}
+              onChange={(e) => setMarketing(e.target.checked)}
+            />{' '}
+            Email me occasional deals and updates from Charly’s.
+          </label>
+          <Notice icon="mail">
+            Email delivery isn’t configured. You can still download every side as a PNG.
+          </Notice>
+          <Button
+            tone="primary"
+            icon="download"
+            onClick={() => {
+              setModal(null)
+              setView('email')
+              setSample(false)
+            }}
+          >
+            View PNG downloads
+          </Button>
+        </Dialog>
+      )}
+      {modal === 'help' && (
+        <Dialog title="Make it yours" close={() => setModal(null)}>
+          <p>
+            Choose a garment and color, then add artwork or text. Use Side to choose your placement
+            and Layers to make it fit.
+          </p>
+          <p>
+            On the canvas, use the arrow keys to nudge artwork. Open Send when you’re ready to
+            download, order, or add your design to the cart.
+          </p>
+          <CharlyLine />
+          <Button tone="primary" onClick={() => setModal(null)}>
+            Back to studio
+          </Button>
+        </Dialog>
+      )}
+    </div>
+  )
+}

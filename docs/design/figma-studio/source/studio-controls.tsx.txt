@@ -1,0 +1,736 @@
+import type { ReactNode } from 'react'
+import {
+  areasFor,
+  clamp,
+  colorsFor,
+  fitLayer,
+  fonts,
+  garments,
+  getArea,
+  inks,
+  markedSides,
+  methodReason,
+  methods,
+  outside,
+  sizes,
+  sidesFor,
+  totalOf,
+  type Design,
+  type Layer,
+  type Side,
+} from './studio-model'
+import { photo, RenderDesign } from './studio-canvas'
+import { Button, Dog, Icon } from './studio-ui'
+
+export const steps = ['Garment', 'Colors', 'Design', 'Send']
+export function Stepper({ step, go }: { step: number; go: (n: number) => void }) {
+  return (
+    <nav className="stepper" aria-label="Design progress">
+      <div className="stepper-row">
+        {steps.map((s, i) => (
+          <button
+            key={s}
+            onClick={() => go(i)}
+            aria-label={`${i + 1}. ${s}${i < step ? ', previous step' : ''}`}
+            aria-current={i === step ? 'step' : undefined}
+            className={`step-item ${i === step ? 'current' : ''} ${i < step ? 'complete' : ''}`}
+          >
+            <span className="step-number">
+              <b>{String(i + 1).padStart(2, '0')}</b>
+              {i < step && <Icon name="check" />}
+            </span>
+            <span className="step-name">{s}</span>
+          </button>
+        ))}
+        <span className="step-count">Step {step + 1} of 4</span>
+      </div>
+      <div
+        className="progress-track"
+        role="progressbar"
+        aria-label="Design progress"
+        aria-valuemin={0}
+        aria-valuemax={4}
+        aria-valuenow={step + 1}
+      >
+        <span style={{ width: `${(step + 1) * 25}%` }} />
+      </div>
+    </nav>
+  )
+}
+export const toolTabs = [
+  ['Item', 'shirt'],
+  ['Add', 'plus'],
+  ['Side', 'eye'],
+  ['Layers', 'layers'],
+]
+export function Tools({ tab, setTab }: { tab: string; setTab: (s: string) => void }) {
+  return (
+    <div className="tool-tabs" role="tablist" aria-label="Design tools">
+      {toolTabs.map(([label, icon], i) => (
+        <button
+          key={label}
+          id={`tool-tab-${label}`}
+          role="tab"
+          aria-controls="studio-panel"
+          aria-selected={tab === label}
+          tabIndex={tab === label ? 0 : -1}
+          onClick={() => setTab(label)}
+          onKeyDown={(e) => {
+            const delta = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0
+            if (delta || e.key === 'Home' || e.key === 'End') {
+              e.preventDefault()
+              const next =
+                toolTabs[e.key === 'Home' ? 0 : e.key === 'End' ? 3 : (i + delta + 4) % 4][0]
+              setTab(next)
+              document.getElementById(`tool-tab-${next}`)?.focus()
+            }
+          }}
+        >
+          <Icon name={icon} />
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
+export function Notice({
+  icon = 'info',
+  tone = '',
+  children,
+}: {
+  icon?: string
+  tone?: string
+  children: ReactNode
+}) {
+  return (
+    <div className={`studio-notice ${tone}`} role={tone === 'error' ? 'alert' : undefined}>
+      <Icon name={icon} />
+      <div>{children}</div>
+    </div>
+  )
+}
+export function PanelHeading({ step, tab }: { step: number; tab: string }) {
+  const info =
+    step === 0
+      ? ['shirt', 'Pick your garment', 'Start with the blank that fits your idea.']
+      : step === 1
+        ? ['palette', 'Choose your colors', 'Pick a shade your garment actually comes in.']
+        : step === 3
+          ? ['mail', 'Send it your way', 'Take your mockup with you, or let us bring it to life.']
+          : tab === 'Layers'
+            ? ['layers', 'Fine-tune your design', 'Select a layer to adjust how it prints.']
+            : tab === 'Side'
+              ? ['eye', 'Choose a print side', 'Add artwork to one side or make it all yours.']
+              : tab === 'Item'
+                ? ['shirt', 'Your garment', 'Review the blank and the print method.']
+                : ['plus', 'Add your design', 'Upload art, add text, or start with your logo.']
+  return (
+    <div className="panel-heading">
+      <span className="panel-icon">
+        <Icon name={info[0]} />
+      </span>
+      <div>
+        <div className="panel-eyebrow">
+          STEP {String(step + 1).padStart(2, '0')} / {steps[step].toUpperCase()}
+        </div>
+        <h2>{info[1]}</h2>
+        <p>{info[2]}</p>
+      </div>
+    </div>
+  )
+}
+export function GarmentPicker({
+  value,
+  onChange,
+}: {
+  value: number
+  onChange: (value: number) => void
+}) {
+  return (
+    <>
+      <div className="section-label">
+        <span>GARMENT STYLES</span>
+        <span className="mono">09 OPTIONS</span>
+      </div>
+      <div className="garment-grid">
+        {garments.map(([name, description, material], i) => (
+          <button
+            key={name}
+            className="garment-card"
+            aria-pressed={i === value}
+            onClick={() => onChange(i)}
+          >
+            <div className="garment-thumb">
+              <svg viewBox="0 0 100 71" aria-hidden="true">
+                <image href={photo(i)} x="10" y="3" width="80" height="65" />
+              </svg>
+              {i === value && (
+                <span className="picked-check">
+                  <Icon name="check" />
+                </span>
+              )}
+            </div>
+            <div className="garment-copy">
+              <strong>{name}</strong>
+              <small>{description}</small>
+              {material === 'poly' && <span className="poly-tag">Performance polyester</span>}
+            </div>
+          </button>
+        ))}
+      </div>
+      <Notice>Have your own garment or a different brand in mind? Tell us in the notes.</Notice>
+    </>
+  )
+}
+export function ColorPicker({
+  design,
+  change,
+}: {
+  design: Design
+  change: (color: number) => void
+}) {
+  const options = colorsFor(design.item)
+  const combo = design.item === 4 || design.item === 6
+  return (
+    <>
+      <div className="section-label">
+        <span>
+          {design.item === 4
+            ? 'BODY / SLEEVES'
+            : design.item === 6
+              ? 'FRONT / MESH / VISOR'
+              : 'GARMENT COLOR'}
+        </span>
+        <span className="mono">
+          {options.length} {combo ? 'COMBOS' : 'COLORS'}
+        </span>
+      </div>
+      <div className="selected-color">
+        <span className="live-dot" />
+        {options[design.color][0]}
+      </div>
+      <div className="swatches" role="radiogroup" aria-label="Garment colors">
+        {options.map(([name, hex, trim, visor], i) => (
+          <button
+            key={name}
+            type="button"
+            data-swatch={i}
+            role="radio"
+            aria-checked={i === design.color}
+            title={name}
+            aria-label={name}
+            tabIndex={i === design.color ? 0 : -1}
+            style={{
+              background: visor
+                ? `linear-gradient(120deg,${hex} 0 35%,${trim} 35% 68%,${visor} 68%)`
+                : trim
+                  ? `linear-gradient(125deg,${hex} 50%,${trim} 50%)`
+                  : hex,
+            }}
+            onClick={() => change(i)}
+            onKeyDown={(e) => {
+              const delta = ['ArrowRight', 'ArrowDown'].includes(e.key)
+                ? 1
+                : ['ArrowLeft', 'ArrowUp'].includes(e.key)
+                  ? -1
+                  : 0
+              if (!delta && e.key !== 'Home' && e.key !== 'End') return
+              e.preventDefault()
+              const index =
+                e.key === 'Home'
+                  ? 0
+                  : e.key === 'End'
+                    ? options.length - 1
+                    : (i + delta + options.length) % options.length
+              change(index)
+              const target = e.currentTarget.parentElement?.querySelector<HTMLButtonElement>(
+                `[data-swatch="${index}"]`,
+              )
+              target?.focus()
+              target?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+            }}
+          >
+            {i === design.color && (
+              <span className="picked-check">
+                <Icon name="check" />
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+      <Notice>
+        {combo
+          ? 'These color zones come together as a fixed combination.'
+          : 'Screen colors are a close preview. We’ll confirm your garment color before printing.'}
+      </Notice>
+    </>
+  )
+}
+export function MethodPicker({ design, change }: { design: Design; change: (n: number) => void }) {
+  return (
+    <fieldset className="method-picker">
+      <legend className="field-title">
+        Print method <span>(whole garment)</span>
+      </legend>
+      <details className="method-details">
+        <summary>
+          {methods[design.method]}
+          <Icon name="expand" />
+        </summary>
+        <div className="method-options">
+          {methods.map((label, i) => {
+            const reason = methodReason(design, i)
+            return (
+              <label key={label} className="method-row">
+                <input
+                  type="radio"
+                  name="print-method"
+                  checked={design.method === i}
+                  disabled={!!reason}
+                  onChange={() => change(i)}
+                />
+                <span>
+                  {label}
+                  {reason && (
+                    <small>
+                      <Icon name="lock" />
+                      {reason}
+                    </small>
+                  )}
+                </span>
+              </label>
+            )
+          })}
+        </div>
+      </details>
+      <p className="field-help">We’ll recommend what suits your artwork, garment and quantity.</p>
+    </fieldset>
+  )
+}
+export function SidePicker({
+  design,
+  side,
+  choose,
+  location,
+}: {
+  design: Design
+  side: Side
+  choose: (s: Side) => void
+  location: (n: number) => void
+}) {
+  return (
+    <>
+      <div className="section-label">CHOOSE A SIDE</div>
+      <div className="side-grid">
+        {sidesFor(design.item).map((s) => (
+          <button
+            key={s}
+            aria-pressed={s === side}
+            aria-label={`${s}${design.layers[s]?.length ? ', has artwork' : ''}`}
+            onClick={() => choose(s)}
+            className="side-card"
+          >
+            <div>
+              <RenderDesign design={design} side={s} />
+            </div>
+            <span>
+              {s}
+              {!!design.layers[s]?.length && <i className="live-dot" />}
+            </span>
+          </button>
+        ))}
+      </div>
+      <div className="section-label">PRINT LOCATION</div>
+      <div className="chips">
+        {areasFor(design.item, side).map((a, i) => (
+          <button
+            key={a.label}
+            aria-pressed={(design.areas[side] ?? 0) === i}
+            onClick={() => location(i)}
+          >
+            {a.label}
+            <span className="mono">
+              {a.w}″×{a.h}″
+            </span>
+          </button>
+        ))}
+      </div>
+    </>
+  )
+}
+export function LayerControls({
+  design,
+  side,
+  selected,
+  select,
+  update,
+  duplicate,
+  remove,
+  reorder,
+  add,
+}: {
+  design: Design
+  side: Side
+  selected: string
+  select: (id: string) => void
+  update: (p: Partial<Layer>) => void
+  duplicate: () => void
+  remove: () => void
+  reorder: (id: string, delta: number) => void
+  add: () => void
+}) {
+  const layers = design.layers[side] ?? [],
+    layer = layers.find((l) => l.id === selected),
+    area = getArea(design, side)
+  const w = layer ? (layer.w / area.width) * area.w : 0,
+    h = layer ? (layer.h / area.height) * area.h : 0
+  const dpi =
+    layer && layer.kind === 'image'
+      ? Math.floor(Math.min(layer.pixels / w, layer.pixelHeight / h))
+      : 0
+  const actions = [
+    ['center', 'Center', () => update({ x: area.x + area.width / 2, y: area.y + area.height / 2 })],
+    ['fit', 'Fit', () => layer && update(fitLayer(layer, area))],
+    ['flip', 'Flip', () => layer && update({ flip: !layer.flip })],
+    ['copy', 'Duplicate', duplicate],
+    ['trash', 'Delete', remove],
+  ] as const
+  function measure(value: number, axis: 'w' | 'h') {
+    if (!layer) return
+    const n = clamp(value, 0.1, 48) * (axis === 'w' ? area.width / area.w : area.height / area.h)
+    if (axis === 'w')
+      update({ w: n, ...(layer.lock ? { h: clamp((layer.h * n) / layer.w, 0.01, 160) } : {}) })
+    else update({ h: n, ...(layer.lock ? { w: clamp((layer.w * n) / layer.h, 0.01, 160) } : {}) })
+  }
+  if (!layers.length)
+    return (
+      <div className="studio-empty">
+        <span className="panel-icon">
+          <Icon name="layers" />
+        </span>
+        <h3>No layers on this side</h3>
+        <p>Add an image or text to start your design.</p>
+        <Button tone="secondary" icon="plus" onClick={add}>
+          Add a layer
+        </Button>
+      </div>
+    )
+  return (
+    <>
+      <div className="section-label">
+        <span>{side.toUpperCase()} LAYERS</span>
+        <span className="mono">{layers.length} / 8</span>
+      </div>
+      {layers.length >= 2 && (
+        <ul className="layer-list">
+          {layers.map((l, i) => (
+            <li key={l.id} className={selected === l.id ? 'selected' : ''}>
+              <Button
+                aria-pressed={selected === l.id}
+                icon={l.kind === 'text' ? 'type' : 'image'}
+                onClick={() => select(l.id)}
+              >
+                {l.kind === 'text' ? l.text || 'Text' : l.name}
+              </Button>
+              <Button
+                icon="up"
+                onClick={() => reorder(l.id, -1)}
+                aria-label={`Move ${l.name} up`}
+                disabled={i === 0}
+              />
+              <Button
+                icon="down"
+                onClick={() => reorder(l.id, 1)}
+                aria-label={`Move ${l.name} down`}
+                disabled={i === layers.length - 1}
+              />
+            </li>
+          ))}
+        </ul>
+      )}
+      {layer && (
+        <>
+          {layer.kind === 'text' && (
+            <div className="tool-stack">
+              <label className="field-title">
+                Text{' '}
+                <input
+                  value={layer.text}
+                  maxLength={60}
+                  onChange={(e) => update({ text: e.target.value })}
+                />
+                <small className="field-help mono">{layer.text.length} / 60</small>
+              </label>
+              <label className="field-title">
+                Font{' '}
+                <select value={layer.font} onChange={(e) => update({ font: +e.target.value })}>
+                  {fonts.map((f, i) => (
+                    <option key={f} value={i}>
+                      {f}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="field-title">
+                Ink color
+                <div className="ink-swatches">
+                  {inks.map((c) => (
+                    <button
+                      key={c}
+                      aria-label={`Ink ${c}`}
+                      aria-pressed={layer.ink === c}
+                      style={{ backgroundColor: c }}
+                      onClick={() => update({ ink: c })}
+                    >
+                      {layer.ink === c && (
+                        <span className="picked-check">
+                          <Icon name="check" />
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                  <label title="Custom color">
+                    <input
+                      aria-label="Custom color"
+                      type="color"
+                      value={layer.ink}
+                      onChange={(e) => update({ ink: e.target.value })}
+                    />
+                  </label>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <label className="field-title">
+                  Outline{' '}
+                  <input
+                    type="color"
+                    value={layer.outline}
+                    onChange={(e) => update({ outline: e.target.value })}
+                  />
+                </label>
+                <label className="field-title flex-1">
+                  Outline width
+                  <input
+                    type="range"
+                    min="0"
+                    max="10"
+                    value={layer.stroke}
+                    onChange={(e) => update({ stroke: +e.target.value })}
+                  />
+                </label>
+              </div>
+              <label className="field-title">
+                Arch <span>Rainbow ↔ Smile</span>
+                <input
+                  type="range"
+                  min="-100"
+                  max="100"
+                  value={layer.arch}
+                  onChange={(e) => update({ arch: +e.target.value })}
+                />
+              </label>
+              <label className="field-title">
+                Letter spacing
+                <input
+                  type="range"
+                  min="0"
+                  max="12"
+                  value={layer.spacing}
+                  onChange={(e) => update({ spacing: +e.target.value })}
+                />
+              </label>
+            </div>
+          )}
+          <div className="layer-actions">
+            {actions.map(([icon, label, fn]) => (
+              <Button
+                key={label}
+                icon={icon}
+                onClick={fn}
+                disabled={label === 'Duplicate' && layers.length >= 8}
+              >
+                {label}
+              </Button>
+            ))}
+          </div>
+          <div className="tool-stack">
+            <div className="field-help">
+              Printed size: about{' '}
+              <b className="mono">
+                {w.toFixed(1)}″ × {h.toFixed(1)}″
+              </b>
+            </div>
+            <div className="flex items-end gap-2">
+              <label className="field-title min-w-0 flex-1">
+                Width (in)
+                <input
+                  type="number"
+                  min=".1"
+                  max="48"
+                  step=".1"
+                  value={+w.toFixed(1)}
+                  onChange={(e) => measure(+e.target.value, 'w')}
+                />
+              </label>
+              <label className="field-title min-w-0 flex-1">
+                Height (in)
+                <input
+                  type="number"
+                  min=".1"
+                  max="48"
+                  step=".1"
+                  value={+h.toFixed(1)}
+                  onChange={(e) => measure(+e.target.value, 'h')}
+                />
+              </label>
+              <Button
+                icon="lock"
+                aria-label="Lock aspect ratio"
+                aria-pressed={layer.lock}
+                onClick={() => update({ lock: !layer.lock })}
+              />
+            </div>
+            <label className="field-title">
+              Rotate <span className="mono">{layer.rotation}°</span>
+              <input
+                type="range"
+                min="-180"
+                max="180"
+                step="15"
+                value={layer.rotation}
+                onChange={(e) => update({ rotation: +e.target.value })}
+              />
+            </label>
+            <div className="flex items-center justify-between gap-2">
+              <span className="field-title">Nudge</span>
+              <div className="nudge">
+                {[
+                  ['up', 0, -1],
+                  ['back', -1, 0],
+                  ['arrow', 1, 0],
+                  ['down', 0, 1],
+                ].map(([icon, x, y], i) => (
+                  <Button
+                    key={icon}
+                    icon={String(icon)}
+                    aria-label={`Nudge ${['up', 'left', 'right', 'down'][i]}`}
+                    onClick={() =>
+                      update({
+                        x: clamp(layer.x + Number(x), 0, 100),
+                        y: clamp(layer.y + Number(y), 0, 100),
+                      })
+                    }
+                  />
+                ))}
+              </div>
+            </div>
+            {layer.kind === 'image' && dpi < 150 && (
+              <Notice icon="warning" tone="warning">
+                Low resolution: about <b className="mono">{dpi} DPI</b>. Use a larger image or
+                reduce the print size to reach 150 DPI.
+              </Notice>
+            )}
+            {outside(layer, area) && (
+              <Notice icon="warning" tone="warning">
+                Artwork outside the guide won’t print.{' '}
+                <button
+                  className="text-cyan underline"
+                  onClick={() => update(fitLayer(layer, area))}
+                >
+                  Fit to area
+                </button>
+              </Notice>
+            )}
+          </div>
+        </>
+      )}
+    </>
+  )
+}
+export function Notes({ design, change }: { design: Design; change: (value: string) => void }) {
+  return (
+    <label className="field-title">
+      Notes for Charly’s <span>(optional)</span>
+      <textarea
+        rows={3}
+        maxLength={2000}
+        value={design.notes}
+        onChange={(e) => change(e.target.value)}
+        placeholder="Different brand, your own garment, placement details…"
+      />
+      <small className="field-help mono">{design.notes.length} / 2000</small>
+    </label>
+  )
+}
+export function Quantities({
+  design,
+  change,
+  load,
+  save,
+}: {
+  design: Design
+  change: (i: number, n: number) => void
+  load: () => void
+  save: () => void
+}) {
+  return (
+    <>
+      <div className="section-label">
+        <span>SIZES & QUANTITIES</span>
+        <span className="mono text-cyan">{totalOf(design)} TOTAL</span>
+      </div>
+      <div className="size-grid">
+        {sizes.map(
+          (size, i) =>
+            (design.item === 6 ? i === 9 : i < 9) && (
+              <label className="field-title" key={size}>
+                {size}
+                <input
+                  type="number"
+                  min="0"
+                  max="999"
+                  value={design.quantities[i] || ''}
+                  placeholder="0"
+                  onChange={(e) => change(i, clamp(Math.floor(+e.target.value), 0, 999))}
+                />
+              </label>
+            ),
+        )}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button onClick={load} tone="secondary">
+          Load size set / roster
+        </Button>
+        <Button onClick={save}>Save size set</Button>
+      </div>
+    </>
+  )
+}
+export function DesignSummary({ design }: { design: Design }) {
+  const sideList = markedSides(design)
+  return (
+    <div className="summary-card">
+      <div className="summary-thumb">
+        <RenderDesign design={design} side={sideList[0] ?? 'Front'} />
+      </div>
+      <div>
+        <strong>{garments[design.item][0]}</strong>
+        <p>
+          {colorsFor(design.item)[design.color][0]} · {methods[design.method]}
+        </p>
+        <p>
+          {sideList.length ? sideList.join(', ') : 'No artwork'} ·{' '}
+          <span className="mono">{totalOf(design)} total</span>
+        </p>
+      </div>
+    </div>
+  )
+}
+export function CharlyLine() {
+  return (
+    <div className="charly-line">
+      <Dog className="size-8 shrink-0" />
+      <span>Have a Ruffin awesome day 🐾</span>
+    </div>
+  )
+}
