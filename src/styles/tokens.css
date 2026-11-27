@@ -39,6 +39,9 @@
   --dur-fast: 150ms;
   --dur-base: 300ms;
   --dur-slow: 500ms;
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+  --ease-out-neon: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* Builder canvas backdrop — plain neutral studio gray, deliberately NOT a neon color
      (docs/04 §2: the theme never touches the garment, the canvas, or the export). */

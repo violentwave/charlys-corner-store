@@ -4,6 +4,7 @@
  * Security — addressed by the URL hash so links like /account#security land on the
  * right tab. Drafts and Brand kit are coming in P49-3 — add values here.
  */
+import { startTransition, ViewTransition } from "react";
 import { useEffect, useState } from "react";
 
 import { MyDesigns } from "./my-designs";
@@ -30,19 +31,28 @@ export function AccountTabs({ email }: { email: string }) {
   const [tab, setTab] = useState<"designs" | "drafts" | "brand" | "payments" | "sizes" | "settings" | "security">(
     "designs",
   );
+  const [dir, setDir] = useState(1);
 
+  const TAB_ORDER = ["designs", "drafts", "brand", "payments", "sizes", "settings", "security"] as const;
   useEffect(() => {
-    const sync = () => setTab(tabFromHash(window.location.hash));
+    const sync = () => {
+      const next = tabFromHash(window.location.hash);
+      setDir(TAB_ORDER.indexOf(next) >= TAB_ORDER.indexOf(tab) ? 1 : -1);
+      setTab(next);
+    };
     sync();
     window.addEventListener("hashchange", sync);
     return () => window.removeEventListener("hashchange", sync);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <Tabs
       value={tab}
       onValueChange={(value) => {
-        setTab(value as "designs" | "drafts" | "brand" | "payments" | "sizes" | "settings" | "security");
+        const v = value as "designs" | "drafts" | "brand" | "payments" | "sizes" | "settings" | "security";
+        setDir(TAB_ORDER.indexOf(v) >= TAB_ORDER.indexOf(tab) ? 1 : -1);
+        startTransition(() => setTab(v));
         history.replaceState(null, "", `#${value}`);
       }}
     >
@@ -57,33 +67,33 @@ export function AccountTabs({ email }: { email: string }) {
         <TabsTrigger value="security">Security</TabsTrigger>
       </TabsList>
 
-      <TabsContent value="designs">
-        <MyDesigns email={email} />
-      </TabsContent>
-
-      <TabsContent value="drafts">
-        <Drafts />
-      </TabsContent>
-
-      <TabsContent value="brand">
-        <BrandKitTab />
-      </TabsContent>
-
-      <TabsContent value="payments">
-        <PaymentMethods />
-      </TabsContent>
-
-      <TabsContent value="sizes">
-        <SizeSets />
-      </TabsContent>
-
-      <TabsContent value="settings">
-        <SettingsTab />
-      </TabsContent>
-
-      <TabsContent value="security">
-        <SecuritySettings email={email} />
-      </TabsContent>
+      <ViewTransition
+        enter={dir > 0 ? "slide-in-right" : "slide-in-left"}
+        exit={dir > 0 ? "slide-out-left" : "slide-out-right"}
+        default="none"
+      >
+        <TabsContent value="designs">
+          <MyDesigns email={email} />
+        </TabsContent>
+        <TabsContent value="drafts">
+          <Drafts />
+        </TabsContent>
+        <TabsContent value="brand">
+          <BrandKitTab />
+        </TabsContent>
+        <TabsContent value="payments">
+          <PaymentMethods />
+        </TabsContent>
+        <TabsContent value="sizes">
+          <SizeSets />
+        </TabsContent>
+        <TabsContent value="settings">
+          <SettingsTab />
+        </TabsContent>
+        <TabsContent value="security">
+          <SecuritySettings email={email} />
+        </TabsContent>
+      </ViewTransition>
     </Tabs>
   );
 }

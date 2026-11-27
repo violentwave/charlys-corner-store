@@ -14,7 +14,7 @@ export function SiteFooter() {
   const socialEntries = Object.entries(site.socials) as [string, string][];
 
   return (
-    <footer className="border-border bg-bg-1 mt-12 border-t">
+    <footer className="border-border bg-bg-1 mt-12 border-t" style={{ viewTransitionName: "site-footer" }}>
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-2 lg:grid-cols-4">
         <div className="flex flex-col gap-3">
           <p className="font-heading text-text-1 text-sm tracking-widest uppercase">{site.name}</p>
@@ -40,7 +40,7 @@ export function SiteFooter() {
           <ul className="flex flex-col gap-1">
             {createNav.map((item) => (
               <li key={item.href}>
-                <Link href={item.href} className={COLUMN_LINK}>
+                <Link href={item.href} transitionTypes={["nav-forward"]} className={COLUMN_LINK}>
                   {item.label}
                 </Link>
               </li>
@@ -53,7 +53,7 @@ export function SiteFooter() {
           <ul className="flex flex-col gap-1">
             {helpNav.map((item) => (
               <li key={item.href}>
-                <Link href={item.href} className={COLUMN_LINK}>
+                <Link href={item.href} transitionTypes={["nav-forward"]} className={COLUMN_LINK}>
                   {item.label}
                 </Link>
               </li>

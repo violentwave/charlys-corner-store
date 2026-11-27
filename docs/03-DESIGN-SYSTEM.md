@@ -75,6 +75,20 @@ Scale (rem): 0.75 · 0.875 · 1 · 1.125 · 1.25 · 1.5 · 2 · 2.5 · 3.5 · 5 
 - **Coupon ticket:** dashed yellow border, mono code, "copy" button.
 - **Charly mascot:** simple line-art neon dog (commission or illustrate; ask the owner for photos) for empty states, 404, loading ("Fetching your mockup…"), and success screens.
 
+## Motion (P52-3)
+
+Tokens (in `src/styles/tokens.css`): `--motion-fast: 120ms`, `--motion-base: 200ms`, `--ease-out-neon: cubic-bezier(0.22, 1, 0.36, 1)`. Use these everywhere; never hard-code durations.
+
+Where transitions are used:
+- Page navigation: crossfade + 6–8px upward slide on `<main>` (`::view-transition-old/new(root)`); header, footer and menu are anchored (their own `view-transition-name`, animation suppressed).
+- Forward/back: links carry `transitionTypes={["nav-forward"]}` / `nav-back`; browser back gets `addTransitionType("nav-back")` on `popstate`.
+- Account tabs and the builder steps / mobile tool tabs: directional slide via React `<ViewTransition>` (keyed by the active tab/step), changed inside `startTransition`.
+- Menu drawer: its slide plus a 150 ms stagger-in of the link rows (`data-menu-row`, CSS only, max 8 rows).
+- Home section jumps: a one-shot cyan underline sweep on the reached heading (`section:target [data-section-heading]`, 400 ms).
+- Hover/press polish: 120 ms transform/opacity only — no box-shadow animation on large elements.
+
+Reduced-motion rule: every animation and keyframe is wrapped in `@media (prefers-reduced-motion: no-preference)`; the global `@media (prefers-reduced-motion: reduce)` block forces `animation-duration: 0.01ms` and `transition-duration: 0.01ms`. Unsupported browsers just swap instantly (no polyfill). CLS must stay 0: transitions use `transform`/`opacity` only, no layout changes.
+
 ## Accessibility (non-negotiable)
 - WCAG 2.2 AA: body text ≥ 4.5:1, large text ≥ 3:1. `--text-3` is for ≥18px only.
 - Visible focus ring: 2px `--neon-cyan` + offset on every interactive element.
@@ -84,5 +98,4 @@ Scale (rem): 0.75 · 0.875 · 1 · 1.125 · 1.25 · 1.5 · 2 · 2.5 · 3.5 · 5 
 ## Inspiration references (from research)
 - Rapid Silk Screen: Bungee Inline + Nunito pairing (retro display, friendly body)
 - Muzli dark-mode set: glass cards, sticky blur nav, gradient pill CTAs
-- Vev "Neon Highlights" palette, rated HIGH fit for synthwave
 - Awwwards/Colorlib retro galleries (Poolsuite is a good tone reference: playful retro done with restraint)
